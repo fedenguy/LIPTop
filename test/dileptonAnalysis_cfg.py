@@ -14,7 +14,7 @@ process.source = cms.Source("PoolSource",
 #load the analyzer
 process.load('LIP.Top.DileptonEventAnalysis_cfi')
 process.evAnalyzer.dtag=cms.string(dtag)
-process.TFileService = cms.Service("TFileService", fileName = cms.string(dtag+'.root') )
+process.TFileService = cms.Service("TFileService", fileName = cms.string('data/'+dtag+'.root') )
 process.p = cms.Path(process.evAnalyzer)
 
 # message logger
