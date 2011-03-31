@@ -7,4 +7,4 @@
 #include "LIP/Top/interface/DileptonEventCleaner.h"
 #include "PhysicsTools/UtilAlgos/interface/EDAnalyzerWrapper.h"
 typedef edm::AnalyzerWrapper<DileptonEventCleaner> WrappedEDDileptonEventCleaner;
-DEFINE_FWK_MODULE(DileptonEventCleaner);  
+DEFINE_FWK_MODULE(WrappedEDDileptonEventCleaner);
