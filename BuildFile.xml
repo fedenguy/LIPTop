@@ -1,0 +1,19 @@
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/FWLite"/>
+<use name="FWCore/ServiceRegistry"/>
+<use name="FWCore/Services"/>
+<use name="PhysicsTools/UtilAlgos"/>
+<use name="DataFormats/FWLite"/>
+<use name="DataFormats/Histograms"/>
+<use name="DataFormats/VertexReco"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="SimDataFormats/GeneratorProducts"/>
+<use name="CMGTools/HtoZZ2l2nu"/>
+<use name="root"/>
+<use name="roottmva"/>
+<use name="rootrflx"/>
+<use name="roofit"/>
+<export>
+  <lib name="1"/>
+</export>

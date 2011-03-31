@@ -1,0 +1,14 @@
+<export>
+</export>
+<library   name="LIPTop_plugins" file="*.cc">
+  <use   name="FWCore/Framework"/>
+  <use   name="FWCore/ParameterSet"/>
+  <use   name="CommonTools/UtilAlgos"/>
+  <use   name="PhysicsTools/UtilAlgos"/>
+  <use   name="FWCore/ServiceRegistry"/>
+  <use   name="DataFormats/CLHEP"/>
+  <use   name="DataFormats/PatCandidates"/>
+  <use  name="PhysicsTools/SelectorUtils"/>
+  <use   name="CMGToolsHtoZZ2l2nu"/>
+  <use   name="LIPTop"/>
+</library>
