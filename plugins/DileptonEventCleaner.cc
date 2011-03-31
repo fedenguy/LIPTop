@@ -1,20 +1,70 @@
-#include "LIP/Top/interface/DileptonEventCleaner.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
+
+#include <vector>
+#include <map>
+#include <string>
+
+#include "TH1.h"
+#include "TH2.h"
+#include "TFile.h"
+#include "TString.h"
+#include "TLorentzVector.h"
+
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "DataFormats/FWLite/interface/Handle.h"
+#include "DataFormats/FWLite/interface/Event.h"
+#include "FWCore/Framework/interface/LuminosityBlock.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenRunInfoProduct.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/PatCandidates/interface/Jet.h"
+#include "DataFormats/PatCandidates/interface/MET.h"
+#include "DataFormats/PatCandidates/interface/EventHypothesis.h"
+#include "DataFormats/PatCandidates/interface/EventHypothesisLooper.h"
+#include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/Common/interface/MergeableCounter.h"
+
+
+class DileptonEventCleaner : public edm::EDAnalyzer 
+{
+public:
+  explicit DileptonEventCleaner(const edm::ParameterSet& cfg);
+  ~DileptonEventCleaner(){};
+  virtual void analyze( const edm::Event &iEvent, const edm::EventSetup &iSetup) ;
+  void endLuminosityBlock(const edm::LuminosityBlock & iLumi, const edm::EventSetup & iSetup);
+
+private:
+  inline TH1 *getHist(TString key)
+  {
+    if(results_.find(key)==results_.end()) return 0;
+    return (TH1 *)results_[key];
+  }
+  std::map<TString, TObject *>  results_;
+  std::map<std::string, edm::ParameterSet> objConfig_;
+};
 
 using namespace std;
 
 /// default constructor
-DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg, TFileDirectory& fs): 
-  edm::BasicAnalyzer::BasicAnalyzer(cfg, fs)
+DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 {
   try{
-    
+
+    edm::Service<TFileService> fs;
+
     objConfig_["Vertices"] = cfg.getParameter<edm::ParameterSet>("Vertices");
     
-    TFileDirectory baseDir=fs.mkdir(cfg.getParameter<std::string>("dtag"));    
+    TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
-    TString selSteps[]={"2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,20"};
+    TString selSteps[]={"Reco","2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,20"};
     for(size_t istream=0; istream<sizeof(streams)/sizeof(TString); istream++)
     {
       TString cat=streams[istream];
@@ -66,9 +116,9 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg, TFileDi
 }
 
 /// everything that needs to be done during the event loop
-void DileptonEventCleaner::analyze(const edm::EventBase& event)
+void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup &iSetup)
 {
-
+  
   try{
     //get objects for this event
     edm::Handle<std::vector<pat::EventHypothesis> > evHandle;
@@ -113,7 +163,7 @@ void DileptonEventCleaner::analyze(const edm::EventBase& event)
     std::string istream="mumu";
     if(selPath==2) istream="ee";
     if(selPath==3) istream="emu";
-    getHist(istream+"_cutflow")->Fill(0);
+    getHist(istream+"_cutflow")->Fill(1);
     
     //vertex quantities
     getHist(istream+"_ngoodvertex")->Fill(selVertices.size());
@@ -131,7 +181,7 @@ void DileptonEventCleaner::analyze(const edm::EventBase& event)
     //Z+quarkonia veto
     if(dileptonP.M()<20) return;
     if( (istream=="ee" || istream=="mumu") && fabs(dileptonP.M()-91)<15) return;
-    getHist(istream+"_cutflow")->Fill(1);
+    getHist(istream+"_cutflow")->Fill(2);
     
     //count the jets in the event
     std::vector<reco::CandidatePtr> seljets= evhyp.all("jet");
@@ -146,10 +196,10 @@ void DileptonEventCleaner::analyze(const edm::EventBase& event)
     getHist(istream+"_bmult")->Fill(nbjets);
 
     //require two jets
-    if(njets==0) getHist(istream+"_cutflow")->Fill(2);
-    if(njets==1) getHist(istream+"_cutflow")->Fill(3);
+    if(njets==0) getHist(istream+"_cutflow")->Fill(3);
+    if(njets==1) getHist(istream+"_cutflow")->Fill(4);
     if(njets<2) return;
-    getHist(istream+"_cutflow")->Fill(3);
+    getHist(istream+"_cutflow")->Fill(5);
 
     //base met kinematics
     const pat::MET *themet=evhyp.getAs<pat::MET>("met");
@@ -174,10 +224,26 @@ void DileptonEventCleaner::analyze(const edm::EventBase& event)
     //require met
     if(metP.Pt()<20) return;
     if( (istream=="ee" || istream=="mumu") && metP.Pt()<30) return;
-    getHist(istream+"_cutflow")->Fill(5);
+    getHist(istream+"_cutflow")->Fill(6);
     
   }catch(std::exception &e){
     std::cout << "[DileptonEventCleaner][analyze] failed with " << e.what() << std::endl;
   }
 
 }
+
+//
+void DileptonEventCleaner::endLuminosityBlock(const edm::LuminosityBlock & iLumi, const edm::EventSetup & iSetup)
+{
+  cout << "[DileptonEventCleaner][endLuminosityBlock]" << endl;
+  TString streams[]={"ee","mumu","emu"};
+  edm::Handle<edm::MergeableCounter> ctrHandle;
+  iLumi.getByLabel("startCounter", ctrHandle);
+  for(size_t istream=0; istream<sizeof(streams)/sizeof(TString); istream++)
+    ((TH1F *)getHist(streams[istream]+"_cutflow"))->Fill(0.,ctrHandle->value);
+}
+
+
+DEFINE_FWK_MODULE(DileptonEventCleaner);
+
+
