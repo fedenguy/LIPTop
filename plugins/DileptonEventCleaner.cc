@@ -92,6 +92,8 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
       
       //jets
       results_[cat+"_jetpt"]    = formatPlot( newDir.make<TH1F>(cat+"_jetpt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_jeteta"]    = formatPlot( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_jetfassoc"]    = formatPlot( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_njets"]    = formatPlot( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_bmult"]    = formatPlot( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
       for(int ibin=1; ibin<=((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins(); ibin++)
@@ -167,6 +169,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     
     //vertex quantities
     getHist(istream+"_ngoodvertex")->Fill(selVertices.size());
+    const reco::Vertex &primVertex = (*(vertexHandle.product()))[0];
 
     //basic dilepton kinematics
     reco::CandidatePtr lepton1 = evhyp["leg1"];
@@ -191,6 +194,8 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       if(btag>1.74) nbjets+=1; //loose point
       getHist(istream+"_btags")->Fill(btag);
       getHist(istream+"_jetpt")->Fill(jet->pt());
+      getHist(istream+"_jeteta")->Fill(jet->eta());
+      getHist(istream+"_jetfassoc")->Fill( jet::fAssoc( jet.get(), &primVertex) );
     }
     getHist(istream+"_njets")->Fill(njets);
     getHist(istream+"_bmult")->Fill(nbjets);
@@ -209,6 +214,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       const reco::MET *origMet = dynamic_cast<const reco::MET *>(themet->originalObject());
       metsig=origMet->significance();
     }catch(std::exception &e){
+      metsig=themet->significance();
     }
     float dphil2met[]={ fabs(metP.DeltaPhi(lepton1P)), fabs(metP.DeltaPhi(lepton2P)) };
     float mTlmet[]={ TMath::Sqrt(2*metP.Pt()*lepton1P.Pt()*(1-TMath::Cos(dphil2met[0]))) ,   TMath::Sqrt(2*metP.Pt()*lepton2P.Pt()*(1-TMath::Cos(dphil2met[1]))) };
