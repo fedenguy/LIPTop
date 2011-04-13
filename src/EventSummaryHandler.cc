@@ -9,7 +9,7 @@ EventSummaryHandler::EventSummaryHandler()
 //
 void EventSummaryHandler::initTree(TTree *t)
 {
-  if(t) return;
+  if(t==0) return;
   t_ = t;
 
   t_->Branch("run",        &evSummary_.run,    "run/I");

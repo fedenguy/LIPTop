@@ -104,14 +104,14 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
       results_[cat+"_jeteta"]    = formatPlot( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_jetfassoc"]    = formatPlot( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_njets"]    = formatPlot( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_chhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chhadenfrac",";f_{charged hadrons}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_neuthadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neuthadenfrac",";f_{neutral hadrons}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_chemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chemenfrac",";f_{charged electromagnetic}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_neutemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neutemenfrac",";f_{neutral electromagnetic}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_phoenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_phoenfrac",";f_{_photons}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_muenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_muenfrac",";f_{muons}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_hfhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_hfhadenfrac",";f_{HF hadrons}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_hfemenfacr"]    = formatPlot( newDir.make<TH1F>(cat+"",";f_{HF electromagnetic}; Jets",0,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_chhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chhadenfrac",";f_{charged hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_neuthadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neuthadenfrac",";f_{neutral hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_chemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chemenfrac",";f_{charged electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_neutemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neutemenfrac",";f_{neutral electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_phoenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_phoenfrac",";f_{_photons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_muenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_muenfrac",";f_{muons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_hfhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_hfhadenfrac",";f_{HF hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+      results_[cat+"_hfemenfacr"]    = formatPlot( newDir.make<TH1F>(cat+"",";f_{HF electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
 
       results_[cat+"_bmult"]    = formatPlot( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
       for(int ibin=1; ibin<=((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins(); ibin++)

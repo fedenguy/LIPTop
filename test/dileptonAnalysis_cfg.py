@@ -2,20 +2,21 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("DileptonAN")
 
-#configure the source
-import sys
-dtag='DYToEEM20'
-if(len(sys.argv)>2 ): dtag=sys.argv[2]
-from CMGTools.HtoZZ2l2nu.localPatTuples_cff import fillFromCastor
+from CMGTools.HtoZZ2l2nu.localPatTuples_cff import configureFromCommandLine
 process.source = cms.Source("PoolSource",
-                            fileNames = fillFromCastor('/castor/cern.ch/user/p/psilva/Dileptons/'+dtag+'/')
+                            fileNames = cms.untracked.vstring()
                             )
+dtag, process.source.fileNames, outputFile = configureFromCommandLine(process)
 
 #load the analyzer
+process.load('CMGTools.HtoZZ2l2nu.CleanEventProducer_cfi')
+process.load('CMGTools.HtoZZ2l2nu.CleanEventFilter_cfi')
+process.load('CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi')
 process.load('LIP.Top.DileptonEventAnalysis_cfi')
 process.evAnalyzer.dtag=cms.string(dtag)
-process.TFileService = cms.Service("TFileService", fileName = cms.string('data/'+dtag+'.root') )
-process.p = cms.Path(process.evAnalyzer)
+process.TFileService = cms.Service("TFileService", fileName = cms.string(outputFile) )
+
+process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.puWeights*process.evAnalyzer)
 
 # message logger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
