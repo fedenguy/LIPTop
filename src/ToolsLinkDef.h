@@ -14,6 +14,7 @@
 #pragma link C++ class EventSummaryHandler;
 #pragma link C++ class HeavyFlavorPDF;
 #pragma link C++ struct TTbarSolution_t;
+#pragma link C++ typedef TTbarSolutionCollection_t;
 #pragma link C++ function mTTbarOrder;
 #pragma link C++ function getMT;
 #pragma link C++ function getMT2;

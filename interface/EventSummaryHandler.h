@@ -27,7 +27,6 @@ struct EventSummary_t
   Float_t info1[MAXPARTICLES],info2[MAXPARTICLES],info3[MAXPARTICLES],info4[MAXPARTICLES],info5[MAXPARTICLES];
 };
 
-
 class EventSummaryHandler{
  public:
   
@@ -35,6 +34,9 @@ class EventSummaryHandler{
   
   EventSummaryHandler();
   void initTree(TTree *t);
+  void getEntry(int ientry) { if(t_) t_->GetEntry(ientry); }
+  int getEntries() { return (t_ ? t_->GetEntriesFast() : 0); }
+  EventSummary_t &getEvent() { return evSummary_; }
   void fillTree();
   ~EventSummaryHandler();
 
