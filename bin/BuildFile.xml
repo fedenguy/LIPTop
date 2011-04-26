@@ -1,0 +1,5 @@
+<use name="root"/>
+<use name="LIP/Top"/>
+<use name="CondFormats/JetMETObjects"/>
+<bin file="runKinAnalysis.cc">
+</bin>

@@ -29,19 +29,27 @@ struct EventSummary_t
 
 class EventSummaryHandler{
  public:
-  
-  EventSummary_t evSummary_;
-  
+
+  //c/dtor
   EventSummaryHandler();
-  void initTree(TTree *t);
+  ~EventSummaryHandler();
+  
+  //current event
+  EventSummary_t evSummary_;
+  EventSummary_t &getEvent() { return evSummary_; }
+  
+  //write mode
+  bool initTree(TTree *t);
+  void fillTree();
+
+  //read mode
+  bool attachToTree(TTree *t);
   void getEntry(int ientry) { if(t_) t_->GetEntry(ientry); }
   int getEntries() { return (t_ ? t_->GetEntriesFast() : 0); }
-  EventSummary_t &getEvent() { return evSummary_; }
-  void fillTree();
-  ~EventSummaryHandler();
 
  private:
-  
+
+  //the tree
   TTree *t_;
 };
 
