@@ -197,7 +197,7 @@
 		  "br":1
                 }
 	   ]	
-	}
+	},
 	{
            "tag":"data",
            "isdata":true,
@@ -208,32 +208,32 @@
                 {
 		  "dtag":"DoubleMuon-v3",
 		  "dset":"/DoubleMu/Run2011A-PromptReco-v1/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v3",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v3"
                 },
                 {
 		  "dtag":"DoubleMuon-v5",
 		  "dset":"/DoubleMu/Run2011A-PromptReco-v1/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v5",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v5"
                 },
                 {
 		  "dtag":"DoubleMuon-v6",
 		  "dset":"/DoubleMu/Run2011A-PromptReco-v2/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v6",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v6"
                 },
                 {
 		  "dtag":"DoubleElectron-v3",
 		  "dset":"/DoubleElectron/Run2011A-PromptReco-v1/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v3",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v3"
                 },
                 {
 		  "dtag":"DoubleElectron-v5",
 		  "dset":"/DoubleElectron/Run2011A-PromptReco-v1/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v5",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v5"
                 },
                 {
 		  "dtag":"DoubleElectron-v6",
 		  "dset":"/DoubleElectron/Run2011A-PromptReco-v2/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v6",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v6"
                 },
                 {
 		  "dtag":"MuEG-v3",

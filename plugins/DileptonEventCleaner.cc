@@ -63,6 +63,7 @@ using namespace std;
 
 /// default constructor
 DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
+  : rmet_(1.0,1.0,0.0,0.0,1.0)
 {
   try{
 
@@ -71,6 +72,7 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
     summaryHandler_.initTree( fs->make<TTree>("data","Event Summary") );
 
     objConfig_["Vertices"] = cfg.getParameter<edm::ParameterSet>("Vertices");
+   
     
     TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
@@ -186,6 +188,9 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 	cout << "No valid selection info" << endl;
 	return;
       }
+
+    edm::Handle<std::vector<reco::PFMET> > hPfMET;
+    event.getByLabel(edm::InputTag("pfMet"), hPfMET);
     
     int selPath = (*(selInfo.product()))[0];
     int selStep = (*(selInfo.product()))[1];
@@ -263,12 +268,9 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     const pat::MET *themet=evhyp.getAs<pat::MET>("met");
     TLorentzVector metP(themet->px(),themet->py(),0,themet->pt());
     float metsig(-1);
-    try{
-      const reco::MET *origMet = dynamic_cast<const reco::MET *>(themet->originalObject());
-      metsig=origMet->significance();
-    }catch(std::exception &e){
-      metsig=themet->significance();
-    }
+    if(hPfMET.isValid())
+      metsig = ((*hPfMET)[0]).significance();
+
     float dphil2met[]={ fabs(metP.DeltaPhi(lepton1P)), fabs(metP.DeltaPhi(lepton2P)) };
     float mTlmet[]={ TMath::Sqrt(2*metP.Pt()*lepton1P.Pt()*(1-TMath::Cos(dphil2met[0]))) ,   TMath::Sqrt(2*metP.Pt()*lepton2P.Pt()*(1-TMath::Cos(dphil2met[1]))) };
 
