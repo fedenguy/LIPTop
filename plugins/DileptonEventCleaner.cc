@@ -355,6 +355,7 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
 	  const pat::Muon *mu = dynamic_cast<const pat::Muon *>(leptons[ilepton].get());
 	  if(mu)
 	    {
+	      id=13;
 	      id *= mu->charge();
 	      gen=mu->genLepton();	 
 	    }

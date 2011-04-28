@@ -1,5 +1,11 @@
 <use name="root"/>
+<use name="boost_program_options"/>
 <use name="LIP/Top"/>
 <use name="CondFormats/JetMETObjects"/>
-<bin file="runKinAnalysis.cc">
-</bin>
+<use name="FWCore/FWLite"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/PythonParameterSet"/>
+<use name="PhysicsTools/FWLite"/>
+<environment>
+   <bin file="runKinAnalysis.cc"></bin>
+</environment>

@@ -1,15 +1,15 @@
 #include "LIP/Top/interface/KinAnalysis.h"
-#include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 
 using namespace std;
 
 //
-KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, float mb)
+KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, float mb, TString outpath, bool doWrite)
   : scheme_(scheme),
     maxTries_(maxTries),
     maxJetMult_(maxJetMult),
     mw_(mw),
-    mb_(mb)
+    mb_(mb),
+    resHandler_(outpath,doWrite)
 {
   //seed
   TTimeStamp timeStamp;
@@ -28,6 +28,9 @@ KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, 
   if( scheme_.Contains("pdpz") )   { deltaPzFunc_->FixParameter(2,323*2);   deltaPzFunc_->FixParameter(5,690*2); }
   if( scheme_.Contains("pmw") )    mw_ += 0.025;
   if( scheme_.Contains("mmw") )    mw_ -= 0.025;
+
+  //configure handler
+  resHandler_.bookHistos(maxJetMult_);
 }
 
 //
@@ -39,6 +42,7 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
+	if(isnan(p4.Pt()) || isinf(p4.Pt())) continue;
 	switch( ev.id[ipart] )
 	  {
 	  case 0:
@@ -48,18 +52,26 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
 	    jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
 	    break;
 	  default:
-	    leptons.push_back( KinCandidate_t(p4,p4.Pt()) );
+	    leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
 	    break;
 	  }
       }
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
+    if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
 
-
+    //debug
+    cout << "[KinAnalysis][runOn] " << ev.run << " : " << ev.lumi << " : " << ev.event << endl
+	 << "Leptons #1 : (" << leptons[0].first.Pt() << ";" << leptons[0].first.Eta() << ";" << leptons[0].first.Phi() << ") q:" << leptons[0].second << endl  
+	 << "        #2 : (" << leptons[1].first.Pt() << ";" << leptons[1].first.Eta() << ";" << leptons[1].first.Phi() << ") q:" << leptons[1].second << endl  
+	 << "Jets    #1 : (" << jets[0].first.Pt() << ";" << jets[0].first.Eta() << ";" << jets[0].first.Phi() << ") btag:" << jets[0].second  << endl  
+	 << "        #2 : (" << jets[1].first.Pt() << ";" << jets[1].first.Eta() << ";" << jets[1].first.Phi() << ") btag:" << jets[1].second << endl  
+	 << "MET        : (" << mets[0].first.Pt() << ";" << mets[0].first.Phi() << ")" << endl;
+    
     //set to the base values
     int nComb=0;
-    resetHistos();
+    resHandler_.resetHistos();
  
     //jet energy scale
     double jet1Scale(1.0), jet2Scale(1.0);
@@ -70,9 +82,6 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
 	    if(ijet==jjet) continue;
 	    nComb++;
 		  
-	    cout << "\t - Comb #" << nComb << " (" << leptons[0].first.Pt() << ";" << jets[ijet].first.Pt() << ":" << jets[ijet].second << ")"
-		 << " (" << leptons[1].first.Pt() << ";" << jets[jjet].first.Pt() << ":" << jets[jjet].second << ")" << endl;
-
 	    for(int ivar=0; ivar<3; ivar++)
 	      {
 		if(ivar>0)
@@ -125,25 +134,30 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
 		      
 		    //prevent strange values
 		    if(pl1.Pt()<1 || pb1.Pt()<1 || pl2.Pt()<1 || pb2.Pt()<1 || metConstraint.Pt()<1) continue;
-		      
+		    
 		    TTbarSolutionCollection_t sols = kin_.findSolutions(pl1,pb1,pl2,pb2,metConstraint,mw_);    
 		    if(sols.size()==0) continue;
+
+		    //compute the full kinematics obtained
 		    TTbarSolution_t *sol = &(sols.back());
 		    TLorentzVector ttbar = sol->pt1+sol->pt2;
 		    float avgMtop = (sol->pt1.M()+sol->pt2.M())*0.5;
 		    float mttbar = ttbar.M();
 		    std::vector<double> mt2 = getMT2( *sol );
 		    float afb = sol->pt1.Eta()-sol->pt2.Eta();
-			  
-		    getHisto("mt", nComb)->Fill( avgMtop );
-		    getHisto("mttbar",nComb)->Fill(mttbar);
-		    getHisto("minmt2",nComb)->Fill(mt2[1]);
-		    getHisto("maxmt2",nComb)->Fill(mt2[0]);
-		    getHisto("afb",nComb)->Fill(afb);
+
+		    //fill histos
+		    resHandler_.getHisto("mt", nComb)->Fill( avgMtop );
+		    resHandler_.getHisto("mttbar",nComb)->Fill(mttbar);
+		    resHandler_.getHisto("mt2",nComb)->Fill(mt2[0]);
+		    resHandler_.getHisto("afb",nComb)->Fill(afb);
 		  }
 	      }
 	  }
       }
+
+    //save resuls
+    resHandler_.addResults( ev );
   }
   catch(std::exception &e){
     cout << e.what() << endl;
@@ -151,41 +165,8 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
 }
 
 
-//
-void KinAnalysis::resetHistos()
-{
-  //  for(std::map<KinHistoKey,TH1 *>::iterator it = kinHistos_.begin();
-  //      it != kinHistos_.end(); it++)
-  //    it->second->Reset("ICE");
-}
 
 //
-TH1 *KinAnalysis::getHisto(TString var, int nComb)
+KinAnalysis::~KinAnalysis()
 {
-  //  KinHistoKey key(var,nComb);
-  //  if(kinHistos_.find(key)==kinHistos_.end()) return 0;
-  //  return kinHistos_[key];
-  return 0;
-}
-
-//
-void KinAnalysis::bookHistos()
-{
-  int ncombs=maxJetMult_*(maxJetMult_-1);
-  for(int icomb=1; icomb<=ncombs; icomb++)
-    {
-      TString cat(""); cat += icomb;
-      TString title("Combination #"); title+=cat;
-      /*
-      kinHistos_[KinHistoKey("mt",icomb)]=  new TH1D("mt_"+cat,title+";M_{t} [GeV/c^{2}];N_{solutions} / (2 GeV/c^{2})",200,100,500);
-      kinHistos_[KinHistoKey("mttbar",icomb)] = new TH1D("mttbar_"+cat,title+";M_{t#bar{t}} [GeV/c^{2}];N_{solutions} / (10 GeV/c^{2})", 200,0,2000);
-      kinHistos_[KinHistoKey("minmt2",icomb)] = new TH1D("minmt2_"+cat,title+";min M_{T2} [GeV/c^{2}];N_{solutions} / (2 GeV/c^{2})",200,0,400);
-      kinHistos_[KinHistoKey("maxmt2",icomb)] = new TH1D("maxmt2_"+cat,title+";max M_{T2} [GeV/c^{2}];N_{solutions} / (2 GeV/c^{2})",200,0,400);
-      kinHistos_[KinHistoKey("afb",icomb)] = new TH1D("afb_"+cat,title+";A_{fb};N_{solutions} / (0.05)",100,-4.95,5.05);
-      */
-    }
-
-  //  for(std::map<KinHistoKey,TH1 *>::iterator it = kinHistos_.begin();
-  //      it != kinHistos_.end(); it++)  
-  //    formatPlot( it->second, 1,1,1,20,0,true,true,1,1,1);
 }
