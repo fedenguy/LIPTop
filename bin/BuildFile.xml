@@ -8,4 +8,5 @@
 <use name="PhysicsTools/FWLite"/>
 <environment>
    <bin file="runKinAnalysis.cc"></bin>
+   <bin file="displayKinResults.cc"></bin>
 </environment>

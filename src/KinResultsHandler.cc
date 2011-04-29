@@ -5,37 +5,67 @@ using namespace std;
 
 //
 KinResultsHandler::KinResultsHandler(TString outpath,bool doWrite) 
-  : kinTree_(0)
+  : doWrite_(doWrite),
+    kinTree_(0)
 {
   kinFile_ = TFile::Open(outpath, doWrite ? "RECREATE" : "");
-  if(doWrite) kinFile_->SetCompressionLevel( 9 );
+  if(doWrite_) kinFile_->SetCompressionLevel( 9 );
   fitFunc_ =  new TF1("fitFunc","gaus",0,500);
+  if(!doWrite_) appendTree();
 }
 
 //
 void KinResultsHandler::addResults(EventSummary_t &ev)
 {
-  if(kinTree_==0)  bookTree(ev);
+  if(kinTree_==0)  bookTree();
+  iRun_=ev.run;
+  iLumi_=ev.lumi;
+  iEvent_=ev.event;
   kinTree_->Fill();
 }
 
 //
-void KinResultsHandler::bookTree(EventSummary_t &ev)
+void KinResultsHandler::bookTree()
 {
   kinFile_->cd();
   kinTree_ = new TTree( "kin","Kinematics analysis of top dilepton events" );
   kinTree_->SetDirectory(kinFile_);
   kinTree_->SetAutoSave();
-  kinTree_->Branch("run",  &ev.run, "run/I");
-  kinTree_->Branch("lumi", &ev.lumi, "lumi/I");
-  kinTree_->Branch("event", &ev.event, "event/I");
+  kinTree_->Branch("run",  &iRun_, "run/I");
+  kinTree_->Branch("lumi", &iEvent_, "lumi/I");
+  kinTree_->Branch("event", &iLumi_, "event/I");
   for(std::map<std::pair<TString, int>,TH1D *>::iterator it = kinHistos_.begin();
       it != kinHistos_.end();
       it++)
     {
       it->second->SetDirectory(0);
-      kinTree_->Branch(it->second->GetName(), it->second, it->second->ClassName());
+      //      kinTree_->Branch(it->second->GetName(), it->second, it->second->ClassName());
+      //      kinTree_->Branch(it->second->GetName(), &it->second, sizeof(TH1D));
+      kinTree_->Branch(it->second->GetName(), &it->second,it->second->ClassName(), sizeof(TH1D));
     } 
+}
+
+//
+void KinResultsHandler::appendTree()
+{
+  kinTree_ = (TTree *) kinFile_->Get("kin"); 
+  TObjArray *branches = kinTree_->GetListOfBranches();
+  for(int ibranch=0; ibranch<branches->GetEntriesFast(); ibranch++)
+    {
+      TBranch *br = (TBranch *) branches->At(ibranch);
+      TString name(br->GetName());
+      if( name=="run" )   br->SetAddress(&iRun_);
+      else if( name=="event" ) br->SetAddress(&iEvent_);
+      else if( name=="lumi" )  br->SetAddress(&iLumi_);
+      else
+	{
+	  TObjArray *tkns=name.Tokenize("_");
+	  std::pair<TString, int> key( ((TObjString *)tkns->At(0))->GetString(),
+				       ((TObjString *)tkns->At(1))->GetString().Atoi() );
+	  kinHistos_[ key ] = 0;
+	  br->SetAddress( &kinHistos_[key] );
+	}
+    }     
 }
 
 //
@@ -44,9 +74,12 @@ void KinResultsHandler::end()
   if(kinTree_==0 || kinFile_==0) return;
 
   //close file and delete allocated memory
-  kinFile_->cd();
-  kinTree_->SetDirectory(kinFile_);
-  kinFile_->Write();
+  if(doWrite_)
+    {
+      kinFile_->cd();
+      kinTree_->SetDirectory(kinFile_);
+      kinFile_->Write();
+    }
   kinFile_->Close();
   kinFile_->Delete();
 }

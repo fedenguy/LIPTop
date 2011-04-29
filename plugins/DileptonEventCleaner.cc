@@ -76,83 +76,85 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
     
     TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
-    TString selSteps[]={"Reco","2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,20","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
+    TString selSteps[]={"Reco","2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,0","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
+    const size_t nselsteps=sizeof(selSteps)/sizeof(TString);
+    results_["cutflow"]=formatPlot( baseDir.make<TH1F>("cutflow", ";Step; Events",nselsteps,0,nselsteps), 1,1,1,20,0,false,true,1,1,1);
     for(size_t istream=0; istream<sizeof(streams)/sizeof(TString); istream++)
-    {
-      TString cat=streams[istream];
-      TFileDirectory newDir=baseDir.mkdir(cat.Data());
+      {
+	TString cat=streams[istream];
+	TFileDirectory newDir=baseDir.mkdir(cat.Data());
 
-      const size_t nselsteps=sizeof(selSteps)/sizeof(TString);
-      results_[cat+"_cutflow"]=formatPlot( newDir.make<TH1F>(cat+"_cutflow", ";Step; Events",nselsteps,0,nselsteps), 1,1,1,20,0,false,true,1,1,1);
-      for(int ibin=1; ibin<=((TH1F *)results_[cat+"_cutflow"])->GetXaxis()->GetNbins(); ibin++)
-	{
-	  ((TH1F *)results_[cat+"_cutflow"])->GetXaxis()->SetBinLabel(ibin,selSteps[ibin-1]);
-	}
-
-      //dilepton control
-      results_[cat+"_dilepton_mass"]=formatPlot( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_dilepton_mass"]=formatPlot( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_dilepton_sumpt"]= formatPlot( newDir.make<TH1F>(cat+"_dilepton_sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_dilepton_pt"] = formatPlot( newDir.make<TH1F>(cat+"_dilepton_pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-
-      //vertex control
-      results_[cat+"_vertex_sumpt"] = formatPlot( newDir.make<TH1F>(cat+"_vertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_othervertex_sumpt"] = formatPlot( newDir.make<TH1F>(cat+"_othervertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_vertex_pt"] = formatPlot( newDir.make<TH1F>(cat+"_vertex_pt", ";|#Sigma_{tracks} #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_othervertex_pt"] = formatPlot( newDir.make<TH1F>(cat+"_othervertex_pt", ";|#Sigma_{tracks} #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_ngoodvertex"] = formatPlot( newDir.make<TH1F>(cat+"_ngoodvertex", ";Vertices; Events", 25, 0.,25.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_cutflow"]=formatPlot( newDir.make<TH1F>(cat+"_cutflow", ";Step; Events",nselsteps,0,nselsteps), 1,1,1,20,0,false,true,1,1,1);
+	for(int ibin=1; ibin<=((TH1F *)results_[cat+"_cutflow"])->GetXaxis()->GetNbins(); ibin++)
+	  {
+	    ((TH1F *)results_[cat+"_cutflow"])->GetXaxis()->SetBinLabel(ibin,selSteps[ibin-1]);
+	    if(istream==0) ((TH1F *)results_["cutflow"])->GetXaxis()->SetBinLabel(ibin,selSteps[ibin-1]);
+	  }
       
-      //jets
-      results_[cat+"_jetpt"]    = formatPlot( newDir.make<TH1F>(cat+"_jetpt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
+	//dilepton control
+	results_[cat+"_dilepton_mass"]=formatPlot( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_dilepton_mass"]=formatPlot( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_dilepton_sumpt"]= formatPlot( newDir.make<TH1F>(cat+"_dilepton_sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_dilepton_pt"] = formatPlot( newDir.make<TH1F>(cat+"_dilepton_pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+
+	//vertex control
+	results_[cat+"_vertex_sumpt"] = formatPlot( newDir.make<TH1F>(cat+"_vertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_othervertex_sumpt"] = formatPlot( newDir.make<TH1F>(cat+"_othervertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_vertex_pt"] = formatPlot( newDir.make<TH1F>(cat+"_vertex_pt", ";|#Sigma_{tracks} #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_othervertex_pt"] = formatPlot( newDir.make<TH1F>(cat+"_othervertex_pt", ";|#Sigma_{tracks} #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_ngoodvertex"] = formatPlot( newDir.make<TH1F>(cat+"_ngoodvertex", ";Vertices; Events", 25, 0.,25.), 1,1,1,20,0,false,true,1,1,1);
+      
+	//jets
+	results_[cat+"_jetpt"]    = formatPlot( newDir.make<TH1F>(cat+"_jetpt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
 	//test pt distribution for 1 jets and 2 or +
 
-      results_[cat+"_jet1pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet1pt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_jet1pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet1pt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
 
-      results_[cat+"_jet2pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet2pt",";p_{T} [GeV/c]; Jets",100,0,200),     1,1,1,20,0,false,true,1,1,1);
-
-
-      results_[cat+"_jeteta"]    = formatPlot( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_jetfassoc"]    = formatPlot( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_njets"]    = formatPlot( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_chhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chhadenfrac",";f_{charged hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_neuthadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neuthadenfrac",";f_{neutral hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_chemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chemenfrac",";f_{charged electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_neutemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neutemenfrac",";f_{neutral electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_phoenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_phoenfrac",";f_{_photons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_muenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_muenfrac",";f_{muons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_hfhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_hfhadenfrac",";f_{HF hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_hfemenfacr"]    = formatPlot( newDir.make<TH1F>(cat+"",";f_{HF electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-
-      results_[cat+"_bmult"]    = formatPlot( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
-
-      results_[cat+"_bmultmE"]    = formatPlot( newDir.make<TH1F>(cat+"_bmultmE",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_jet2pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet2pt",";p_{T} [GeV/c]; Jets",100,0,200),     1,1,1,20,0,false,true,1,1,1);
 
 
-      for(int ibin=1; ibin<=((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins(); ibin++)
-	{
-	  TString ilabel(""); ilabel+=(ibin-1);
-	  if(ibin==((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins()) ilabel="#geq"+ilabel;
-	  ((TH1F *)results_[cat+"_njets"])->GetXaxis()->SetBinLabel(ibin,ilabel);
-	  ((TH1F *)results_[cat+"_bmult"])->GetXaxis()->SetBinLabel(ibin,ilabel);
-          ((TH1F *)results_[cat+"_bmultmE"])->GetXaxis()->SetBinLabel(ibin,ilabel);
-	}
+	results_[cat+"_jeteta"]    = formatPlot( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_jetfassoc"]    = formatPlot( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_njets"]    = formatPlot( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_chhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chhadenfrac",";f_{charged hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_neuthadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neuthadenfrac",";f_{neutral hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_chemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chemenfrac",";f_{charged electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_neutemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neutemenfrac",";f_{neutral electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_phoenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_phoenfrac",";f_{_photons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_muenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_muenfrac",";f_{muons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_hfhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_hfhadenfrac",";f_{HF hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_hfemenfacr"]    = formatPlot( newDir.make<TH1F>(cat+"",";f_{HF electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
 
-      results_[cat+"_btags"]  = formatPlot( newDir.make<TH1F>(cat+"_btags",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
-// test b tag
+	results_[cat+"_bmult"]    = formatPlot( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
 
-results_[cat+"_btagsmE"]     = formatPlot( newDir.make<TH1F>(cat+"_btagsmE",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_bmultmE"]    = formatPlot( newDir.make<TH1F>(cat+"_bmultmE",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
 
 
-      results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 30,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
+	for(int ibin=1; ibin<=((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins(); ibin++)
+	  {
+	    TString ilabel(""); ilabel+=(ibin-1);
+	    if(ibin==((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins()) ilabel="#geq"+ilabel;
+	    ((TH1F *)results_[cat+"_njets"])->GetXaxis()->SetBinLabel(ibin,ilabel);
+	    ((TH1F *)results_[cat+"_bmult"])->GetXaxis()->SetBinLabel(ibin,ilabel);
+	    ((TH1F *)results_[cat+"_bmultmE"])->GetXaxis()->SetBinLabel(ibin,ilabel);
+	  }
+
+	results_[cat+"_btags"]  = formatPlot( newDir.make<TH1F>(cat+"_btags",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
+	// test b tag
+
+	results_[cat+"_btagsmE"]     = formatPlot( newDir.make<TH1F>(cat+"_btagsmE",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
+
+
+	results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 30,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
     
-      results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 100,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_rmet"]               = formatPlot( newDir.make<TH1F>(cat+"_rmet", ";red-#slash{E}_{T} [GeV/c]; Events", 100,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_mT_individual"]     = formatPlot( newDir.make<TH1F>(cat+"_mT_individual",";Transverse mass(lepton,MET) [GeV/c^{2}]; Events",100,0,500), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_mT_corr"]           = formatPlot( newDir.make<TH2F>(cat+"_mT_corr",";Transverse mass(leading lepton,MET) [GeV/c^{2}];Transverse mass(trailer lepton,MET) [GeV/c^{2}]; Events",50,0,500,50,0,500), 1,1,1,20,0,false,true,1,1,1);
-      results_[cat+"_mT_individualsum"]  = formatPlot( newDir.make<TH1F>(cat+"_mT_individualsum",";#Sigma Transverse mass(lepton,MET) [GeV/c^{2}]; Events",100,0,500), 1,1,1,20,0,false,true,1,1,1);
-    }
+	results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 100,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_rmet"]               = formatPlot( newDir.make<TH1F>(cat+"_rmet", ";red-#slash{E}_{T} [GeV/c]; Events", 100,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_mT_individual"]     = formatPlot( newDir.make<TH1F>(cat+"_mT_individual",";Transverse mass(lepton,MET) [GeV/c^{2}]; Events",100,0,500), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_mT_corr"]           = formatPlot( newDir.make<TH2F>(cat+"_mT_corr",";Transverse mass(leading lepton,MET) [GeV/c^{2}];Transverse mass(trailer lepton,MET) [GeV/c^{2}]; Events",50,0,500,50,0,500), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_mT_individualsum"]  = formatPlot( newDir.make<TH1F>(cat+"_mT_individualsum",";#Sigma Transverse mass(lepton,MET) [GeV/c^{2}]; Events",100,0,500), 1,1,1,20,0,false,true,1,1,1);
+      }
   }catch(std::exception &e){
   }  
 }
@@ -213,12 +215,13 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     int selPath = (*(selInfo.product()))[0];
     int selStep = (*(selInfo.product()))[1];
 
-      //require that a dilepton has benn selected
+    //require that a dilepton has benn selected
     if(selPath==0 or selStep<3) return;
     std::string istream="mumu";
     if(selPath==2) istream="ee";
     if(selPath==3) istream="emu";
     getHist(istream+"_cutflow")->Fill(1,weight);
+    getHist("cutflow")->Fill(1,weight);
     
     //vertex quantities
     getHist(istream+"_ngoodvertex")->Fill(selVertices.size(),weight);
@@ -240,6 +243,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     if(dileptonP.M()<20) return;
     if( (istream=="ee" || istream=="mumu") && fabs(dileptonP.M()-91)<15) return;
     getHist(istream+"_cutflow")->Fill(2,weight);
+    getHist("cutflow")->Fill(2,weight);
     
     //count the jets in the event
     std::vector<reco::CandidatePtr> seljets= evhyp.all("jet");
@@ -276,18 +280,27 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     njets=selJets.size();
 
     for(int ijet=0; ijet < njets; ++ijet){
-    if(njets==1) getHist(istream+"_jet1pt")->Fill(selJets[ijet]->pt(),weight);
-    if(njets>=2) getHist(istream+"_jet2pt")->Fill(selJets[ijet]->pt(),weight);   
+      if(njets==1) getHist(istream+"_jet1pt")->Fill(selJets[ijet]->pt(),weight);
+      if(njets>=2) getHist(istream+"_jet2pt")->Fill(selJets[ijet]->pt(),weight);   
     } 
 
     getHist(istream+"_njets")->Fill(njets,weight);
     getHist(istream+"_bmult")->Fill(nbjets,weight);
 
     //require two jets
-    if(njets==0) getHist(istream+"_cutflow")->Fill(3,weight);
-    if(njets==1) getHist(istream+"_cutflow")->Fill(4,weight);
+    if(njets==0) 
+      {
+	getHist(istream+"_cutflow")->Fill(3,weight);
+	getHist("cutflow")->Fill(3,weight);
+      }
+    if(njets==1) 
+      {
+	getHist(istream+"_cutflow")->Fill(4,weight);
+	getHist("cutflow")->Fill(4,weight);
+      }
     if(njets<2) return;
     getHist(istream+"_cutflow")->Fill(5,weight);
+    getHist("cutflow")->Fill(5,weight);
 
     //base met kinematics
     const pat::MET *themet=evhyp.getAs<pat::MET>("met");
@@ -321,19 +334,20 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     if( (istream=="ee" || istream=="mumu") && metP.Pt()<30) return;
     
     getHist(istream+"_cutflow")->Fill(6,weight);
+    getHist("cutflow")->Fill(6,weight);
     getHist(istream+"_bmultmE")->Fill(nbjets,weight);
 
 
-   for(int ijet=0; ijet < njets; ++ijet){
-    float btag=selJets[ijet]->bDiscriminator("trackCountingHighEffBJetTags");
-    getHist(istream+"_btagsmE")->Fill(btag,weight);   
+    for(int ijet=0; ijet < njets; ++ijet){
+      float btag=selJets[ijet]->bDiscriminator("trackCountingHighEffBJetTags");
+      getHist(istream+"_btagsmE")->Fill(btag,weight);   
     } 
-
 
     //b-tagged sample
     int btagbin= nbjets;
     if(btagbin>2) btagbin=2;
     getHist(istream+"_cutflow")->Fill(7+btagbin,weight);
+    getHist("cutflow")->Fill(7+btagbin,weight);
 
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);
@@ -354,7 +368,10 @@ void DileptonEventCleaner::endLuminosityBlock(const edm::LuminosityBlock & iLumi
   edm::Handle<edm::MergeableCounter> ctrHandle;
   iLumi.getByLabel("startCounter", ctrHandle);
   for(size_t istream=0; istream<sizeof(streams)/sizeof(TString); istream++)
-    ((TH1F *)getHist(streams[istream]+"_cutflow"))->Fill(0.,ctrHandle->value);
+    {
+      ((TH1F *)getHist(streams[istream]+"_cutflow"))->Fill(0.,ctrHandle->value);
+      if(istream==0) ((TH1F *)getHist("cutflow"))->Fill(0.,ctrHandle->value);
+    }
 }
 
 //
