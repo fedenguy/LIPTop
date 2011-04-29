@@ -76,7 +76,7 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
     
     TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
-    TString selSteps[]={"Reco","2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,0","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
+    TString selSteps[]={"Reco","2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,20","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
     for(size_t istream=0; istream<sizeof(streams)/sizeof(TString); istream++)
     {
       TString cat=streams[istream];
@@ -104,6 +104,13 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
       
       //jets
       results_[cat+"_jetpt"]    = formatPlot( newDir.make<TH1F>(cat+"_jetpt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
+	//test pt distribution for 1 jets and 2 or +
+
+      results_[cat+"_jet1pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet1pt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
+
+      results_[cat+"_jet2pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet2pt",";p_{T} [GeV/c]; Jets",100,0,200),     1,1,1,20,0,false,true,1,1,1);
+
+
       results_[cat+"_jeteta"]    = formatPlot( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_jetfassoc"]    = formatPlot( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_njets"]    = formatPlot( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
@@ -117,14 +124,25 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
       results_[cat+"_hfemenfacr"]    = formatPlot( newDir.make<TH1F>(cat+"",";f_{HF electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
 
       results_[cat+"_bmult"]    = formatPlot( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
+
+      results_[cat+"_bmultmE"]    = formatPlot( newDir.make<TH1F>(cat+"_bmultmE",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
+
+
       for(int ibin=1; ibin<=((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins(); ibin++)
 	{
 	  TString ilabel(""); ilabel+=(ibin-1);
 	  if(ibin==((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins()) ilabel="#geq"+ilabel;
 	  ((TH1F *)results_[cat+"_njets"])->GetXaxis()->SetBinLabel(ibin,ilabel);
 	  ((TH1F *)results_[cat+"_bmult"])->GetXaxis()->SetBinLabel(ibin,ilabel);
+          ((TH1F *)results_[cat+"_bmultmE"])->GetXaxis()->SetBinLabel(ibin,ilabel);
 	}
-      results_[cat+"_btags"]             = formatPlot( newDir.make<TH1F>(cat+"_btags",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
+
+      results_[cat+"_btags"]  = formatPlot( newDir.make<TH1F>(cat+"_btags",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
+// test b tag
+
+results_[cat+"_btagsmE"]     = formatPlot( newDir.make<TH1F>(cat+"_btagsmE",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
+
+
       results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 30,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
       results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
     
@@ -225,7 +243,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     
     //count the jets in the event
     std::vector<reco::CandidatePtr> seljets= evhyp.all("jet");
-    int njets( seljets.size() ), nbjets(0);
+    int njets(0), nbjets(0);
     std::vector<const pat::Jet *> selJets;
     std::vector<LorentzVector> jetmomenta;
     for (pat::eventhypothesis::Looper<pat::Jet> jet = evhyp.loopAs<pat::Jet>("jet"); jet; ++jet) {
@@ -255,6 +273,13 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       
       selJets.push_back( jet.get() );
     }
+    njets=selJets.size();
+
+    for(int ijet=0; ijet < njets; ++ijet){
+    if(njets==1) getHist(istream+"_jet1pt")->Fill(selJets[ijet]->pt(),weight);
+    if(njets>=2) getHist(istream+"_jet2pt")->Fill(selJets[ijet]->pt(),weight);   
+    } 
+
     getHist(istream+"_njets")->Fill(njets,weight);
     getHist(istream+"_bmult")->Fill(nbjets,weight);
 
@@ -292,9 +317,18 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     getHist(istream+"_mT_individualsum")->Fill(mTlmet[0]+mTlmet[1],weight);
 
     //require met for same flavor channels
-    //if(metP.Pt()<20) return;
+    if(metP.Pt()<20) return;
     if( (istream=="ee" || istream=="mumu") && metP.Pt()<30) return;
+    
     getHist(istream+"_cutflow")->Fill(6,weight);
+    getHist(istream+"_bmultmE")->Fill(nbjets,weight);
+
+
+   for(int ijet=0; ijet < njets; ++ijet){
+    float btag=selJets[ijet]->bDiscriminator("trackCountingHighEffBJetTags");
+    getHist(istream+"_btagsmE")->Fill(btag,weight);   
+    } 
+
 
     //b-tagged sample
     int btagbin= nbjets;
