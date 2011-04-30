@@ -36,33 +36,41 @@ int main(int argc, char* argv[])
   event--;
 
   //open the file
-  KinResultsHandler kinHandler(url,false);
+  KinResultsHandler kinHandler;
+  kinHandler.init(url,false);
   TTree *t=kinHandler.getResultsTree();
   const Int_t nEntries = t->GetEntriesFast();
   if(event>=0 && event<nEntries)
     {
       t->GetEntry(event);
-      cout << "event retrieved" << endl;
 
       Int_t irun,ievent,ilumi;
       kinHandler.getEventInfo(irun,ievent,ilumi);
-      TString title("Run: "); title += irun; title += "\\"; 
+      TString title("CMS preliminary, #sqrt{s}=7 TeV\\Run: "); title += irun; title += "\\"; 
       title += "Event: ";     title += ievent; title += "\\"; 
       title += "Lumi: ";      title += ilumi; title += "\\"; 
-      cout << title << endl;
 
       setStyle();
       TCanvas *c=getNewCanvas("kinres","kinres",false);
-      TH1D *h =kinHandler.getHisto("mt",1);
-      cout << h << " " << dynamic_cast<TH1D *>(h) << endl;
-      h->Print("all");
-      h->Draw("hist");
-      h=kinHandler.getHisto("mt",2);
-      cout << h << endl;
-      h->Draw("histsame");
 
-      TLegend *leg = c->BuildLegend();
+      TH1F *h=kinHandler.getHisto("mt",1);
+      h->SetLineWidth(2);
+      h->SetMarkerStyle(20);
+      h->SetFillStyle(0);
+      h->DrawClone("hist");
+      cout << "Combination #1: " << h->Integral() << " has solutions" << endl;
+
+      h =kinHandler.getHisto("mt",2);
+      h->SetFillStyle(3472);
+      h->SetFillColor(1);
+      h->SetMarkerStyle(21);
+      h->DrawClone("histsame");
+      cout << "Combination #2: " << h->Integral() << " has solutions" << endl;
+
+      TLegend *leg=c->BuildLegend();
       formatForCmsPublic(c,leg,title,2);
+      c->Modified();
+      c->Update();
       c->SaveAs("kinres.C");
     }
 

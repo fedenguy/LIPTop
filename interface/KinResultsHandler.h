@@ -9,13 +9,14 @@
 #include "TTree.h"
 #include "TChain.h"
 #include "TF1.h"
-#include "TH1D.h"
+#include "TH1F.h"
 
 class KinResultsHandler
 {
  public:
   
-  KinResultsHandler(TString outpath,bool doWrite);
+  KinResultsHandler();
+  void init(TString outpath,bool doWrite,int maxJetMult=2);
   void addResults(EventSummary_t &ev);
   inline TTree *getResultsTree() { return kinTree_; }
   void end();
@@ -26,17 +27,13 @@ class KinResultsHandler
       event=iEvent_;
       lumi=iLumi_;
     }
-  void bookHistos(int maxJetMult=2);
   void resetHistos();
-  TH1D *getHisto(TString var, int nComb);
-  inline std::map<std::pair<TString, int>,TH1D *> &getControlHistos() { return kinHistos_; }
+  TH1F *getHisto(TString var, int nComb);
+  inline std::map<std::pair<TString, int>,TH1F *> &getControlHistos() { return kinHistos_; }
   ~KinResultsHandler();
   
  private:
   
-  void bookTree();
-  void appendTree();
-
   //
   bool doWrite_;
 
@@ -46,7 +43,7 @@ class KinResultsHandler
   TF1 *fitFunc_;
   Int_t iRun_, iEvent_, iLumi_;
   
-  std::map<std::pair<TString, int>,TH1D *> kinHistos_;
+  std::map<std::pair<TString, int>,TH1F *> kinHistos_;
 };
 
 

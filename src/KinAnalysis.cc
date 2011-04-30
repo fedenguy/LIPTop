@@ -8,9 +8,11 @@ KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, 
     maxTries_(maxTries),
     maxJetMult_(maxJetMult),
     mw_(mw),
-    mb_(mb),
-    resHandler_(outpath,doWrite)
+    mb_(mb)
 {
+  //init the handler
+  resHandler_.init(outpath,doWrite,maxJetMult);
+
   //seed
   TTimeStamp timeStamp;
   UInt_t theSeed = timeStamp.GetNanoSec() % timeStamp.GetSec() + timeStamp.GetDate();
@@ -28,9 +30,6 @@ KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, 
   if( scheme_.Contains("pdpz") )   { deltaPzFunc_->FixParameter(2,323*2);   deltaPzFunc_->FixParameter(5,690*2); }
   if( scheme_.Contains("pmw") )    mw_ += 0.025;
   if( scheme_.Contains("mmw") )    mw_ -= 0.025;
-
-  //configure handler
-  resHandler_.bookHistos(maxJetMult_);
 }
 
 //
