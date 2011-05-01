@@ -78,7 +78,8 @@ int main(int argc, char* argv[])
     }
   
   //run the kin analysis
-  KinAnalysis kin(scheme,maxTries,maxJetMult,mw,mb,output,true);
+  TString localFile("/tmp/kinanalysis.root");
+  KinAnalysis kin(scheme,maxTries,maxJetMult,mw,mb,localFile,true);
   for( int iev=evStart; iev<evEnd; iev++)
     {
       evSummaryHandler.getEntry(iev);
@@ -86,4 +87,22 @@ int main(int argc, char* argv[])
       kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,&jecUnc);
     }
   kin.endAnalysis();
+
+  //move result to the output
+  TString inputDir = gSystem->DirName( url );
+  url.ReplaceAll(inputDir,"");
+  url.ReplaceAll(".root","");
+  url.ReplaceAll("/","");
+  TString mkcmd( output.Contains("/castor") ? "rfmkdir -p" : "mkdir -p");
+  gSystem->Exec(mkcmd + " " + output);
+  output += "/" +  url;
+  gSystem->Exec(mkcmd + " " + output);
+  TString cpcmd( output.Contains("/castor") ? "rfcp" : "cp -v");
+  TString outUrl(output+"/KinAnalysis_");  
+  outUrl += evStart;
+  outUrl += ".root";
+  cpcmd += " " + localFile + " " + outUrl;
+  gSystem->Exec(cpcmd);
+  gSystem->Exec("rm " + localFile);
+  std::cout  << "Result can be found @ :" << outUrl << std::endl;
 }  

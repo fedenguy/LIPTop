@@ -95,10 +95,8 @@ void KinResultsHandler::end()
       kinFile_->Write();
       //kinTree_->Write();
     }
-  cout << 3 << endl;
   kinFile_->Close();
   //kinFile_->Delete();
-  cout << 2 << endl;
 }
 
 //    
