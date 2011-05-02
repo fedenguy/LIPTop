@@ -24,11 +24,8 @@ typedef std::vector<KinCandidate_t> KinCandidateCollection_t;
 class KinAnalysis
 {
  public:
-<<<<<<< KinAnalysis.h
+
   KinAnalysis(TString &scheme, int maxTries=10000, int maxJetMult=2, float mw=80.398, float mb=4.8, TString outpath="/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/KinAnalysis_0.root", bool doWrite=true);
-=======
-  KinAnalysis(TString &scheme, int maxTries=10000, int maxJetMult=2, float mw=80.398, float mb=4.8, TString outpath="KinAnalysis_0.root", bool doWrite=true);
->>>>>>> 1.3
   static bool sortKinCandidates(KinCandidate_t a, KinCandidate_t b)   {   return (a.second>b.second);  }
   void runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc);
   void endAnalysis() { resHandler_.end(); }
