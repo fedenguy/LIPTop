@@ -146,13 +146,11 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
 		    float afb = sol->pt1.Eta()-sol->pt2.Eta();
 
 		    //fill histos
-		    cout << itry << " ";
 		    resHandler_.getHisto("mt", nComb)->Fill( avgMtop );
 		    resHandler_.getHisto("mttbar",nComb)->Fill(mttbar);
 		    resHandler_.getHisto("mt2",nComb)->Fill(mt2[0]);
 		    resHandler_.getHisto("afb",nComb)->Fill(afb);
 		  }
-		cout << endl;
 // 	      }
  	  }
       }
