@@ -199,8 +199,7 @@
 		{
 		  "dtag":"QCD_Pt-800to1000_Spring11",	
 		  "dset":"/QCD_Pt_800to1000_TuneZ2_7TeV_pythia6/Spring11-PU_S1_START311_V1G1-v1/AODSIM",
-		  "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/QCD_Pt-800to1000
-QCD_Pt-800to1000_Spring11",
+		  "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/QCD_Pt-800to1000/QCD_Pt-800to1000_Spring11",
                   "xsec":1.844,
 		  "br":1
                 }
@@ -216,7 +215,8 @@ QCD_Pt-800to1000_Spring11",
                 {
 		  "dtag":"DoubleMuon-v3",
 		  "dset":"/DoubleMu/Run2011A-PromptReco-v1/AOD",
-		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v3"
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v3",
+		  "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data"
                 },
                 {
 		  "dtag":"DoubleMuon-v5",
