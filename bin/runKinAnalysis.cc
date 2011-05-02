@@ -78,9 +78,11 @@ int main(int argc, char* argv[])
     }
   
   //run the kin analysis
-    //TString localFile("/tmp/KinAnalysis.root");
-    TString localFile("/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/KinAnalysis_0.root");
-    KinAnalysis kin(scheme,maxTries,maxJetMult,mw,mb,localFile,true);
+  //TString localFile("/tmp/KinAnalysis.root");  
+  TString localFile(argv[1]);
+  localFile.ReplaceAll("_cfg.py",".root"); 
+  //TString localFile("/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/KinAnalysis_0.root");
+  KinAnalysis kin(scheme,maxTries,maxJetMult,mw,mb,localFile,true);
   for( int iev=evStart; iev<evEnd; iev++)
     {
       evSummaryHandler.getEntry(iev);

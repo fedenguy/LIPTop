@@ -25,7 +25,8 @@ class KinAnalysis
 {
  public:
 
-  KinAnalysis(TString &scheme, int maxTries=10000, int maxJetMult=2, float mw=80.398, float mb=4.8, TString outpath="/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/KinAnalysis_0.root", bool doWrite=true);
+
+  KinAnalysis(TString &scheme, int maxTries=10000, int maxJetMult=2, float mw=80.398, float mb=4.8, TString outpath="KinAnalysis.root", bool doWrite=true);
   static bool sortKinCandidates(KinCandidate_t a, KinCandidate_t b)   {   return (a.second>b.second);  }
   void runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc);
   void endAnalysis() { resHandler_.end(); }
