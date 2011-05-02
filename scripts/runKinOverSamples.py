@@ -31,11 +31,12 @@ for proc in procList :
         data = desc['data']
         for d in data :
             dtag = d['dtag']
-            try:
-            	dir = d['summarydir']
-            except:
-		continue
-	    fileName=dir + '/' + dtag + '.root'
+            try :
+                dir = d['summarydir']
+            except :
+                continue
+            fileName=dir + '/' + dtag + '.root'
+
             print "*****"
 
             #check number of jobs

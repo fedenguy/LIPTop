@@ -49,8 +49,8 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
       kinTree_ = new TTree( "kin","Kinematics analysis of top dilepton events" );
       kinTree_->SetAutoSave();
       kinTree_->Branch("run",  &iRun_, "run/I");
-      kinTree_->Branch("lumi", &iEvent_, "lumi/I");
-      kinTree_->Branch("event", &iLumi_, "event/I");
+      kinTree_->Branch("lumi", &iLumi_, "lumi/I");
+      kinTree_->Branch("event", &iEvent_, "event/I");
       for(int icomb=1; icomb<=ncombs; icomb++)
 	{
 	  TString cat(""); cat += icomb;

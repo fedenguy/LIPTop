@@ -105,7 +105,7 @@
                "dtag":"DYToEE_M-20_Spring11",
 	       "dset":"/DYToEE_M-20_CT10_TuneZ2_7TeV-powheg-pythia/Spring11-PU_S1_START311_V1G1-v1/AODSIM",
 	       "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/DYToEE_M-20/DYToEE_M-20_Spring11",
-
+	       "summarydir":"/afs/cern.ch/user/p/psilva/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data",
                "dir":"/castor/cern.ch/user/p/psilva/Dileptons-v2/DYToEE_M-20_Spring11",
                "xsec":1670
 
@@ -115,6 +115,7 @@
 	       "dset":"/DYToMuMu_M-20_CT10_TuneZ2_7TeV-powheg-pythia/Spring11-PU_S1_START311_V1G1-v1/AODSIM",
 	       "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/DYToMuMu_M-20/DYToMuMu_M-20_Spring11",
                "dir":"/castor/cern.ch/user/p/psilva/Dileptons-v2/DYToMuMu_M-20_Spring11",
+	       "summarydir":"/afs/cern.ch/user/p/psilva/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data",
                "xsec":1670
 
               }
@@ -130,6 +131,7 @@
 	       "dset":"/DYToTauTau_M-20_CT10_TuneZ2_7TeV-powheg-pythia-tauola/Spring11-PU_S1_START311_V1G1-v1/AODSIM",
 	       "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/DYToTauTau_M-20/DYToTauTau_M-20_Spring11",
                "dir":"/castor/cern.ch/user/p/psilva/Dileptons-v2/DYToTauTau_M-20_Spring11",
+	       "summarydir":"/afs/cern.ch/user/p/psilva/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data",
                "xsec":1670
 
               }
@@ -199,7 +201,7 @@
 		{
 		  "dtag":"QCD_Pt-800to1000_Spring11",	
 		  "dset":"/QCD_Pt_800to1000_TuneZ2_7TeV_pythia6/Spring11-PU_S1_START311_V1G1-v1/AODSIM",
-		  "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/QCD_Pt-800to1000/QCD_Pt-800to1000_Spring11",
+	          "patdir":"/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/QCD_Pt-800to1000/QCD_Pt-800to1000_Spring11",
                   "xsec":1.844,
 		  "br":1
                 }
