@@ -12,7 +12,8 @@
 
 #include "TSystem.h"
 #include "TFile.h"
-#include "TTree.h"
+#include "TChain.h"
+#include "TChainElement.h"
 #include "TCanvas.h"
 
 using namespace std;
@@ -32,49 +33,49 @@ int main(int argc, char* argv[])
   TH1F *graph=(TH1F*)formatPlot( new TH1F ("top_mass", "; m_{Top} [GeV/c^{2}]; Events", 100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
   TString url = argv[1];
   
-
-  //open the file
+  //process the file
   KinResultsHandler kinHandler;
   kinHandler.init(url,false);
-  TTree *t=kinHandler.getResultsTree();
-  const Int_t nEntries = t->GetEntriesFast();
-  
+  TChain *t=kinHandler.getResultsChain();
+  const Int_t nEntries = t->GetEntries();
+  cout << nEntries << endl;
+  for (int inum=0; inum < nEntries; ++inum){
+    t->GetEvent(inum);
 
-    for (int inum=0; inum < nEntries; ++inum){
-      t->GetEntry(inum);
-
-      TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-      TH1F *hprev=h1->Integral()> h2->Integral()? h1:h2;
-
-      vector<double> res=kinHandler.getMPVEstimate(hprev);
-      double mtop=res[1];
-      graph->Fill(mtop);
-    }
- 
-    
-     
-    
+    TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
+    TH1F *hprev=h1->Integral()> h2->Integral()? h1:h2;
+    vector<double> res=kinHandler.getMPVEstimate(hprev);
+    double mtop=res[1];
       
-      TString title("CMS preliminary, #sqrt{s}=7 TeV "); 
+    Int_t irun,ievent,ilumi;
+    kinHandler.getEventInfo(irun,ievent,ilumi);
       
+    if(inum%100==0)
+      {
+	cout << inum << " "
+	     << irun << " " << ievent << " " << ilumi << endl;
+	//	       << h1->Integral() << " " << h2->Integral() << endl
+	//	       << mtop << " " << endl;
+      }
 
-      setStyle();
-      TCanvas *c=getNewCanvas("kinresprev","kinresprev",false);
-
- 
-      graph->SetLineWidth(2);
-      graph->SetMarkerStyle(20);
-      graph->SetFillStyle(0);
-      graph->Draw("E1P");
-      
-
-    
-      TLegend *leg=c->BuildLegend();
-      formatForCmsPublic(c,leg,title,2);
-      c->Modified();
-      c->Update();
-      c->SaveAs("kinresprev.C");
-    
+    graph->Fill(mtop);
+  }
 
   kinHandler.end();
+
+  
+  TString title("CMS preliminary, #sqrt{s}=7 TeV "); 
+  setStyle();
+
+  TCanvas *c=getNewCanvas("kinresprev","kinresprev",false);
+  graph->SetLineWidth(2);
+  graph->SetMarkerStyle(20);
+  graph->SetFillStyle(0);
+  graph->Draw("E1P");
+    
+  TLegend *leg=c->BuildLegend();
+  formatForCmsPublic(c,leg,title,2);
+  c->Modified();
+  c->Update();
+  c->SaveAs("kinresprev.C");
 }  

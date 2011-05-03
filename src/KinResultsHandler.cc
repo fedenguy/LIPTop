@@ -1,11 +1,12 @@
 #include "LIP/Top/interface/KinResultsHandler.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
+#include "TSystem.h"
 
 using namespace std;
 
 //
 KinResultsHandler::KinResultsHandler()
-  : kinFile_(0),  kinTree_(0)
+  : kinFile_(0),  kinTree_(0), kinChain_(0)
 {
 }
 
@@ -20,31 +21,50 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
   int ncombs=maxJetMult*(maxJetMult-1);
 
   //open file
-  kinFile_ = TFile::Open(outpath, doWrite ? "RECREATE" : "");
-
   if(!doWrite_) 
     {
-      kinTree_ = (TTree *) kinFile_->Get("kin"); 
-      TObjArray *branches = kinTree_->GetListOfBranches();
+      //kinFile_ = TFile::Open(outpath);
+      //kinTree_ = (TTree *) kinFile_->Get("kin");
+
+      kinChain_ = new TChain("kin");
+      if(!outpath.Contains(".root"))
+	{
+	  std::map<int,TString> files;
+	  void *dirp=gSystem->OpenDirectory(outpath);
+	  while(dirp){
+	    TString entry(gSystem->GetDirEntry(dirp));
+	    if(entry=="") break;
+	    if(!entry.Contains(".root")) continue;
+	    int ifile;
+	    sscanf(entry.Data(),"KinAnalysis_%d.root",&ifile);
+	    files[ifile]=outpath+"/"+entry;
+	  }
+	  for(std::map<int,TString>::iterator it = files.begin(); it != files.end(); it++) kinChain_->AddFile(it->second);
+	}
+      else  kinChain_->AddFile(outpath);
+            
+      TObjArray *branches = kinChain_->GetListOfBranches();
       for(int ibranch=0; ibranch<branches->GetEntriesFast(); ibranch++)
 	{
 	  TBranch *br = (TBranch *) branches->At(ibranch);
 	  TString name(br->GetName());
-	  if( name=="run" )   br->SetAddress(&iRun_);
-	  else if( name=="event" ) br->SetAddress(&iEvent_);
-	  else if( name=="lumi" )  br->SetAddress(&iLumi_);
+	  
+	  if( name=="run" )        kinChain_->SetBranchAddress(name,&iRun_);
+	  else if( name=="event" ) kinChain_->SetBranchAddress(name,&iEvent_);
+	  else if( name=="lumi" )  kinChain_->SetBranchAddress(name,&iLumi_);
 	  else
 	    {
 	      TObjArray *tkns=name.Tokenize("_");
 	      KinHistoKey key( ((TObjString *)tkns->At(0))->GetString(),
 			       ((TObjString *)tkns->At(1))->GetString().Atoi() );
 	      kinHistos_[ key ] = 0;
-	      br->SetAddress( &kinHistos_[key] );
+	      kinChain_->SetBranchAddress(name, &kinHistos_[key] );
 	    }
 	}     
     } 
   else
     {
+      kinFile_ = TFile::Open(outpath, doWrite ? "RECREATE" : "");
       kinFile_->SetCompressionLevel( 9 );
       kinTree_ = new TTree( "kin","Kinematics analysis of top dilepton events" );
       kinTree_->SetAutoSave();
@@ -86,17 +106,13 @@ void KinResultsHandler::end()
 {
   if(kinTree_==0 || kinFile_==0) return;
 
-  //close file and delete allocated memory
   if(doWrite_)
     {
       kinFile_->cd();
-      //kinTree_->SetDirectory(kinFile_);
       kinTree_->Print();
       kinFile_->Write();
-      //kinTree_->Write();
     }
   kinFile_->Close();
-  //kinFile_->Delete();
 }
 
 //    

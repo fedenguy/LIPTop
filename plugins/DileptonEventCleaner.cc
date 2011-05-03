@@ -72,8 +72,7 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
     summaryHandler_.initTree( fs->make<TTree>("data","Event Summary") );
 
     objConfig_["Vertices"] = cfg.getParameter<edm::ParameterSet>("Vertices");
-   
-    
+       
     TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
     TString selSteps[]={"Reco","2 leptons","Z-veto","=0 jets","=1 jet","#geq 2 jets","MET>30,0","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
