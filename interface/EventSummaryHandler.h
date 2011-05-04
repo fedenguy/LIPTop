@@ -46,11 +46,13 @@ class EventSummaryHandler{
   bool attachToTree(TTree *t);
   void getEntry(int ientry) { if(t_) t_->GetEntry(ientry); }
   int getEntries() { return (t_ ? t_->GetEntriesFast() : 0); }
+  TTree *getTree(){return t_;}
 
  private:
 
   //the tree
   TTree *t_;
+ 
 };
 
 #endif
