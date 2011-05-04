@@ -272,6 +272,13 @@
 	    	  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/MuEG/MuEG-v6",
                   "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data" 
 
+                },
+		{
+		  "dtag":"MuEG-v7",
+		  "dset":"/MuEG/Run2011A-PromptReco-v2/AOD",
+	    	  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/MuEG/MuEG-v7",
+                  "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data" 
+
                 }
 
              ]
