@@ -232,7 +232,12 @@
 		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v6",
                   "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data" 
                 },
-		
+		{
+		  "dtag":"DoubleMuon-v7",
+		  "dset":"/DoubleMu/Run2011A-PromptReco-v2/AOD",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleMuon/DoubleMuon-v7",
+                  "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data" 
+                },
 		
 		{
 		  "dtag":"DoubleElectron-v3",
@@ -253,8 +258,13 @@
 		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v6",
                   "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data" 
                 },
-		
-                {
+		{
+		  "dtag":"DoubleElectron-v7",
+		  "dset":"/DoubleElectron/Run2011A-PromptReco-v2/AOD",
+		  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/DoubleElectron/DoubleElectron-v7",
+                  "summarydir":"/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data" 
+                },		
+	        {
 		  "dtag":"MuEG-v3",
 		  "dset":"/MuEG/Run2011A-PromptReco-v1/AOD",
 	    	  "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/MuEG/MuEG-v3",

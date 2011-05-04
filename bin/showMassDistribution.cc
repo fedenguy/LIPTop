@@ -37,30 +37,12 @@ int main(int argc, char* argv[])
   KinResultsHandler kinHandler;
   kinHandler.init(url,false);
 
-/*
 
-  TTree *t=kinHandler.getResultsTree();
-  const Int_t nEntries = t->GetEntriesFast();
+
   
-
-    for (int inum=0; inum < nEntries; ++inum){
-      t->GetEntry(inum);
-      
-      Int_t irun,ievent,ilumi;
-      kinHandler.getEventInfo(irun,ievent,ilumi);
-
-      TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-      TH1F *hprev=h1->Integral()> h2->Integral()? h1:h2;
-
-      vector<double> res=kinHandler.getMPVEstimate(hprev);
-      double mtop=res[1];
-      graph->Fill(mtop);
-      if (mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << flush;
-      
-    }
-    cout << endl;
+   
     
-*/
+
   TChain *t=kinHandler.getResultsChain();
   const Int_t nEntries = t->GetEntries();
   cout << nEntries << endl;
@@ -85,6 +67,11 @@ int main(int argc, char* argv[])
       }
 
     graph->Fill(mtop);
+
+   //   if (mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << flush;
+      
+    
+   // cout << endl;
   }
 
   kinHandler.end();
@@ -103,5 +90,5 @@ int main(int argc, char* argv[])
   formatForCmsPublic(c,leg,title,2);
   c->Modified();
   c->Update();
-  c->SaveAs("kinresprev.C");
+  c->SaveAs("kinresprev.root");
 }  
