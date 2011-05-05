@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
     Int_t irun,ievent,ilumi;
     kinHandler.getEventInfo(irun,ievent,ilumi);
     //fix me after reprocessing KIN trees event <-> lumi
-    TString key("");  key+= irun; key+="-"; key += ievent; key+="-"; key += ilumi;
+    TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
     if(selEvents.find(key)==selEvents.end()) continue;
     nresults++;
     evTree->GetEntry( selEvents[key] );
@@ -129,12 +129,12 @@ int main(int argc, char* argv[])
   cout << endl;
 
   //rescale to number of selected events
-  double scaleFactor=selEvents.size()/nresults;
-  if(fixEntries)
-  {
-    hmtop->Scale(scaleFactor);
-    hmtopvsdilmass->Scale(scaleFactor);
-  }
+  if(nresults && fixEntries)
+    {
+      double scaleFactor=selEvents.size()/nresults;
+      hmtop->Scale(scaleFactor);
+      hmtopvsdilmass->Scale(scaleFactor);
+    }
 
   //save to file
   TString outUrl( argv[3] );
