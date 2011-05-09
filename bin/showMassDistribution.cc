@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
   //check arguments
   if ( argc < 5 ) {
-    std::cout << "Usage : " << argv[0] << " kinDir eventsFile outputDir fixEntries" << std::endl;
+    std::cout << "Usage : " << argv[0] << " kinDir eventsFile outputDir isMC" << std::endl;
     return 0;
   }
 
@@ -68,8 +68,8 @@ int main(int argc, char* argv[])
 
 
   //fix entries flag
-  TString fixEntriesBuf(argv[4]);
-  bool fixEntries=fixEntriesBuf.Atoi();
+  TString isMCBuf(argv[4]);
+  bool isMC=isMCBuf.Atoi();
 
   //process kin file
   TString url = argv[1];
@@ -178,28 +178,40 @@ int main(int argc, char* argv[])
 	results[*cIt+"_leadlepton"]->Fill(max(ptlep1,ptlep2),weight);
 	results[*cIt+"_subleadlepton"]->Fill(min(ptlep1,ptlep2),weight);
 	results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
-	results[*cIt+"_mtop"]->Fill(mtop,weight);
-	((TH2F *)results[*cIt+"_mtopvsdilmass"])->Fill(mtop,dilmass,weight);
-	((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj1.M(),weight);
-	((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj2.M(),weight);
-	((TH2F *)results[*cIt+"_mtopvsmet"])->Fill(mtop,mets[0].first.Pt(),weight);
-	((TH2F *)results[*cIt+"_mtopvsmttbar"])->Fill(mtop,mttbar,weight);
-	((TH2F *)results[*cIt+"_mtopvsafb"])->Fill(mtop,afb,weight);
-	((TH2F *)results[*cIt+"_mttbarvsafb"])->Fill(mttbar,afb,weight);
-	results[*cIt+"_afb"]->Fill(afb);
-	results[*cIt+"_mttbar"]->Fill(mttbar);
+	if(mtop>0)
+	  {
+	    results[*cIt+"_mtop"]->Fill(mtop,weight);
+	    ((TH2F *)results[*cIt+"_mtopvsdilmass"])->Fill(mtop,dilmass,weight);
+	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj1.M(),weight);
+	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj2.M(),weight);
+	    ((TH2F *)results[*cIt+"_mtopvsmet"])->Fill(mtop,mets[0].first.Pt(),weight);
+	    ((TH2F *)results[*cIt+"_mtopvsmttbar"])->Fill(mtop,mttbar,weight);
+	    ((TH2F *)results[*cIt+"_mtopvsafb"])->Fill(mtop,afb,weight);
+	    ((TH2F *)results[*cIt+"_mttbarvsafb"])->Fill(mttbar,afb,weight);
+	    results[*cIt+"_afb"]->Fill(afb);
+	    results[*cIt+"_mttbar"]->Fill(mttbar);
+	  }
       }
 
     
-    if (mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << flush;
+    if (!isMC && mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << flush;
   }
   kinHandler.end();
   cout << endl;
 
-  //rescale to number of selected events
-  if(nresults && fixEntries)
+  //if MC: rescale to number of selected events and to units of pb
+  if(isMC && nresults)
     {
       double scaleFactor=selEvents.size()/nresults;
+      TString tag=gSystem->BaseName(evurl);
+      tag.ReplaceAll(".root","");
+      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/"+tag+"/cutflow");
+      if(cutflowH)
+	{
+	  float cnorm=cutflowH->GetBinContent(1);
+	  if(cnorm>0) scaleFactor/=cnorm;
+	}
+      cout << scaleFactor << endl;
       for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
 
@@ -209,10 +221,11 @@ int main(int argc, char* argv[])
   outUrl += "/";
   outUrl += gSystem->BaseName(evurl);
   TFile *file=TFile::Open(outUrl, "recreate");
+  TDirectory *baseOutDir=file->mkdir("massAnalyzer");
   for( size_t icat=0; icat<ncats; icat++)
     {
-      file->cd();
-      if(icat) file->mkdir( cats[icat] )->cd();
+      baseOutDir->cd();
+      if(icat) baseOutDir->mkdir( cats[icat] )->cd();
       for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) 
 	{
 	  if(!hIt->first.BeginsWith(cats[icat])) continue;

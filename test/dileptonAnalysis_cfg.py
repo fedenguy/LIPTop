@@ -16,7 +16,7 @@ process.load('LIP.Top.DileptonEventAnalysis_cfi')
 process.evAnalyzer.dtag=cms.string(dtag)
 process.TFileService = cms.Service("TFileService", fileName = cms.string(outputFile) )
 
-process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.puWeights*process.evAnalyzer)
+process.p = cms.Path(process.puWeights*process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
 
 # message logger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
