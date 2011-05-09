@@ -19,7 +19,7 @@ lumi=1
 if(len(sys.argv)>3) :
     lumi=int(sys.argv[3])
     if(len(sys.argv)>4) :
-        scheme=sys.argv[3]
+        scheme=sys.argv[4]
 
 #run over sample
 for proc in procList :

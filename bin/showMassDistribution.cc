@@ -73,13 +73,16 @@ int main(int argc, char* argv[])
   bool isMC=isMCBuf.Atoi();
 
   //process kin file
+
   TString url = argv[1];
+  gSystem->ExpandPathName(url);
   KinResultsHandler kinHandler;
   kinHandler.init(url,false);
   TChain *t=kinHandler.getResultsChain();
 
   //process events file
   TString evurl = argv[2];
+  gSystem->ExpandPathName(evurl);
   TFile *evfile = TFile::Open(evurl);
   if(evfile==0) return -1;
   if(evfile->IsZombie()) return -1;
