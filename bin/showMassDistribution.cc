@@ -5,6 +5,7 @@
 #include "LIP/Top/interface/KinResultsHandler.h"
 #include "LIP/Top/interface/KinAnalysis.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
@@ -15,6 +16,8 @@
 #include "TChain.h"
 #include "TChainElement.h"
 #include "TCanvas.h"
+#include "TString.h"
+#include "TDirectory.h"
 
 using namespace std;
 
@@ -31,8 +34,38 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  TH1F *hmtop=(TH1F*)formatPlot( new TH1F ("hmtop", "; m_{Top} [GeV/c^{2}]; Events", 100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
-  TH2F *hmtopvsdilmass=(TH2F*)formatPlot( new TH2F ("mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+  std::map<TString, TH1 *> results;
+  TString cats[]={"all","ee","mumu","emu"};
+  size_t ncats=sizeof(cats)/sizeof(TString);
+  for( size_t icat=0; icat<ncats; icat++)
+    {
+      results[cats[icat]+"_njets"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_njets", ";Jets;Events", 6, 0.,6.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_btags"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_btags", ";b-tag multiplicity;Events", 6, 0.,6.), 1,1,1,20,0,true,true,1,1,1);
+      for(int ibin=1; ibin<=results[cats[icat]+"_njets"]->GetXaxis()->GetNbins(); ibin++)
+	{
+	  TString label(""); label += ibin-1; 
+	  if(ibin==results[cats[icat]+"_njets"]->GetXaxis()->GetNbins()) label ="#geq" + label;
+	  results[cats[icat]+"_njets"]->GetXaxis()->SetBinLabel(ibin,label + " jets");
+	  results[cats[icat]+"_btags"]->GetXaxis()->SetBinLabel(ibin,label + " btags");
+	}
+
+      results[cats[icat]+"_leadjet"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadjet", "; Leading jet p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_subleadjet"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_leadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_subleadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_met"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_met", "; #slash{E}_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (5 GeV/c^{2})", 100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_afb"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_afb", "; #Delta #eta(t,#bar{t}); Events / (0.1)", 100, -5.,5.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mttbar"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (20 GeV/c^{2})", 100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtopvsdilmass"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtopvsmlj"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsmlj", "; m_{Top} [GeV/c^{2}]; Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtopvsmet"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsmet", "; m_{Top} [GeV/c^{2}]; #slash{E}_{T} [GeV/c]; Events", 100, 0.,500.,50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+
+      results[cats[icat]+"_mtopvsmttbar"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsmttbar", "; m_{Top} [GeV/c^{2}]; Mass(t,#bar{t}) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtopvsafb"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsafb", "; m_{Top} [GeV/c^{2}]; #Delta #eta(t,#bar{t}); Events", 100, 0.,500.,100, -5.,5.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mttbarvsafb"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mttbarvsafb", "; Mass(t,#bar{t}) [GeV/c^{2}];#Delta #eta(t,#bar{t}); Events", 100, 0.,2000.,100,-5.,5.), 1,1,1,20,0,true,true,1,1,1);
+    }
+
 
   //fix entries flag
   TString fixEntriesBuf(argv[4]);
@@ -57,13 +90,6 @@ int main(int argc, char* argv[])
     }  
   TTree *evTree=evSummaryHandler.getTree();
 
-
- /*
- // tree synchronization
-  evTree->BuildIndex ("run","event");
-  t->BuildIndex ("run","event");
-  evTree->AddFriend(t);
-*/
  
   //loop over events
   std::map<TString,int> selEvents;
@@ -83,46 +109,88 @@ int main(int argc, char* argv[])
     //get original event
     Int_t irun,ievent,ilumi;
     kinHandler.getEventInfo(irun,ievent,ilumi);
-    //fix me after reprocessing KIN trees event <-> lumi
+
     TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
     if(selEvents.find(key)==selEvents.end()) continue;
     nresults++;
     evTree->GetEntry( selEvents[key] );
-    EventSummary_t &ev = evSummaryHandler.getEvent();
 
-    //get particles from the event
-    std::vector<TLorentzVector> leptons, jets, mets;
+    //get event summary
+    EventSummary_t &ev = evSummaryHandler.getEvent();
+    std::vector<TString> categs;
+    categs.push_back("all");
+    if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
+    if(ev.cat==dilepton::EE)  categs.push_back("ee");
+    if(ev.cat==dilepton::EMU)  categs.push_back("emu");
+
+    int njets(0),nbtags(0);
+    KinCandidateCollection_t leptons, jets, mets;
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
 	switch( ev.id[ipart] )
 	  {
 	  case 0:
-	    mets.push_back(p4);
-	    break;
-	  case 1:
-	    jets.push_back(p4);
-	    break;
-	  default:
-	    leptons.push_back(p4);
-	    break;
+            mets.push_back( KinCandidate_t(p4,p4.Pt()) );
+            break;
+          case 1:
+            jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
+	    njets++;
+	    if(ev.info1[ipart]>1.74) nbtags++;
+            break;
+          default:
+            leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
+            break;
 	  }
       }
+    sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
+    sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
+    sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
 
+    //get the combination preferred by KIN
+    TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
+    Int_t icomb=(h1->Integral()< h2->Integral())+1;
+    TH1F *mpref=kinHandler.getHisto("mt",icomb);
+    double mtop = kinHandler.getMPVEstimate(mpref) [1];
+    TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
+    double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
+    TH1F *afbpref=kinHandler.getHisto("afb",icomb);
+    double afb = kinHandler.getMPVEstimate(afbpref)[1];
+    
     //compute dilepton invariant mass
-    TLorentzVector dil = leptons[0]+leptons[1];
+    TLorentzVector dil = leptons[0].first+leptons[1].first;
     float dilmass = dil.M();
 
+    //get the lepton-jet pairs
+    TLorentzVector lj1=leptons[0].first+jets[icomb==1?0:1].first;
+    TLorentzVector lj2=leptons[1].first+jets[icomb==1?1:0].first;
 
     //fill histos
-    TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-    TH1F *hprev=h1->Integral()> h2->Integral()? h1:h2;
-    vector<double> res=kinHandler.getMPVEstimate(hprev);
-    double mtop=res[1];
+    float weight = ev.weight;
+    for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
+      {
+	double ptjet1(jets[0].first.Pt()), ptjet2(jets[1].first.Pt());
+	double ptlep1(leptons[0].first.Pt()), ptlep2(leptons[1].first.Pt());
+	results[*cIt+"_njets"]->Fill(njets,weight);
+	results[*cIt+"_btags"]->Fill(nbtags,weight);
+	results[*cIt+"_leadjet"]->Fill(max(ptjet1,ptjet2),weight);
+	results[*cIt+"_subleadjet"]->Fill(min(ptjet1,ptjet2),weight);
+	results[*cIt+"_leadlepton"]->Fill(max(ptlep1,ptlep2),weight);
+	results[*cIt+"_subleadlepton"]->Fill(min(ptlep1,ptlep2),weight);
+	results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
+	results[*cIt+"_mtop"]->Fill(mtop,weight);
+	((TH2F *)results[*cIt+"_mtopvsdilmass"])->Fill(mtop,dilmass,weight);
+	((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj1.M(),weight);
+	((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj2.M(),weight);
+	((TH2F *)results[*cIt+"_mtopvsmet"])->Fill(mtop,mets[0].first.Pt(),weight);
+	((TH2F *)results[*cIt+"_mtopvsmttbar"])->Fill(mtop,mttbar,weight);
+	((TH2F *)results[*cIt+"_mtopvsafb"])->Fill(mtop,afb,weight);
+	((TH2F *)results[*cIt+"_mttbarvsafb"])->Fill(mttbar,afb,weight);
+	results[*cIt+"_afb"]->Fill(afb);
+	results[*cIt+"_mttbar"]->Fill(mttbar);
+      }
 
-    hmtop->Fill(mtop);
-    hmtopvsdilmass->Fill(mtop,dilmass);
-
+    
     if (mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << flush;
   }
   kinHandler.end();
@@ -132,8 +200,7 @@ int main(int argc, char* argv[])
   if(nresults && fixEntries)
     {
       double scaleFactor=selEvents.size()/nresults;
-      hmtop->Scale(scaleFactor);
-      hmtopvsdilmass->Scale(scaleFactor);
+      for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
 
   //save to file
@@ -142,7 +209,15 @@ int main(int argc, char* argv[])
   outUrl += "/";
   outUrl += gSystem->BaseName(evurl);
   TFile *file=TFile::Open(outUrl, "recreate");
-  hmtop->Write();
-  hmtopvsdilmass->Write();
+  for( size_t icat=0; icat<ncats; icat++)
+    {
+      file->cd();
+      if(icat) file->mkdir( cats[icat] )->cd();
+      for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) 
+	{
+	  if(!hIt->first.BeginsWith(cats[icat])) continue;
+	  hIt->second->Write();
+	}
+    }
   file->Close(); 
 }  
