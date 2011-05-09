@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 kinProcess = cms.PSet(
 #    input = cms.string("/afs/cern.ch/user/p/psilva/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/data/TTJets_madgraph_Spring11.root"),
-    input = cms.string("~aalves/public/DoubleMuon-v3.root"),
+    input = cms.string("~aalves/public/DoubleElectron-v7.root"),
 
 # data sample used
     output = cms.string("/castor/cern.ch/user/a/aalves/Dileptons/"),
@@ -12,7 +12,7 @@ kinProcess = cms.PSet(
 #rum over all events???
     dirName = cms.string("evAnalyzer/data"),
     kinScheme = cms.string("std"),
-    maxTries = cms.int32(10),
+    maxTries = cms.int32(10000),
 # by deflaut should be 10000, more of x the algorithm solve the equations
     maxJetMult = cms.int32(2),
     mw = cms.double(80.398),

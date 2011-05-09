@@ -67,6 +67,7 @@ int main(int argc, char* argv[])
     }
 
 
+
   //fix entries flag
   TString isMCBuf(argv[4]);
   bool isMC=isMCBuf.Atoi();
@@ -110,7 +111,9 @@ int main(int argc, char* argv[])
     Int_t irun,ievent,ilumi;
     kinHandler.getEventInfo(irun,ievent,ilumi);
 
+
     TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
+
     if(selEvents.find(key)==selEvents.end()) continue;
     nresults++;
     evTree->GetEntry( selEvents[key] );
@@ -123,15 +126,21 @@ int main(int argc, char* argv[])
     if(ev.cat==dilepton::EE)  categs.push_back("ee");
     if(ev.cat==dilepton::EMU)  categs.push_back("emu");
 
+
+    //get particles from the event
+    
+
     int njets(0),nbtags(0);
     KinCandidateCollection_t leptons, jets, mets;
+
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
+	if(isnan(p4.Pt()) || isinf(p4.Pt())) continue;
 	switch( ev.id[ipart] )
 	  {
 	  case 0:
-            mets.push_back( KinCandidate_t(p4,p4.Pt()) );
+	    mets.push_back( KinCandidate_t(p4,p4.Pt()) );
             break;
           case 1:
             jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
@@ -141,11 +150,15 @@ int main(int argc, char* argv[])
           default:
             leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
             break;
+
 	  }
       }
+
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
+
+
 
     //get the combination preferred by KIN
     TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
@@ -159,11 +172,13 @@ int main(int argc, char* argv[])
     
     //compute dilepton invariant mass
     TLorentzVector dil = leptons[0].first+leptons[1].first;
+
     float dilmass = dil.M();
 
     //get the lepton-jet pairs
     TLorentzVector lj1=leptons[0].first+jets[icomb==1?0:1].first;
     TLorentzVector lj2=leptons[1].first+jets[icomb==1?1:0].first;
+
 
     //fill histos
     float weight = ev.weight;
@@ -193,14 +208,18 @@ int main(int argc, char* argv[])
 	  }
       }
 
-    
-    if (!isMC && mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << flush;
+
+
+    if (!isMC && mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << "(" << leptons[0].second <<" "<< leptons[1].second << ")" << flush;
+   
   }
   kinHandler.end();
   cout << endl;
 
+
   //if MC: rescale to number of selected events and to units of pb
   if(isMC && nresults)
+
     {
       double scaleFactor=selEvents.size()/nresults;
       TString tag=gSystem->BaseName(evurl);
@@ -215,12 +234,14 @@ int main(int argc, char* argv[])
       for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
 
+
   //save to file
   TString outUrl( argv[3] );
   gSystem->Exec("mkdir -p " + outUrl);
   outUrl += "/";
   outUrl += gSystem->BaseName(evurl);
   TFile *file=TFile::Open(outUrl, "recreate");
+
   TDirectory *baseOutDir=file->mkdir("massAnalyzer");
   for( size_t icat=0; icat<ncats; icat++)
     {
@@ -232,5 +253,6 @@ int main(int argc, char* argv[])
 	  hIt->second->Write();
 	}
     }
+
   file->Close(); 
 }  

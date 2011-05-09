@@ -6,6 +6,7 @@ import ROOT
                 
 if(len(sys.argv)<3):
     print 'runKinOverSamples.py subToBatch samples.json eventsPerJob'
+
     exit(-1)
 
 #open the file which describes the sample
