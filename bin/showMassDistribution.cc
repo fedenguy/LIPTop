@@ -1,5 +1,6 @@
 #include <iostream>
 #include <boost/shared_ptr.hpp>
+#include <fstream>
 
 #include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
@@ -67,13 +68,13 @@ int main(int argc, char* argv[])
     }
 
 
-
   //fix entries flag
   TString isMCBuf(argv[4]);
   bool isMC=isMCBuf.Atoi();
+  ofstream *outf=0;
+  if(!isMC) outf=new ofstream("highmassevents.txt",ios::app);
 
   //process kin file
-
   TString url = argv[1];
   gSystem->ExpandPathName(url);
   KinResultsHandler kinHandler;
@@ -114,7 +115,6 @@ int main(int argc, char* argv[])
     Int_t irun,ievent,ilumi;
     kinHandler.getEventInfo(irun,ievent,ilumi);
 
-
     TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
 
     if(selEvents.find(key)==selEvents.end()) continue;
@@ -131,15 +131,14 @@ int main(int argc, char* argv[])
 
 
     //get particles from the event
-    
-
     int njets(0),nbtags(0);
     KinCandidateCollection_t leptons, jets, mets;
-
+    float htlep(0);
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
 	if(isnan(p4.Pt()) || isinf(p4.Pt())) continue;
+	htlep+= p4.Pt();
 	switch( ev.id[ipart] )
 	  {
 	  case 0:
@@ -156,12 +155,9 @@ int main(int argc, char* argv[])
 
 	  }
       }
-
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
-
-
 
     //get the combination preferred by KIN
     TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
@@ -173,28 +169,30 @@ int main(int argc, char* argv[])
     TH1F *afbpref=kinHandler.getHisto("afb",icomb);
     double afb = kinHandler.getMPVEstimate(afbpref)[1];
     
-    //compute dilepton invariant mass
+    //compute dilepton/dijet invariant mass
     TLorentzVector dil = leptons[0].first+leptons[1].first;
-
     float dilmass = dil.M();
-
+    double ptlep1(max(leptons[0].first.Pt(),leptons[1].first.Pt())), ptlep2(min(leptons[0].first.Pt(),leptons[1].first.Pt()));    
+    TLorentzVector dij = jets[0].first+jets[1].first;
+    float mjj=dij.M();
+    double ptjet1(max(jets[0].first.Pt(),jets[1].first.Pt())), ptjet2(min(jets[0].first.Pt(),jets[1].first.Pt()));
+    
     //get the lepton-jet pairs
     TLorentzVector lj1=leptons[0].first+jets[icomb==1?0:1].first;
     TLorentzVector lj2=leptons[1].first+jets[icomb==1?1:0].first;
 
-
+    
     //fill histos
     float weight = ev.weight;
+
     for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
       {
-	double ptjet1(jets[0].first.Pt()), ptjet2(jets[1].first.Pt());
-	double ptlep1(leptons[0].first.Pt()), ptlep2(leptons[1].first.Pt());
 	results[*cIt+"_njets"]->Fill(njets,weight);
 	results[*cIt+"_btags"]->Fill(nbtags,weight);
-	results[*cIt+"_leadjet"]->Fill(max(ptjet1,ptjet2),weight);
-	results[*cIt+"_subleadjet"]->Fill(min(ptjet1,ptjet2),weight);
-	results[*cIt+"_leadlepton"]->Fill(max(ptlep1,ptlep2),weight);
-	results[*cIt+"_subleadlepton"]->Fill(min(ptlep1,ptlep2),weight);
+	results[*cIt+"_leadjet"]->Fill(ptjet1,weight);
+	results[*cIt+"_subleadjet"]->Fill(ptjet2,weight);
+	results[*cIt+"_leadlepton"]->Fill(ptlep1,weight);
+	results[*cIt+"_subleadlepton"]->Fill(ptlep2,weight);
 	results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
 	if(mtop>0)
 	  {
@@ -211,13 +209,23 @@ int main(int argc, char* argv[])
 	  }
       }
 
-
-
-    if (!isMC && mtop>350) cout << irun << ":" << ilumi << ":" << ievent << " " << "(" << leptons[0].second <<" "<< leptons[1].second << ")" << flush;
-   
+    //for data only
+    if (!isMC && mtop>350) 
+      *outf << "| " << irun << ":" << ilumi << ":" << ievent 
+	    << " | " << categs[1] 
+	    << " | " << mtop 
+	    << " | " << mttbar 
+	    << " | " << ptlep1 << ";" << ptlep2  << " | " << dilmass
+	    << " | " << ptjet1 << ";" << ptjet2  << " | " << mjj
+	    << " | " << mets[0].first.Pt() << " | " << htlep << endl; 
   }
   kinHandler.end();
-  cout << endl;
+
+  if(!isMC) 
+    {
+      outf->close(); 
+      delete outf;
+    }
 
 
   //if MC: rescale to number of selected events and to units of pb

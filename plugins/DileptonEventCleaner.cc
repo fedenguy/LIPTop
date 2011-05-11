@@ -33,7 +33,10 @@
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/Common/interface/MergeableCounter.h"
-#include "CMGTools/HtoZZ2l2nu/interface/ReducedMETComputer.h"
+
+#include "Math/LorentzVector.h"
+
+typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > LorentzVector;
 
 class DileptonEventCleaner : public edm::EDAnalyzer 
 {
@@ -56,14 +59,12 @@ private:
   std::map<std::string, edm::ParameterSet> objConfig_;
   
   EventSummaryHandler summaryHandler_;
-  ReducedMETComputer rmet_;
 };
 
 using namespace std;
 
 /// default constructor
 DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
-  : rmet_(1.0,1.0,0.0,0.0,1.0)
 {
   try{
 
@@ -106,29 +107,13 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 	//jets
 	results_[cat+"_jetpt"]    = formatPlot( newDir.make<TH1F>(cat+"_jetpt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
 	//test pt distribution for 1 jets and 2 or +
-
 	results_[cat+"_jet1pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet1pt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
-
 	results_[cat+"_jet2pt"]    = formatPlot( newDir.make<TH1F>(cat+"_jet2pt",";p_{T} [GeV/c]; Jets",100,0,200),     1,1,1,20,0,false,true,1,1,1);
-
-
 	results_[cat+"_jeteta"]    = formatPlot( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
 	results_[cat+"_jetfassoc"]    = formatPlot( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1), 1,1,1,20,0,false,true,1,1,1);
 	results_[cat+"_njets"]    = formatPlot( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_chhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chhadenfrac",";f_{charged hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_neuthadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neuthadenfrac",";f_{neutral hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_chemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_chemenfrac",";f_{charged electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_neutemenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_neutemenfrac",";f_{neutral electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_phoenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_phoenfrac",";f_{_photons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_muenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_muenfrac",";f_{muons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_hfhadenfrac"]    = formatPlot( newDir.make<TH1F>(cat+"_hfhadenfrac",";f_{HF hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_hfemenfacr"]    = formatPlot( newDir.make<TH1F>(cat+"",";f_{HF electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
-
 	results_[cat+"_bmult"]    = formatPlot( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
-
 	results_[cat+"_bmultmE"]    = formatPlot( newDir.make<TH1F>(cat+"_bmultmE",";b tag multiplicity (TCHEL); Events",4,0,4), 1,1,1,20,0,false,true,1,1,1);
-
-
 	for(int ibin=1; ibin<=((TH1F *)results_[cat+"_njets"])->GetXaxis()->GetNbins(); ibin++)
 	  {
 	    TString ilabel(""); ilabel+=(ibin-1);
@@ -139,20 +124,45 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 	  }
 
 	results_[cat+"_btags"]  = formatPlot( newDir.make<TH1F>(cat+"_btags",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
-	// test b tag
-
 	results_[cat+"_btagsmE"]     = formatPlot( newDir.make<TH1F>(cat+"_btagsmE",";b tags (TCHE); Jets",100,-1,50), 1,1,1,20,0,false,true,1,1,1);
 
+	results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV]; Events", 30,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
 
-	results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 30,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
-    
-	results_[cat+"_met"]               = formatPlot( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV/c]; Events", 100,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_rmet"]               = formatPlot( newDir.make<TH1F>(cat+"_rmet", ";red-#slash{E}_{T} [GeV/c]; Events", 100,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
-	results_[cat+"_metsig"]            = formatPlot( newDir.make<TH1F>(cat+"_metsig", ";#slash{E}_{T} significance; Events", 100,  0.,100.), 1,1,1,20,0,false,true,1,1,1);
 	results_[cat+"_mT_individual"]     = formatPlot( newDir.make<TH1F>(cat+"_mT_individual",";Transverse mass(lepton,MET) [GeV/c^{2}]; Events",100,0,500), 1,1,1,20,0,false,true,1,1,1);
 	results_[cat+"_mT_corr"]           = formatPlot( newDir.make<TH2F>(cat+"_mT_corr",";Transverse mass(leading lepton,MET) [GeV/c^{2}];Transverse mass(trailer lepton,MET) [GeV/c^{2}]; Events",50,0,500,50,0,500), 1,1,1,20,0,false,true,1,1,1);
 	results_[cat+"_mT_individualsum"]  = formatPlot( newDir.make<TH1F>(cat+"_mT_individualsum",";#Sigma Transverse mass(lepton,MET) [GeV/c^{2}]; Events",100,0,500), 1,1,1,20,0,false,true,1,1,1);
+
+	//meant for validation of the simulation only
+	if(istream==0)
+	  {
+	    results_["jetpt"]    = formatPlot( baseDir.make<TH1F>("jetpt",";p_{T} [GeV/c]; Jets",100,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jeteta"]    = formatPlot( baseDir.make<TH1F>("jeteta",";#eta; Jets",100,-2.5,2.5), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetchhadenfrac"]    = formatPlot( baseDir.make<TH1F>("jetchhadenfrac",";f_{charged hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetneuthadenfrac"]    = formatPlot( baseDir.make<TH1F>("jetneuthadenfrac",";f_{neutral hadrons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetchemenfrac"]    = formatPlot( baseDir.make<TH1F>("jetchemenfrac",";f_{charged electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetneutemenfrac"]    = formatPlot( baseDir.make<TH1F>("jetneutemenfrac",";f_{neutral electromagnetic}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetphoenfrac"]    = formatPlot( baseDir.make<TH1F>("jetphoenfrac",";f_{photons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetmuenfrac"]    = formatPlot( baseDir.make<TH1F>("jetmuenfrac",";f_{muons}; Jets",50,0,1), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetchhaden"]    = formatPlot( baseDir.make<TH1F>("jetchhaden",";Charged hadron components in jets [GeV/c]; Jets",50,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetneuthaden"]    = formatPlot( baseDir.make<TH1F>("jetneuthaden",";Neutral hadrons component in jets [GeV/c]; Jets",50,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetchemen"]    = formatPlot( baseDir.make<TH1F>("jetchemen",";Charged electromagnetic component in jets [GeV/c]; Jets",50,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetneutemen"]    = formatPlot( baseDir.make<TH1F>("jetneutemen",";Neutral electromagnetic component in jets [GeV/c]; Jets",50,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetphoen"]    = formatPlot( baseDir.make<TH1F>("jetphoen",";Photon component in jets [GeV/c]; Jets",50,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["jetmuen"]    = formatPlot( baseDir.make<TH1F>("jetmuen",";Muon component in jets [GeV/c]; Jets",50,0,200), 1,1,1,20,0,false,true,1,1,1);
+	    results_["met"]               = formatPlot( baseDir.make<TH1F>("met", ";#slash{E}_{T} [GeV]; Events", 30,  0.,300.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["sumet"]             = formatPlot( baseDir.make<TH1F>("sumet", ";#sum E_{T} [GeV]; Events", 100,  0.,1000.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["photonet"]          = formatPlot( baseDir.make<TH1F>("photonet", ";#sum_{photons} E_{T} [GeV]; Events", 100,  0.,500.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["neutralet"]         = formatPlot( baseDir.make<TH1F>("neutralet", ";#sum_{neutral} E_{T} [GeV]; Events", 100,  0.,500.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["electronet"]        = formatPlot( baseDir.make<TH1F>("electronet", ";#sum_{electron} E_{T} [GeV]; Events", 100,  0.,500.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["chhadet"]        = formatPlot( baseDir.make<TH1F>("chhadet", ";#sum_{charged hadron} E_{T} [GeV]; Events", 100,  0.,500.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["muonet"]        = formatPlot( baseDir.make<TH1F>("muonet", ";#sum_{muons} E_{T} [GeV]; Events", 100,  0.,500.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["photonetfrac"]          = formatPlot( baseDir.make<TH1F>("photonetfrac", ";f_{photons} E_{T} [GeV]; Events", 100,  0.,1.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["neutraletfrac"]         = formatPlot( baseDir.make<TH1F>("neutraletfrac", ";f_{neutral} E_{T} [GeV]; Events", 100,  0.,1.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["electronetfrac"]        = formatPlot( baseDir.make<TH1F>("electronetfrac", ";f_{electron} E_{T} [GeV]; Events", 100,  0.,1.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["chhadetfrac"]        = formatPlot( baseDir.make<TH1F>("chhadetfrac", ";f_{charged hadron} E_{T} [GeV]; Events", 100,  0.,1.), 1,1,1,20,0,false,true,1,1,1);
+	    results_["muonetfrac"]        = formatPlot( baseDir.make<TH1F>("muonetfrac", ";f_{muons} E_{T} [GeV]; Events", 100,  0.,1.), 1,1,1,20,0,false,true,1,1,1);
+	  }
       }
   }catch(std::exception &e){
   }  
@@ -229,10 +239,8 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     //basic dilepton kinematics
     reco::CandidatePtr lepton1 = evhyp["leg1"];
     TLorentzVector lepton1P(lepton1->px(),lepton1->py(),lepton1->pz(), lepton1->energy());
-    double lepton1pterr=dilepton::getPtErrorFor(lepton1);
     reco::CandidatePtr lepton2 = evhyp["leg2"];
     TLorentzVector lepton2P(lepton2->px(),lepton2->py(),lepton2->pz(), lepton2->energy());
-    double lepton2pterr=dilepton::getPtErrorFor(lepton2);
     TLorentzVector dileptonP=lepton1P+lepton2P;
     getHist(istream+"_dilepton_sumpt")->Fill(lepton1P.Pt()+lepton2P.Pt(),weight);
     getHist(istream+"_dilepton_pt")->Fill(dileptonP.Pt(),weight);
@@ -249,33 +257,41 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     int njets(0), nbjets(0);
     std::vector<const pat::Jet *> selJets;
     std::vector<LorentzVector> jetmomenta;
-    for (pat::eventhypothesis::Looper<pat::Jet> jet = evhyp.loopAs<pat::Jet>("jet"); jet; ++jet) {
+    for (pat::eventhypothesis::Looper<pat::Jet> jet = evhyp.loopAs<pat::Jet>("jet"); jet; ++jet) 
+      {
+	
+	if(jet->pt()<30 || fabs(jet->eta())>2.5) continue;
+	
+	float fassoc=jet::fAssoc( jet.get(), &primVertex);
+	getHist(istream+"_jetfassoc")->Fill( jet::fAssoc( jet.get(), &primVertex), weight );
+	if(fassoc<0.1) continue;
+	
+	jetmomenta.push_back(jet->p4());
+	
+	float btag=jet->bDiscriminator("trackCountingHighEffBJetTags");
+	if(btag>1.74) nbjets+=1; //loose point
 
-      getHist(istream+"_jetpt")->Fill(jet->pt(),weight);
-      getHist(istream+"_jeteta")->Fill(jet->eta(),weight);
-      if(jet->pt()<30 || fabs(jet->eta())>2.5) continue;
+	getHist(istream+"_jetpt")->Fill(jet->pt(),weight);
+	getHist(istream+"_jeteta")->Fill(jet->eta(),weight);
+	getHist(istream+"_btags")->Fill(btag,weight);
 
-      float fassoc=jet::fAssoc( jet.get(), &primVertex);
-      getHist(istream+"_jetfassoc")->Fill( jet::fAssoc( jet.get(), &primVertex), weight );
-      if(fassoc<0.1) continue;
-
-      jetmomenta.push_back(jet->p4());
-
-      float btag=jet->bDiscriminator("trackCountingHighEffBJetTags");
-      if(btag>1.74) nbjets+=1; //loose point
-      getHist(istream+"_btags")->Fill(btag,weight);
-
-      getHist(istream+"_chhadenfrac")->Fill( jet->chargedHadronEnergyFraction(), weight );
-      getHist(istream+"_neuthadenfrac")->Fill( jet->neutralHadronEnergyFraction(), weight );
-      getHist(istream+"_chemenfrac")->Fill( jet->chargedEmEnergyFraction(),weight );
-      getHist(istream+"_neutemenfrac")->Fill( jet->neutralEmEnergyFraction(),weight );
-      getHist(istream+"_phoenfrac")->Fill( jet->photonEnergyFraction(),weight );
-      getHist(istream+"_muenfrac")->Fill( jet->muonEnergyFraction(),weight );
-      getHist(istream+"_hfhadenfrac")->Fill( jet->HFHadronEnergyFraction() ,weight);
-      getHist(istream+"_hfemenfacr")->Fill( jet->HFEMEnergyFraction(),weight );
-      
-      selJets.push_back( jet.get() );
-    }
+	//simulation validation
+	getHist("jetpt")->Fill(jet->pt(),weight);
+	getHist("jeteta")->Fill(jet->eta(),weight);
+	getHist("jetchhadenfrac")->Fill( jet->chargedHadronEnergyFraction(), weight );
+	getHist("jetneuthadenfrac")->Fill( jet->neutralHadronEnergyFraction(), weight );
+	getHist("jetchemenfrac")->Fill( jet->chargedEmEnergyFraction(),weight );
+	getHist("jetneutemenfrac")->Fill( jet->neutralEmEnergyFraction(),weight );
+	getHist("jetphoenfrac")->Fill( jet->photonEnergyFraction(),weight );
+	getHist("jetmuenfrac")->Fill( jet->muonEnergyFraction(),weight );
+	getHist("jetchhaden")->Fill( jet->chargedHadronEnergy(), weight );
+	getHist("jetneuthaden")->Fill( jet->neutralHadronEnergy(), weight );
+	getHist("jetchemen")->Fill( jet->chargedEmEnergy(),weight );
+	getHist("jetneutemen")->Fill( jet->neutralEmEnergy(),weight );
+	getHist("jetphoen")->Fill( jet->photonEnergy(),weight );
+	getHist("jetmuen")->Fill( jet->muonEnergy(),weight );
+	selJets.push_back( jet.get() );
+      }
     njets=selJets.size();
 
     for(int ijet=0; ijet < njets; ++ijet){
@@ -304,24 +320,46 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     //base met kinematics
     const pat::MET *themet=evhyp.getAs<pat::MET>("met");
     TLorentzVector metP(themet->px(),themet->py(),0,themet->pt());
-    float metsig(-1);
+    float metsig(-1),sumet(-1);
+    float photonet(-1),neutralet(-1),electronet(-1),chhadet(-1),muonet(-1),
+      photonetfrac(-1),neutraletfrac(-1),electronetfrac(-1),chhadetfrac(-1),muonetfrac(-1);
     if(hPfMET.isValid())
-      metsig = ((*hPfMET)[0]).significance();
+      {
+	const reco::PFMET &origPFmet = ((*hPfMET)[0]);
+	metsig = origPFmet.significance();
+	sumet = origPFmet.sumEt();
+	photonet =origPFmet.photonEt();
+	neutralet=origPFmet.neutralHadronEt();
+	electronet=origPFmet.electronEt();
+	chhadet=origPFmet.chargedHadronEt();
+	muonet=origPFmet.muonEt();
+	photonetfrac =origPFmet.photonEtFraction();
+	neutraletfrac=origPFmet.neutralHadronEtFraction();
+	electronetfrac=origPFmet.electronEtFraction();
+	chhadetfrac=origPFmet.chargedHadronEtFraction();
+	muonetfrac=origPFmet.muonEtFraction();
+      }
 
     float dphil2met[]={ fabs(metP.DeltaPhi(lepton1P)), fabs(metP.DeltaPhi(lepton2P)) };
     float mTlmet[]={ TMath::Sqrt(2*metP.Pt()*lepton1P.Pt()*(1-TMath::Cos(dphil2met[0]))) ,   TMath::Sqrt(2*metP.Pt()*lepton2P.Pt()*(1-TMath::Cos(dphil2met[1]))) };
 
-    //reduced met                                                                                                                                                                                             
-    rmet_.compute(lepton1->p4(),lepton1pterr,
-                  lepton2->p4(),lepton2pterr,
-                  jetmomenta,
-                  themet->p4()
-                  );
-    float reducedMET=rmet_.reducedMET();
-    
     getHist(istream+"_met")->Fill(metP.Pt(),weight);
-    getHist(istream+"_rmet")->Fill(reducedMET,weight);
     getHist(istream+"_metsig")->Fill(metsig,weight);
+
+    //simulation validation
+    getHist("met")->Fill(metP.Pt(),weight);
+    getHist("sumet")->Fill(sumet,weight);
+    getHist("photonet")->Fill(photonet,weight);
+    getHist("neutralet")->Fill(neutralet,weight);
+    getHist("electronet")->Fill(electronet,weight);
+    getHist("chhadet")->Fill(chhadet,weight);
+    getHist("muonet")->Fill(muonet,weight);
+    getHist("photonetfrac")->Fill(photonetfrac,weight);
+    getHist("neutraletfrac")->Fill(neutraletfrac,weight);
+    getHist("electronetfrac")->Fill(electronetfrac,weight);
+    getHist("chhadetfrac")->Fill(chhadetfrac,weight);
+    getHist("muonetfrac")->Fill(muonetfrac,weight);
+
     getHist(istream+"_mT_individual")->Fill(mTlmet[0],weight);
     getHist(istream+"_mT_individual")->Fill(mTlmet[1],weight);
     if(lepton1P.Pt()>lepton2P.Pt()) ((TH2 *)getHist(istream+"_mT_corr"))->Fill(mTlmet[0],mTlmet[1],weight);
