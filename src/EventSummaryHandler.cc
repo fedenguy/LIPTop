@@ -16,6 +16,9 @@ bool EventSummaryHandler::initTree(TTree *t)
   t_->Branch("lumi",       &evSummary_.lumi,   "lumi/I");
   t_->Branch("event",      &evSummary_.event,  "event/I");
   t_->Branch("cat",        &evSummary_.cat,   "cat/I");
+  t_->Branch("nvtx",       &evSummary_.nvtx,   "nvtx/I");
+  t_->Branch("ngenpu",     &evSummary_.ngenpu,   "ngenpu/I");
+  t_->Branch("rho",        &evSummary_.rho,    "rho/F");
   t_->Branch("weight",     &evSummary_.weight,   "weight/F");
   t_->Branch("nparticles", &evSummary_.nparticles, "nparticles/I");
   t_->Branch("px",         evSummary_.px,          "px[nparticles]/F");
@@ -43,6 +46,9 @@ bool EventSummaryHandler::attachToTree(TTree *t)
   t_->GetBranch("lumi")->SetAddress(&evSummary_.lumi);
   t_->GetBranch("event")->SetAddress(&evSummary_.event);
   t_->GetBranch("cat")->SetAddress(&evSummary_.cat);
+  if(t_->GetBranch("nvtx"))   t_->GetBranch("nvtx")->SetAddress(&evSummary_.nvtx);
+  if(t_->GetBranch("ngenpu")) t_->GetBranch("ngenpu")->SetAddress(&evSummary_.ngenpu);
+  if(t_->GetBranch("rho"))    t_->GetBranch("rho")->SetAddress(&evSummary_.rho);
   t_->GetBranch("weight")->SetAddress(&evSummary_.weight);
   t_->GetBranch("nparticles")->SetAddress(&evSummary_.nparticles);
   t_->GetBranch("px")->SetAddress(evSummary_.px);

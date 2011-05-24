@@ -20,7 +20,8 @@ struct EventSummary_t
 {
   Int_t run,lumi,event;
   Int_t cat;
-  Float_t weight;
+  Int_t nvtx,ngenpu;
+  Float_t rho,weight;
   Int_t nparticles;
   Float_t px[MAXPARTICLES], py[MAXPARTICLES], pz[MAXPARTICLES], en[MAXPARTICLES];
   Int_t id[MAXPARTICLES], genid[MAXPARTICLES];

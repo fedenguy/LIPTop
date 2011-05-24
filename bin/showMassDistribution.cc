@@ -129,7 +129,10 @@ int main(int argc, char* argv[])
     if(ev.cat==dilepton::EE)  categs.push_back("ee");
     if(ev.cat==dilepton::EMU)  categs.push_back("emu");
 
+    //temporary
+    if(ev.nvtx>3) continue;
 
+    
     //get particles from the event
     int njets(0),nbtags(0);
     KinCandidateCollection_t leptons, jets, mets;
