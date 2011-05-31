@@ -38,6 +38,8 @@ int main(int argc, char* argv[])
   std::map<TString, TH1 *> results;
   TString cats[]={"all","ee","mumu","emu"};
   size_t ncats=sizeof(cats)/sizeof(TString);
+  TString subcats[]={"eq0btags","eq1btags","geq2btags"};
+  size_t nsubcats=sizeof(subcats)/sizeof(TString);
   for( size_t icat=0; icat<ncats; icat++)
     {
       results[cats[icat]+"_njets"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_njets", ";Jets;Events", 6, 0.,6.), 1,1,1,20,0,true,true,1,1,1);
@@ -50,14 +52,20 @@ int main(int argc, char* argv[])
 	  results[cats[icat]+"_btags"]->GetXaxis()->SetBinLabel(ibin,label + " btags");
 	}
 
-      results[cats[icat]+"_leadjet"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadjet", "; Leading jet p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_subleadjet"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_leadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_subleadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_met"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_met", "; #slash{E}_{T} [GeV/c]; Events / (5 GeV/c)", 50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (5 GeV/c^{2})", 100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_leadjet"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_subleadjet"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_leadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_subleadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_met"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_met", "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (10 GeV/c^{2})", 50, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      for(size_t isubcat=0; isubcat<nsubcats; isubcat++)
+	{
+	  results[cats[icat]+subcats[isubcat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+subcats[isubcat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (10 GeV/c^{2})", 50, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+	  results[cats[icat]+subcats[isubcat]+"_dilmass"] = (TH1F*)formatPlot( new TH1F (cats[icat]+subcats[isubcat]+"_dilmass", "; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+	}
       results[cats[icat]+"_afb"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_afb", "; #Delta #eta(t,#bar{t}); Events / (0.1)", 100, -5.,5.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_mttbar"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (20 GeV/c^{2})", 100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+    
       results[cats[icat]+"_mtopvsdilmass"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_mtopvsmlj"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsmlj", "; m_{Top} [GeV/c^{2}]; Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_mtopvsmet"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsmet", "; m_{Top} [GeV/c^{2}]; #slash{E}_{T} [GeV/c]; Events", 100, 0.,500.,50, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
@@ -77,6 +85,7 @@ int main(int argc, char* argv[])
   //process kin file
   TString url = argv[1];
   gSystem->ExpandPathName(url);
+  cout << url << endl;
   KinResultsHandler kinHandler;
   kinHandler.init(url,false);
   TChain *t=kinHandler.getResultsChain();
@@ -127,11 +136,7 @@ int main(int argc, char* argv[])
     categs.push_back("all");
     if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
     if(ev.cat==dilepton::EE)  categs.push_back("ee");
-    if(ev.cat==dilepton::EMU)  categs.push_back("emu");
-
-    //temporary
-    if(ev.nvtx>3) continue;
-
+    if(ev.cat==dilepton::EMU) categs.push_back("emu");
     
     //get particles from the event
     int njets(0),nbtags(0);
@@ -150,7 +155,7 @@ int main(int argc, char* argv[])
           case 1:
             jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
 	    njets++;
-	    if(ev.info1[ipart]>1.74) nbtags++;
+	    if(ev.info1[ipart]>1.7) nbtags++;
             break;
           default:
             leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
@@ -162,8 +167,16 @@ int main(int argc, char* argv[])
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
 
+    //select same sign
+    //if(leptons[0].second*leptons[1].second<0) continue;
+
+    TString subcat="eq0btags";
+    if(nbtags==1) subcat="eq1btags";
+    if(nbtags>=2) subcat="geq2btags";
+
     //get the combination preferred by KIN
     TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
+    h1->Rebin(2); h2->Rebin(2);
     Int_t icomb=(h1->Integral()< h2->Integral())+1;
     TH1F *mpref=kinHandler.getHisto("mt",icomb);
     double mtop = kinHandler.getMPVEstimate(mpref) [1];
@@ -175,6 +188,7 @@ int main(int argc, char* argv[])
     //compute dilepton/dijet invariant mass
     TLorentzVector dil = leptons[0].first+leptons[1].first;
     float dilmass = dil.M();
+    if(fabs(dilmass-91)<15 && ev.cat!=dilepton::EMU)continue;
     double ptlep1(max(leptons[0].first.Pt(),leptons[1].first.Pt())), ptlep2(min(leptons[0].first.Pt(),leptons[1].first.Pt()));    
     TLorentzVector dij = jets[0].first+jets[1].first;
     float mjj=dij.M();
@@ -200,6 +214,8 @@ int main(int argc, char* argv[])
 	if(mtop>0)
 	  {
 	    results[*cIt+"_mtop"]->Fill(mtop,weight);
+	    results[*cIt+subcat+"_mtop"]->Fill(mtop,weight);
+	    results[*cIt+subcat+"_dilmass"]->Fill(dilmass,weight);
 	    ((TH2F *)results[*cIt+"_mtopvsdilmass"])->Fill(mtop,dilmass,weight);
 	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj1.M(),weight);
 	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj2.M(),weight);
@@ -232,8 +248,8 @@ int main(int argc, char* argv[])
 
 
   //if MC: rescale to number of selected events and to units of pb
+  cout << "Selected " << selEvents.size() << " found " << nresults << " kin results " << endl;
   if(isMC && nresults)
-
     {
       double scaleFactor=selEvents.size()/nresults;
       TString tag=gSystem->BaseName(evurl);
