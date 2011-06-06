@@ -2,6 +2,7 @@
 #include "LIP/Top/interface/HeavyFlavorPDF.h"
 #include "LIP/Top/interface/TopKinSolver.h"
 #include "LIP/Top/interface/KinAnalysis.h"
+#include "LIP/Top/interface/HFCMeasurement.h"
 
 #ifdef __CINT__
 
@@ -19,8 +20,9 @@
 #pragma link C++ function getMT;
 #pragma link C++ function getMT2;
 #pragma link C++ class TopKinSolver;
-#pragma link C++ KinAnalysis;
-
+#pragma link C++ class KinAnalysis;
+#pragma link C++ function randomlyRotate;
+#pragma link C++ class HFCMeasurement;
 
 #endif
 

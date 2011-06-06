@@ -18,8 +18,11 @@
 #include "LIP/Top/interface/TopKinSolver.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
 
+typedef std::vector<TLorentzVector> TLorentzVectorCollection;
 typedef std::pair<TLorentzVector, float> KinCandidate_t;
 typedef std::vector<KinCandidate_t> KinCandidateCollection_t;
+
+TLorentzVectorCollection randomlyRotate(TLorentzVectorCollection &leptonsp4, TLorentzVectorCollection &jetsp4); 
 
 class KinAnalysis
 {
@@ -31,7 +34,7 @@ class KinAnalysis
   void runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc);
   void endAnalysis() { resHandler_.end(); }
   ~KinAnalysis();
-  
+
  private:
   TString scheme_;
   int maxTries_,maxJetMult_;

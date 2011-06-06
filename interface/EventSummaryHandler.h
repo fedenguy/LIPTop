@@ -42,6 +42,7 @@ class EventSummaryHandler{
   //write mode
   bool initTree(TTree *t);
   void fillTree();
+  void fillTreeWithEvent(const EventSummary_t &ev);
 
   //read mode
   bool attachToTree(TTree *t);

@@ -5,7 +5,7 @@ import json
 import ROOT
                 
 if(len(sys.argv)<3):
-    print 'runKinOverSamples.py subToBatch samples.json eventsPerJob'
+    print 'runKinOverSamples.py subToBatch samples.json eventsPerJob runScheme=std'
 
     exit(-1)
 
@@ -17,10 +17,10 @@ procList=json.load(jsonFile,encoding='utf-8').items()
 evPerJob=int(sys.argv[3])
 scriptFile=os.path.expandvars('${CMSSW_BASE}/bin/${SCRAM_ARCH}/wrapKinAnalysisRun.sh')
 
-params=''
+extraParams=''
 if(len(sys.argv)>4) :
-    for i in xrange(5,len(sys.argv)) :
-        params += sys.argv[i] + ' '
+    for i in xrange(4,len(sys.argv)) :
+        extraParams += sys.argv[i] + ' '
 
 #run over sample
 for proc in procList :
@@ -54,7 +54,7 @@ for proc in procList :
             for ijob in range(njobs) :
                 evStart= ijob*evPerJob
                 evEnd= (ijob+1)*evPerJob
-                params = '-src=' + fileName + ' -f=' + str(evStart) + ' -e=' + str(evEnd)
+                params = '-src=' + fileName + ' -f=' + str(evStart) + ' -e=' + str(evEnd) + ' ' + extraParams
                 if(subToBatch==0) :
                     os.system(scriptFile + ' '  + params)
                 else :

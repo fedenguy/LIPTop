@@ -1,6 +1,51 @@
 #include "LIP/Top/interface/KinAnalysis.h"
+#include "TRandom.h"
 
 using namespace std;
+
+//
+TLorentzVectorCollection randomlyRotate(TLorentzVectorCollection &leptons, TLorentzVectorCollection &jets)
+{
+  //get rotated leptons
+  TLorentzVectorCollection rotLeptons;
+
+  //create a rotated copy of all leptons
+  for(TLorentzVectorCollection::iterator lit = leptons.begin(); lit != leptons.end(); lit++)
+    {
+      do
+	{
+	  //rotate lepton
+	  double en    = lit->E();
+	  double pabs  = lit->P();
+	  double phi   = gRandom->Uniform(0,2*TMath::Pi());
+	  double theta = TMath::ACos( gRandom->Uniform(-1,1) );
+	  TLorentzVector rotLep =  TLorentzVector( pabs*TMath::Cos(phi)*TMath::Sin(theta),
+						   pabs*TMath::Sin(phi)*TMath::Sin(theta),
+						   pabs*TMath::Cos(theta),
+						   en);
+
+	  //require selectable kinematics
+	  if( TMath::Abs(rotLep.Eta())>2.4 || rotLep.Pt()<20 ) continue;  
+
+	  //require object separation
+	  double minDR(1000);
+	  for(TLorentzVectorCollection::iterator jit = jets.begin(); jit != jets.end(); jit++)
+	    {
+	      double dR = jit->DeltaR(rotLep);
+	      if(dR>minDR) continue;
+	      minDR=dR;
+	    }
+	  if(minDR<0.4) continue;
+	  
+	  //save lepton
+	  rotLeptons.push_back(rotLep);
+	  break;
+	} while( 1 );
+    }
+
+  //all done
+  return rotLeptons;
+} 
 
 //
 KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, float mb, TString outpath, bool doWrite)
@@ -38,6 +83,7 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
   try{
     
     KinCandidateCollection_t leptons, jets, mets;
+    TLorentzVectorCollection leptonsp4,jetsp4;
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
@@ -49,19 +95,38 @@ void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolutio
 	    break;
 	  case 1:
 	    jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
+	    jetsp4.push_back(p4);
 	    break;
 	  default:
 	    leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
+	    leptonsp4.push_back(p4);
 	    break;
 	  }
       }
+
+    //random rotation of leptons
+    if(scheme_=="randrot") 
+      {
+	TLorentzVector deltaLep(0,0,0,0);
+	leptonsp4 = randomlyRotate(leptonsp4,jetsp4);
+	for(size_t ilep=0; ilep<leptons.size(); ilep++) 
+	  {
+	    deltaLep += leptons[ilep].first-leptonsp4[ilep];
+	    leptons[ilep].first = leptonsp4[ilep];
+	  }
+	mets[0].first += deltaLep;
+      }
+    
+    //order collections
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
     if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
 
+
     //debug
     cout << "[KinAnalysis][runOn] " << ev.run << " : " << ev.lumi << " : " << ev.event << endl
+	 << "Scheme is: " << scheme_ << endl
 	 << "Leptons #1 : (" << leptons[0].first.Pt() << ";" << leptons[0].first.Eta() << ";" << leptons[0].first.Phi() << ") q:" << leptons[0].second << endl  
 	 << "        #2 : (" << leptons[1].first.Pt() << ";" << leptons[1].first.Eta() << ";" << leptons[1].first.Phi() << ") q:" << leptons[1].second << endl  
 	 << "Jets    #1 : (" << jets[0].first.Pt() << ";" << jets[0].first.Eta() << ";" << jets[0].first.Phi() << ") btag:" << jets[0].second  << endl  

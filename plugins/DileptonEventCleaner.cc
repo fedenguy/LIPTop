@@ -261,10 +261,14 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     getHist(istream+"_dilepton_mass")->Fill(dileptonP.mass(),weight);
 
     //Z+quarkonia veto
+    bool isZCand(false);
     if(dileptonP.mass()<20) return;
-    if( (istream=="ee" || istream=="mumu") && fabs(dileptonP.mass()-91)<15) return;
-    getHist(istream+"_cutflow")->Fill(2,weight);
-    getHist("cutflow")->Fill(2,weight);
+    if( (istream=="ee" || istream=="mumu") && fabs(dileptonP.mass()-91)<15) isZCand=true;
+    if(!isZCand)
+      {
+	getHist(istream+"_cutflow")->Fill(2,weight);
+	getHist("cutflow")->Fill(2,weight);
+      }
     
     //count the jets in the event
     std::vector<reco::CandidatePtr> seljets= evhyp.all("jet");
@@ -280,30 +284,36 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 	float btag=jet->bDiscriminator("trackCountingHighEffBJetTags");
 	if(btag>1.74) nbjets+=1; //loose point
 
-	getHist(istream+"_jetpt")->Fill(jet->pt(),weight);
-	getHist(istream+"_jeteta")->Fill(jet->eta(),weight);
-	getHist(istream+"_jetfassoc")->Fill( jet::fAssoc( jet.get(), &primVertex), weight );
-	getHist(istream+"_btags")->Fill(btag,weight);
+	if(!isZCand)
+	  {
+	    getHist(istream+"_jetpt")->Fill(jet->pt(),weight);
+	    getHist(istream+"_jeteta")->Fill(jet->eta(),weight);
+	    getHist(istream+"_jetfassoc")->Fill( jet::fAssoc( jet.get(), &primVertex), weight );
+	    getHist(istream+"_btags")->Fill(btag,weight);
 
-	//simulation validation
-	getHist("jetpt")->Fill(jet->pt(),weight);
-	getHist("jeteta")->Fill(jet->eta(),weight);
-	getHist("jetchhadenfrac")->Fill( jet->chargedHadronEnergyFraction(), weight );
-	getHist("jetneuthadenfrac")->Fill( jet->neutralHadronEnergyFraction(), weight );
-	getHist("jetchemenfrac")->Fill( jet->chargedEmEnergyFraction(),weight );
-	getHist("jetneutemenfrac")->Fill( jet->neutralEmEnergyFraction(),weight );
-	getHist("jetphoenfrac")->Fill( jet->photonEnergyFraction(),weight );
-	getHist("jetmuenfrac")->Fill( jet->muonEnergyFraction(),weight );
-	getHist("jetchhaden")->Fill( jet->chargedHadronEnergy(), weight );
-	getHist("jetneuthaden")->Fill( jet->neutralHadronEnergy(), weight );
-	getHist("jetchemen")->Fill( jet->chargedEmEnergy(),weight );
-	getHist("jetneutemen")->Fill( jet->neutralEmEnergy(),weight );
-	getHist("jetphoen")->Fill( jet->photonEnergy(),weight );
-	getHist("jetmuen")->Fill( jet->muonEnergy(),weight );
+	    //simulation validation
+	    getHist("jetpt")->Fill(jet->pt(),weight);
+	    getHist("jeteta")->Fill(jet->eta(),weight);
+	    getHist("jetchhadenfrac")->Fill( jet->chargedHadronEnergyFraction(), weight );
+	    getHist("jetneuthadenfrac")->Fill( jet->neutralHadronEnergyFraction(), weight );
+	    getHist("jetchemenfrac")->Fill( jet->chargedEmEnergyFraction(),weight );
+	    getHist("jetneutemenfrac")->Fill( jet->neutralEmEnergyFraction(),weight );
+	    getHist("jetphoenfrac")->Fill( jet->photonEnergyFraction(),weight );
+	    getHist("jetmuenfrac")->Fill( jet->muonEnergyFraction(),weight );
+	    getHist("jetchhaden")->Fill( jet->chargedHadronEnergy(), weight );
+	    getHist("jetneuthaden")->Fill( jet->neutralHadronEnergy(), weight );
+	    getHist("jetchemen")->Fill( jet->chargedEmEnergy(),weight );
+	    getHist("jetneutemen")->Fill( jet->neutralEmEnergy(),weight );
+	    getHist("jetphoen")->Fill( jet->photonEnergy(),weight );
+	    getHist("jetmuen")->Fill( jet->muonEnergy(),weight );
+	  }
       }
     njets=selJets.size();
-    getHist(istream+"_njets")->Fill(njets,weight);
-    getHist(istream+"_bmult")->Fill(nbjets,weight);
+    if(!isZCand)
+      {
+	getHist(istream+"_njets")->Fill(njets,weight);
+	getHist(istream+"_bmult")->Fill(nbjets,weight);
+      }
 
     //count the pu jets
     std::vector<reco::CandidatePtr> pujets= evhyp.all("pujet");
@@ -313,16 +323,22 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       {
 	npujets++;
 	puJets.push_back(jet.get());
-        getHist(istream+"_pujetpt")->Fill(jet->pt(),weight);
-	getHist(istream+"_pujetfassoc")->Fill(jet::fAssoc(jet.get(),&primVertex),weight);
+	if(!isZCand)
+	  {
+	    getHist(istream+"_pujetpt")->Fill(jet->pt(),weight);
+	    getHist(istream+"_pujetfassoc")->Fill(jet::fAssoc(jet.get(),&primVertex),weight);
+	  }
       }
-    getHist(istream+"_npujets")->Fill(npujets,weight);
+    if(!isZCand) getHist(istream+"_npujets")->Fill(npujets,weight);
 
 
     //require two jets
     if(njets<2) return;
-    getHist(istream+"_cutflow")->Fill(3,weight);
-    getHist("cutflow")->Fill(3,weight);
+    if(!isZCand)
+      {
+	getHist(istream+"_cutflow")->Fill(3,weight);
+	getHist("cutflow")->Fill(3,weight);
+      }
 
     //base met kinematics
     const reco::PFMET &pfmet = (*hPfMET)[0];
@@ -346,13 +362,13 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     muonetfrac=pfmet.muonEtFraction();
 
     //control  
-    getHist(istream+"_met")->Fill(metP.pt(),weight);
-    getHist(istream+"_jesmet")->Fill(corMets[met::TYPEIMET].pt(),weight);
-    getHist(istream+"_jesmetnopu")->Fill(corMets[met::CORRECTED_TYPEIMET].pt(),weight);
-    getHist(istream+"_metsig")->Fill(metsig,weight);
-
-    if(metP.pt()>50)
+    if(!isZCand)
       {
+	getHist(istream+"_met")->Fill(metP.pt(),weight);
+	getHist(istream+"_jesmet")->Fill(corMets[met::TYPEIMET].pt(),weight);
+	getHist(istream+"_jesmetnopu")->Fill(corMets[met::CORRECTED_TYPEIMET].pt(),weight);
+	getHist(istream+"_metsig")->Fill(metsig,weight);
+
 	getHist("met")->Fill(metP.pt(),weight);
 	getHist("sumet")->Fill(sumet,weight);
 	getHist("photonet")->Fill(photonet,weight);
@@ -370,16 +386,21 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     //require met for same flavor channels
     //if(metP.pt()<20) return;
     if( (istream=="ee" || istream=="mumu") && metP.pt()<40) return;
-    
-    getHist(istream+"_cutflow")->Fill(4,weight);
-    getHist("cutflow")->Fill(4,weight);
+    if(!isZCand)
+      {
+	getHist(istream+"_cutflow")->Fill(4,weight);
+	getHist("cutflow")->Fill(4,weight);
+      }
 
 
     //b-tagged sample
     int btagbin= nbjets;
     if(btagbin>2) btagbin=2;
-    getHist(istream+"_cutflow")->Fill(5+btagbin,weight);
-    getHist("cutflow")->Fill(7+btagbin,weight);
+    if(!isZCand)
+      {
+	getHist(istream+"_cutflow")->Fill(5+btagbin,weight);
+	getHist("cutflow")->Fill(5+btagbin,weight);
+      }
 
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);

@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
   //open the file
   KinResultsHandler kinHandler;
   kinHandler.init(url,false);
-  TTree *t=kinHandler.getResultsTree();
-  const Int_t nEntries = t->GetEntriesFast();
+  TChain *t=kinHandler.getResultsChain();
+  const Int_t nEntries = t->GetEntries();
   if(event>=0 && event<nEntries)
     {
       t->GetEntry(event);
