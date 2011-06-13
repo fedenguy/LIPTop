@@ -53,7 +53,13 @@ else:
 process.e = cms.EndPath( process.endCounter*process.out )
 
 # all done, schedule the execution
-process.schedule = cms.Schedule( process.eePath, process.mumuPath, process.emuPath, process.e )
+if(runOnMC):
+    from CMGTools.HtoZZ2l2nu.GeneratorLevelSequences_cff import addGeneratorLevelSequence
+    addGeneratorLevelSequence(process)
+    process.schedule = cms.Schedule( process.genLevelPath, process.eePath, process.mumuPath, process.emuPath, process.e )
+else :
+    process.schedule = cms.Schedule( process.eePath, process.mumuPath, process.emuPath, process.e )
+
 print "Scheduling the following modules"
 print process.schedule
 print "Events will be selected for the following paths:"
