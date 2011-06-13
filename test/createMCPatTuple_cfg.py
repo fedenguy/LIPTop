@@ -7,4 +7,4 @@ castorDir, outFile, inputList = configureFromCommandLine()
 print castorDir
 print outFile
 print inputList
-#execfile(cfgFile)
+execfile(cfgFile)
