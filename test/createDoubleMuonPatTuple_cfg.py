@@ -1,3 +1,5 @@
+import os
 runOnMC=False
 trigFilter='mumu'
-execfile('createPatTuple_cfg.py')
+cfgFile=os.path.expandvars('${CMSSW_BASE}/src/LIP/Top/test/createPatTuple_cfg.py')
+execfile(cfgFile)

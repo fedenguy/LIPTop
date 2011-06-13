@@ -342,9 +342,11 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 
     //base met kinematics
     const reco::PFMET &pfmet = (*hPfMET)[0];
-    LorentzVectorCollection corMets = met::filter(pfmet,assocJets,puJets);
+    reco::CandidatePtr evmet = evhyp["met"];
+    LorentzVector met(evmet->px(),evmet->py(),0,evmet->pt());
+    LorentzVectorCollection corMets = met::filter(met,assocJets,puJets);
 
-    LorentzVector metP = corMets[0];
+    LorentzVector metP = corMets[met::CORRECTED_TYPEIMET];
     float metsig(-1),sumet(-1);
     float photonet(-1),neutralet(-1),electronet(-1),chhadet(-1),muonet(-1),
       photonetfrac(-1),neutraletfrac(-1),electronetfrac(-1),chhadetfrac(-1),muonetfrac(-1);
