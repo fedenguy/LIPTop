@@ -16,10 +16,6 @@ from CMGTools.HtoZZ2l2nu.localPatTuples_cff import fillFromCastor
 process.source.fileNames=fillFromCastor('/castor/cern.ch/cms/store/cmst3/user/cbern/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM')
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
-# event output
-from CMGTools.HtoZZ2l2nu.OutputConfiguration_cff import configureOutput
-configureOutput(process)
-
 # preselection filters
 from CMGTools.HtoZZ2l2nu.PreselectionSequences_cff import addPreselectionSequences,addLumifilter
 addPreselectionSequences(process)
@@ -60,8 +56,11 @@ if(runOnMC):
 else :
     process.schedule = cms.Schedule( process.eePath, process.mumuPath, process.emuPath, process.e )
 
+# event output
+from CMGTools.HtoZZ2l2nu.OutputConfiguration_cff import configureOutput
+configureOutput(process)
+
 print "Scheduling the following modules"
 print process.schedule
 print "Events will be selected for the following paths:"
 print process.out.SelectEvents.SelectEvents
-
