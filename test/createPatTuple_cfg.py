@@ -12,14 +12,14 @@ process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True),
 process.MessageLogger.cerr.FwkReport.reportEvery = 5000
 
 # event source  
-from CMGTools.HtoZZ2l2nu.localPatTuples_cff import fillFromCastor
-process.source.fileNames=fillFromCastor(castorDir)
+process.source.fileNames=inputList
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 # preselection filters
 from CMGTools.HtoZZ2l2nu.PreselectionSequences_cff import addPreselectionSequences,addLumifilter
-addPreselectionSequences(process)
-if(not runOnMC ): addLumifilter(process, '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Prompt/Cert_160404-166502_7TeV_PromptReco_Collisions11_JSON.txt')
+if(not runOnMC ):
+    addPreselectionSequences(process)
+    addLumifilter(process, '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Prompt/Cert_160404-166502_7TeV_PromptReco_Collisions11_JSON.txt')
 
 # trigger filter
 from CMGTools.HtoZZ2l2nu.TriggerSequences_cff import addTriggerSequence
@@ -59,6 +59,7 @@ else :
 # event output
 from CMGTools.HtoZZ2l2nu.OutputConfiguration_cff import configureOutput
 configureOutput(process)
+process.out.fileName = cms.untracked.string(outFile)
 
 print "Scheduling the following modules"
 print process.schedule
