@@ -1,5 +1,8 @@
-import os
+import os,sys
 runOnMC=True
 trigFilter=''
 cfgFile=os.path.expandvars('${CMSSW_BASE}/src/LIP/Top/test/createPatTuple_cfg.py')
-execfile(cfgFile)
+castorDir='/castor/cern.ch/cms/store/cmst3/user/cbern/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM'
+if(len(sys.argv)>2 ): castorDir=sys.argv[2]
+print castorDir
+#execfile(cfgFile)

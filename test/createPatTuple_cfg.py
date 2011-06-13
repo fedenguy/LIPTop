@@ -13,7 +13,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 5000
 
 # event source  
 from CMGTools.HtoZZ2l2nu.localPatTuples_cff import fillFromCastor
-process.source.fileNames=fillFromCastor('/castor/cern.ch/cms/store/cmst3/user/cbern/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM')
+process.source.fileNames=fillFromCastor(castorDir)
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 # preselection filters
