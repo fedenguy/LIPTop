@@ -61,8 +61,24 @@ TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iCon
       controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_caloiso", ";Calorimeter isolation; Events", 100, 0.,10.),false );
       controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_trackiso", ";Tracker Isolation; Events", 100, 0.,10.),false );
       controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_reliso", "; Isolation; Events", 100, 0.,10.),false );
+   
+      if(icat==0)
+	{
+	  TString subcat[]={"eb","ee"};
+	  for(size_t isubcat=0; isubcat<2; isubcat++)
+	    {
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"eoverp",";E/p;Electrons",100,0,5), false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"einoverp",";E_{seed}/p;Electrons",100,0,5),false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"fbrem",";f_{bremm};Electrons",100,0,1.1),false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"hovere",";H/E;Electrons",100,0,0.5), false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"sigmaietaieta",";#sigma_{i-#eta,i-#eta};Electrons",100,0,0.04),false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"dphiin",";#Delta#phi(SC,track_{in});Electrons",100,-0.1,0.1),false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"detain",";#Delta#eta(SC,track_{in});Electrons",100,-0.1,0.1),false);
+	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"misshits",";N_{miss hits};Electrons",5,0,5),false);
+	    }
+	}
     }
-  
+
   TString dilcats[]={"ee","mumu","emu"};
   size_t ndilcats=sizeof(dilcats)/sizeof(TString);
   for(size_t icat=0; icat<ndilcats; icat++)
@@ -118,7 +134,21 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   Handle<View<Candidate> > hEle; 
   iEvent.getByLabel(objConfig["Electrons"].getParameter<edm::InputTag>("source"), hEle);
   CandidateWithVertexCollection selElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["Electrons"]);
-  
+  for(View<Candidate>::const_iterator eIt=hEle->begin(); eIt != hEle->end(); eIt++)
+    {
+      const pat::Electron &electron=dynamic_cast<const pat::Electron &>(*eIt);
+      TString cat(electron.isEB() ? "eb":"ee");
+      controlHistos_.fillHisto("electron_"+cat+"eoverp","all",electron.eSuperClusterOverP(),weight);
+      controlHistos_.fillHisto("electron_"+cat+"einoverp","all", electron.eSeedClusterOverP(),weight);
+      controlHistos_.fillHisto("electron_"+cat+"fbrem","all",electron.fbrem(),weight);
+      controlHistos_.fillHisto("electron_"+cat+"hovere","all",electron.hadronicOverEm(),weight);
+      controlHistos_.fillHisto("electron_"+cat+"sigmaietaieta","all",electron.sigmaIetaIeta(),weight); 
+      controlHistos_.fillHisto("electron_"+cat+"dphiin","all",electron.deltaPhiSuperClusterTrackAtVtx(),weight);
+      controlHistos_.fillHisto("electron_"+cat+"detain","all",electron.deltaEtaSuperClusterTrackAtVtx(),weight);
+      if(electron.gsfTrack().isNull()) continue;
+      controlHistos_.fillHisto("electron_"+cat+"misshits","all",electron.gsfTrack()->trackerExpectedHitsInner().numberOfHits(),weight);
+    }
+
   //build inclusive collection
   CandidateWithVertexCollection selLeptons = selMuons;
   selLeptons.insert(selLeptons.end(), selElectrons.begin(), selElectrons.end());
@@ -132,10 +162,7 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	{
 	  using namespace lepton;
 	  int id = getLeptonId(selLeptons[ilep].first);
-	  double Aeff= fabs(id)== ELECTRON ? 
-	    objConfig["Dileptons"].getParameter<double>("electronEffectiveArea") :
-	    objConfig["Dileptons"].getParameter<double>("muonEffectiveArea");
-	  std::vector<double> isol=getLeptonIso(selLeptons[ilep].first,objConfig["Dileptons"].getParameter<double>("minPt"),(*rho)*Aeff);
+	  std::vector<double> isol=getLeptonIso(selLeptons[ilep].first,objConfig["Dileptons"].getParameter<double>("minPt"));
 	  TString ptype(fabs(id)==ELECTRON ? "electron" : "muon");
 	  controlHistos_.fillHisto(ptype+"_rho","all",*rho,weight);
 	  controlHistos_.fillHisto(ptype+"_ecaliso","all",isol[ECAL_ISO],weight);

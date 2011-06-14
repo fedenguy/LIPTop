@@ -1,7 +1,7 @@
 {
     "proc":[
 	{
-	 "tag":"t#bar{t}",
+	 "tag":"Summer11",
          "isdata":false,
          "color":"kRed+1",
          "data":[
@@ -10,7 +10,48 @@
 		"dset":"/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
                 "aoddir":"/castor/cern.ch/cms/store/cmst3/user/cbern/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
 	        "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/PAT",
-	        "tmppatdir":"/tmp/psilva/temp",
+                "xsec":165
+                }
+	  ]
+	},
+	{
+	 "tag":"RelVal",
+         "isdata":false,
+         "color":"kRed+1",
+         "data":[
+		{
+ 	        "dtag":"RelValTTbar",
+		"dset":"/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1",
+                "aoddir":"/castor/cern.ch/cms/store/relval/CMSSW_4_3_0_pre5/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1/0073",
+	        "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/42x/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1/PAT",
+                "xsec":165
+                }
+	  ]
+	},
+	{
+	 "tag":"Default FastSim",
+         "isdata":false,
+         "color":"kRed+1",
+         "data":[
+		{
+ 	        "dtag":"DefaultFastSim",
+		"dset":"/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/",
+                "aoddir":"/castor/cern.ch/cms/store/relval/CMSSW_4_3_0_pre5/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/0073",
+	        "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/42x/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/PAT",
+                "xsec":165
+                }
+	  ]
+	},
+	{
+	 "tag":"Modified FastSim",
+         "isdata":false,
+         "color":"kRed+1",
+         "data":[
+		{
+ 	        "dtag":"ModifiedFastSim",
+		"dset":"/NeutralHadron_4_3_0_pre2",
+                "aoddir":"/castor/cern.ch/user/f/federica/NeutralHadron_4_3_0_pre2/TTbar_Tauola_7TeV_cfi_py_GEN_FASTSIM_HLT_VALIDATION.root",
+	        "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/42x/NeutralHadron_4_3_0_pre2/PAT",
                 "xsec":165
                 }
 	  ]

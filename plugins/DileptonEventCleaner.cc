@@ -341,6 +341,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     //control  
     if(!isZCand)
       {
+	controlHistos_.fillHisto("met","all",met.pt(),weight);
 	controlHistos_.fillHisto(istream+"_met","all",met.pt(),weight);
 	//controlHistos_.fillHisto("sumet","all",sumet,weight);
 	controlHistos_.fillHisto("neutralhadetfrac","all",neutralhadetfrac,weight);
