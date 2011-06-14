@@ -19,7 +19,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 from CMGTools.HtoZZ2l2nu.PreselectionSequences_cff import addPreselectionSequences,addLumifilter
 if(not runOnMC ):
     addPreselectionSequences(process)
-    addLumifilter(process, '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Prompt/Cert_160404-166502_7TeV_PromptReco_Collisions11_JSON.txt')
+    #addLumifilter(process, lumilist )
 
 # trigger filter
 from CMGTools.HtoZZ2l2nu.TriggerSequences_cff import addTriggerSequence
