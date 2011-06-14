@@ -10,6 +10,7 @@
 		"dset":"/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
                 "aoddir":"/castor/cern.ch/cms/store/cmst3/user/cbern/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
 	        "patdir":"/castor/cern.ch/cms/store/cmst3/user/psilva/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/PAT",
+	        "tmppatdir":"/tmp/psilva/temp",
                 "xsec":165
                 }
 	  ]

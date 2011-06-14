@@ -2,31 +2,26 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("DileptonAN")
 
+#input
 from CMGTools.HtoZZ2l2nu.localPatTuples_cff import configureFromCommandLine
+castorDir, outFile, inputList = configureFromCommandLine()
 process.source = cms.Source("PoolSource",
-                            fileNames = cms.untracked.vstring()
+                            fileNames = inputList
+                            #cms.untracked.vstring('file:/afs/cern.ch/user/f/federica/public/CMSSW_4_2_0/src/FastSimulation/ParticleFlow/test/PAT_FastSim_modified_cfg.root')
                             )
-dtag, process.source.fileNames, outputFile = configureFromCommandLine(process)
 
-if(dtag.find('DoubleElectron')>=0 or dtag.find('DoubleMuon')>=0 or dtag.find('MuEG')>=0):
-    jsonFile='/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Prompt/Cert_160404-163869_7TeV_PromptReco_Collisions11_JSON.txt'
-    print 'Events will be filtered with json: ' + jsonFile
-    import PhysicsTools.PythonAnalysis.LumiList as LumiList
-    import FWCore.ParameterSet.Types as CfgTypes
-    myLumis = LumiList.LumiList(filename = jsonFile ).getCMSSWString().split(',')
-    process.source.lumisToProcess = CfgTypes.untracked(CfgTypes.VLuminosityBlockRange())
-    process.source.lumisToProcess.extend(myLumis)
-    
+print inputList    
 #load the analyzer
-process.load('CMGTools.HtoZZ2l2nu.CleanEventProducer_cfi')
+process.load('LIP.Top.TopDileptonEventProducer_cfi')
 process.load('CMGTools.HtoZZ2l2nu.CleanEventFilter_cfi')
 process.load('CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi')
 process.load('LIP.Top.DileptonEventAnalysis_cfi')
-process.evAnalyzer.dtag=cms.string(dtag)
-process.TFileService = cms.Service("TFileService", fileName = cms.string(outputFile) )
+process.evAnalyzer.dtag=cms.string('top')
+process.TFileService = cms.Service("TFileService", fileName = cms.string(outFile) )
 
-process.p = cms.Path(process.puWeights*process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
-#process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
+#process the analysis
+#process.p = cms.Path(process.puWeights*process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
+process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
 
 # message logger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
