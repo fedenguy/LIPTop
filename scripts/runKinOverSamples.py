@@ -3,24 +3,54 @@
 import os,sys
 import json
 import ROOT
-                
-if(len(sys.argv)<3):
-    print 'runKinOverSamples.py subToBatch samples.json eventsPerJob runScheme=std'
+import getopt
 
+#print usage
+def usage(msg='') :
+    print msg
+    print ' '
+    print 'runKinOverSamples.py [options]'
+    print '  -s : submit or not to batch'
+    print '  -j : json file containing the samples'
+    print '  -e : number of events per job'
+    print '  -d : directory containing the event summaries'
+    print '  -p : extra parameters to pass to KIN'
+    print ' '
     exit(-1)
 
+#parse the options
+try:
+    # retrive command line options
+    shortopts  = "s:j:e:p:d:h?"
+    opts, args = getopt.getopt( sys.argv[1:], shortopts )
+except getopt.GetoptError:
+    # print help information and exit:
+    print "ERROR: unknown options in argument %s" % sys.argv[1:]
+    usage()
+                                                              
 #open the file which describes the sample
-subToBatch=int(sys.argv[1])
-samplesDB = sys.argv[2]
+subToBatch=False
+samplesDB = ''
+evPerJob=-1
+extraParams=''
+summaryDir=''
+for o,a in opts:
+    if o in("-?", "-h"):
+        usage()
+        sys.exit(0)
+    elif o in('-s'): subtoBatch=True
+    elif o in('-j'): samplesDB = a
+    elif o in('-e'): evPerJob=int(a)
+    elif o in('-p'): extraParams = a
+    elif o in('-d'): summaryDir = a
+
+if(len(summaryDir)==0):
+    usage('Summary dir is missing')
+    exit(-1)
+    
 jsonFile = open(samplesDB,'r')
 procList=json.load(jsonFile,encoding='utf-8').items()
-evPerJob=int(sys.argv[3])
 scriptFile=os.path.expandvars('${CMSSW_BASE}/bin/${SCRAM_ARCH}/wrapKinAnalysisRun.sh')
-
-extraParams=''
-if(len(sys.argv)>4) :
-    for i in xrange(4,len(sys.argv)) :
-        extraParams += sys.argv[i] + ' '
 
 #run over sample
 for proc in procList :
@@ -32,11 +62,7 @@ for proc in procList :
         data = desc['data']
         for d in data :
             dtag = d['dtag']
-            try :
-                dir = d['summarydir']
-            except :
-                continue
-            fileName=dir + '/' + dtag + '.root'
+            fileName=summaryDir + '/' + dtag + '.root'
 
             print "*****"
 
