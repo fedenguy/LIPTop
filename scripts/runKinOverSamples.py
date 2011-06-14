@@ -38,7 +38,7 @@ for o,a in opts:
     if o in("-?", "-h"):
         usage()
         sys.exit(0)
-    elif o in('-s'): subtoBatch=True
+    elif o in('-s'): subToBatch=True
     elif o in('-j'): samplesDB = a
     elif o in('-e'): evPerJob=int(a)
     elif o in('-p'): extraParams = a
