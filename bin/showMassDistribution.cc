@@ -30,11 +30,20 @@ int main(int argc, char* argv[])
   AutoLibraryLoader::enable();
 
   //check arguments
-  if ( argc < 5 ) {
-    std::cout << "Usage : " << argv[0] << " kinDir eventsFile outputDir isMC" << std::endl;
+  if ( argc < 2 ) {
+    std::cout << "Usage : " << argv[0] << " parameters_cfg.py" << std::endl;
     return 0;
   }
+  
+  //configure                                                                                                                                                                                                                 
+  const edm::ParameterSet &runProcess = edm::readPSetsFrom(argv[1])->getParameter<edm::ParameterSet>("runProcess");
+  TString evurl=runProcess.getParameter<std::string>("input");
+  TString outUrl=runProcess.getParameter<std::string>("outdir");
+  TString kindir = runProcess.getParameter<std::string>("kindir");
+  bool isMC = runProcess.getParameter<bool>("isMC");
+  TString dirname = runProcess.getParameter<std::string>("dirName");
 
+  //book histos
   std::map<TString, TH1 *> results;
   TString cats[]={"all","ee","mumu","emu"};
   size_t ncats=sizeof(cats)/sizeof(TString);
@@ -77,33 +86,30 @@ int main(int argc, char* argv[])
 
 
   //fix entries flag
-  TString isMCBuf(argv[4]);
-  bool isMC=isMCBuf.Atoi();
   ofstream *outf=0;
   if(!isMC) outf=new ofstream("highmassevents.txt",ios::app);
 
-  //process kin file
-  TString url = argv[1];
-  gSystem->ExpandPathName(url);
-  cout << url << endl;
-  KinResultsHandler kinHandler;
-  kinHandler.init(url,false);
-  TChain *t=kinHandler.getResultsChain();
-
   //process events file
-  TString evurl = argv[2];
   gSystem->ExpandPathName(evurl);
   TFile *evfile = TFile::Open(evurl);
   if(evfile==0) return -1;
   if(evfile->IsZombie()) return -1;
   EventSummaryHandler evSummaryHandler;
-  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get("evAnalyzer/data") ) ) 
+  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(dirname) ) ) 
     {
       evfile->Close();
       return -1;
     }  
   TTree *evTree=evSummaryHandler.getTree();
 
+  //process kin file
+  TString kinUrl(evurl);
+  kinUrl.ReplaceAll(".root","/"+kindir);
+  gSystem->ExpandPathName(kinUrl);
+  cout << "Kin results from " << kinUrl << " to be processed with summary from " << evurl << endl;
+  KinResultsHandler kinHandler;
+  kinHandler.init(kinUrl,false);
+  TChain *t=kinHandler.getResultsChain();
  
   //loop over events
   std::map<TString,int> selEvents;
@@ -266,13 +272,12 @@ int main(int argc, char* argv[])
 
 
   //save to file
-  TString outUrl( argv[3] );
   gSystem->Exec("mkdir -p " + outUrl);
   outUrl += "/";
   outUrl += gSystem->BaseName(evurl);
   TFile *file=TFile::Open(outUrl, "recreate");
 
-  TDirectory *baseOutDir=file->mkdir("massAnalyzer");
+  TDirectory *baseOutDir=file->mkdir("localAnalysis");
   for( size_t icat=0; icat<ncats; icat++)
     {
       baseOutDir->cd();
