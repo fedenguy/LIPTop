@@ -8,27 +8,27 @@
   	   "marker":20,
            "data":[
                 {
-		  "dtag":"DoubleElectron-May10ReReco",
-		  "dset":"/DoubleElectron/Run2011A-May10ReReco-v1/AOD",
+		  "dtag":"DoubleElectron-PromptReco",
+		  "dset":"/DoubleElectron/Run2011A-PromptReco-v4/AOD",
 		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createDoubleElectronPatTuple_cfg.py",
                   "patdir":[""]
                 },
                 {
-		  "dtag":"DoubleMu-May10ReReco",
-		  "dset":"/DoubleMu/Run2011A-May10ReReco-v1/AOD",
+		  "dtag":"DoubleMu-PromptReco",
+		  "dset":"/DoubleMu/Run2011A-PromptReco-v4/AOD",
 		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createDoubleMuonPatTuple_cfg.py",
                   "patdir":[""]
                 },
                 {
-		  "dtag":"MuEG-May10ReReco",
-		  "dset":"/MuEG/Run2011A-May10ReReco-v1/AOD",
+		  "dtag":"MuEG-PromptReco",
+		  "dset":"/MuEG/Run2011A-PromptReco-v4/AOD",
 		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMuEGPatTuple_cfg.py",
                   "patdir":[""]
                 },
 		{
-		  "dtag":"SingleMu-May10ReReco",
-		  "dset":"/SingleMu/Run2011A-May10ReReco-v1/AOD",
-		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createSingleMuonPatTuple_cfg.py",
+                  "dtag":"SingleMu-PromptReco",
+                  "dset":"/SingleMu/Run2011A-PromptReco-v4/AOD",
+                  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createSingleMuonPatTuple_cfg.py",
                   "patdir":[""]
                 }
              ]
