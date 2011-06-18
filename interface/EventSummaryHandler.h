@@ -22,10 +22,12 @@ struct EventSummary_t
   Int_t cat;
   Int_t nvtx,ngenpu;
   Float_t rho,weight;
-  Int_t nparticles;
+  Int_t nparticles,nmcparticles;
   Float_t px[MAXPARTICLES], py[MAXPARTICLES], pz[MAXPARTICLES], en[MAXPARTICLES];
   Int_t id[MAXPARTICLES], genid[MAXPARTICLES];
   Float_t info1[MAXPARTICLES],info2[MAXPARTICLES],info3[MAXPARTICLES],info4[MAXPARTICLES],info5[MAXPARTICLES];
+  Float_t mcpx[MAXPARTICLES], mcpy[MAXPARTICLES], mcpz[MAXPARTICLES], mcen[MAXPARTICLES];
+  Int_t mcid[MAXPARTICLES];
 };
 
 class EventSummaryHandler{

@@ -104,20 +104,20 @@
                   "patdir":[""]
                 },
 	        {
-		  "dtag":"WtoENu_TuneD6T_Summer11",
-		  "dset":"/WtoENu_TuneD6T_7TeV-pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
+		  "dtag":"WtoENu_TuneZ2_Summer11",
+		  "dset":"/WToENu_TuneZ2_7TeV-pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
 		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
 	          "patdir":[""]
 	     	},
         	{
-		  "dtag":"WtoMuNu_TuneD6T_Summer11",
-		  "dset":"/WtoMuNu_TuneD6T_7TeV-pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
+		  "dtag":"WtoMuNu_TuneZ2_Summer11",
+		  "dset":"/WToMuNu_TuneZ2_7TeV-pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
 		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
 	          "patdir":[""]
 	     	},
 	        {  	
-		  "dtag":"WtoTauNu_TuneD6T_Summer11",
-		  "dset":"/WtoTauNu_TuneD6T_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
+		  "dtag":"WtoTauNu_TuneZ2_Summer11",
+		  "dset":"/WToTauNu_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
 		  "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
  	          "patdir":[""]
 	        },
@@ -192,7 +192,107 @@
 		  "dset":"/QCD_Pt-800to1000_TuneZ2_7TeV_pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
 	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
 	          "patdir":[""]
-                }
+                },
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-90",	
+		  "dset":"/TTToHplusBHminusB_M-90_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-100",	
+		  "dset":"/TTToHplusBHminusB_M-100_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-80",	
+		  "dset":"/TTToHplusBHminusB_M-80_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-120",	
+		  "dset":"/TTToHplusBHminusB_M-120_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-155",	
+		  "dset":"/TTToHplusBHminusB_M-155_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-140",	
+		  "dset":"/TTToHplusBHminusB_M-140_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-150",	
+		  "dset":"/TTToHplusBHminusB_M-150_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBHminusB_M-160",	
+		  "dset":"/TTToHplusBHminusB_M-160_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-90",	
+		  "dset":"/TTToHplusBWB_M-90_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-100",	
+		  "dset":"/TTToHplusBWB_M-100_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-80",	
+		  "dset":"/TTToHplusBWB_M-80_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-120",	
+		  "dset":"/TTToHplusBWB_M-120_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-155",	
+		  "dset":"/TTToHplusBWB_M-155_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-140",	
+		  "dset":"/TTToHplusBWB_M-140_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-150",	
+		  "dset":"/TTToHplusBWB_M-150_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		},
+	        {
+	       	  "dtag":"TTToHplusBWB_M-160",	
+		  "dset":"/TTToHplusBWB_M-160_7TeV-pythia6-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	          "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	          "patdir":[""]
+		}
+
 	   ]	
 	}
     ]

@@ -240,15 +240,19 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
       genEvent_.genLabel_=objConfig["Generator"].getParameter<edm::InputTag>("source");
       tteventcode = genEvent_.assignTTEvent(iEvent,iSetup);
       
-      //       for(std::map<std::string,std::vector<CandidatePtr> >::iterator it = genEvent.begin();
-      // 	  it != genEvent.end();
-      // 	  it++)
-      // 	{
-      // 	  for(std::vector<CandidatePtr>::iterator itt = it->second.begin();
-      // 	      itt != it->second.end();
-      // 	      itt++)
-      // 	      hyp.add( *itt, it->first );
-      // 	}
+      std::map<std::string, std::list<reco::CandidatePtr> > genParticles;
+      genParticles["top"] = genEvent_.tops;
+      genParticles["quarks"] = genEvent_.quarks;
+      genParticles["leptons"] = genEvent_.leptons;
+      genParticles["neutrinos"]  = genEvent_.neutrinos;
+      for(std::map<std::string,std::list<reco::CandidatePtr> >::iterator it = genParticles.begin();
+	  it != genParticles.end(); it++)
+	{
+       	  for(std::list<reco::CandidatePtr>::iterator itt = it->second.begin();
+       	      itt != it->second.end();
+       	      itt++)
+	    hyp.add( *itt, it->first );
+       	}
     }
       
   // work done, save results

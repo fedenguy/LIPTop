@@ -370,6 +370,25 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 	controlHistos_.fillHisto("cutflow","all",5+btagbin,weight);
       }
 
+    //MC truth on the event
+    if(!event.isRealData())
+      {
+	std::string mcparticles[]={"top","quarks","leptons","neutrinos"};
+        summaryHandler_.evSummary_.nmcparticles=0;
+	for(size_t imcpart=0; imcpart<sizeof(mcparticles)/sizeof(std::string); imcpart++)
+	  {
+	    for (pat::eventhypothesis::Looper<reco::GenParticle> genpart = evhyp.loopAs<reco::GenParticle>(mcparticles[imcpart]); genpart; ++genpart)
+	      {
+		summaryHandler_.evSummary_.mcpx[summaryHandler_.evSummary_.nmcparticles] = genpart->px();
+		summaryHandler_.evSummary_.mcpy[summaryHandler_.evSummary_.nmcparticles] = genpart->py();
+		summaryHandler_.evSummary_.mcpz[summaryHandler_.evSummary_.nmcparticles] = genpart->pz();
+		summaryHandler_.evSummary_.mcen[summaryHandler_.evSummary_.nmcparticles]=genpart->energy();
+		summaryHandler_.evSummary_.mcid[summaryHandler_.evSummary_.nmcparticles]=genpart->pdgId();
+		summaryHandler_.evSummary_.nmcparticles++;
+	      }
+	  }
+      }
+
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);
     leptons.push_back(lepton2);

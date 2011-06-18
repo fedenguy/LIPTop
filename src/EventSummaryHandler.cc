@@ -33,6 +33,13 @@ bool EventSummaryHandler::initTree(TTree *t)
   t_->Branch("info4",      evSummary_.info4,       "info4[nparticles]/F");
   t_->Branch("info5",      evSummary_.info5,       "info5[nparticles]/F");
 
+  t_->Branch("nmcparticles", &evSummary_.nmcparticles, "nmcparticles/I");
+  t_->Branch("mcpx",         evSummary_.mcpx,          "mcpx[nmcparticles]/F");
+  t_->Branch("mcpy",         evSummary_.mcpy,          "mcpy[nmcparticles]/F");
+  t_->Branch("mcpz",         evSummary_.mcpz,          "mcpz[nmcparticles]/F");
+  t_->Branch("mcen",         evSummary_.mcen,          "mcen[nmcparticles]/F");
+  t_->Branch("mcid",         evSummary_.mcid,          "mcid[nmcparticles]/I");
+
   return true;
 }
 
@@ -63,6 +70,16 @@ bool EventSummaryHandler::attachToTree(TTree *t)
   t_->GetBranch("info4")->SetAddress(evSummary_.info4);
   t_->GetBranch("info5")->SetAddress(evSummary_.info5);
 
+  if(t_->GetBranch("nmcparticles"))
+    {
+      t_->GetBranch("nmcparticles")->SetAddress(&evSummary_.nmcparticles);
+      t_->GetBranch("mcpx")->SetAddress(evSummary_.mcpx);
+      t_->GetBranch("mcpy")->SetAddress(evSummary_.mcpy);
+      t_->GetBranch("mcpz")->SetAddress(evSummary_.mcpz);
+      t_->GetBranch("mcen")->SetAddress(evSummary_.mcen);
+      t_->GetBranch("mcid")->SetAddress(evSummary_.mcid);
+    }
+
   return true;
 }
 
@@ -88,6 +105,13 @@ void EventSummaryHandler::fillTreeWithEvent(const EventSummary_t &ev)
       evSummary_.info1[ipart]=ev.info1[ipart]; evSummary_.info2[ipart]=ev.info2[ipart];
       evSummary_.info3[ipart]=ev.info3[ipart]; evSummary_.info4[ipart]=ev.info4[ipart];
       evSummary_.info5[ipart]=ev.info5[ipart];
+    }
+
+  for(Int_t ipart=0; ipart<evSummary_.nmcparticles; ipart++)
+    {
+      evSummary_.mcpx[ipart]=ev.mcpx[ipart];       evSummary_.mcpy[ipart]=ev.mcpy[ipart];
+      evSummary_.mcpz[ipart]=ev.mcpz[ipart];       evSummary_.mcen[ipart]=ev.mcen[ipart];
+      evSummary_.mcid[ipart]=ev.mcid[ipart];
     }
 
   fillTree();

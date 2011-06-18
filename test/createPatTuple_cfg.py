@@ -28,6 +28,8 @@ if(not runOnMC): addTriggerSequence(process,trigFilter)
 # pat sequences
 from CMGTools.HtoZZ2l2nu.PatSequences_cff import addPatSequence
 addPatSequence(process,runOnMC)
+#to process modified fastsim
+#process.pfPileUp.PFCandidates=cms.InputTag("FSparticleFlow")
 
 # dilepton filters
 from CMGTools.HtoZZ2l2nu.DileptonFilterSequences_cff import addDileptonFilters
