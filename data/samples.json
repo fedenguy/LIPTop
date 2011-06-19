@@ -27,31 +27,10 @@
 		{
  	        "dtag":"DefaultFastSim",
 	        "normto":1,
-		"dset":"/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/",
+		"dset":"TTbar2l-PYTHIA6-std-FastSim",
 	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
-                "aoddir":["/castor/cern.ch/cms/store/relval/CMSSW_4_3_0_pre5/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/0073",
-			  "/castor/cern.ch/cms/store/relval/CMSSW_4_3_0_pre5/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/0079"],
-	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/42x/RelValTTbar/GEN-SIM-DIGI-RECO/MC_43_V1_FastSim-v1/PAT"]
-                }
-	  ]
-	},
-	{
-	 "tag":"Modified FastSim",
-         "isdata":true,
-         "color":"kGreen+3",
-	 "marker":24,
-         "data":[
-		{
- 	        "dtag":"ModifiedFastSim",
-	        "normto":1,
-		"dset":"/NeutralHadron_4_3_0_pre2",
-	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
-                "aoddir":["rfio:///castor/cern.ch/user/f/federica/NeutralHadron_4_3_0_pre2/TTbar_Tauola_7TeV_cfi_py_GEN_FASTSIM_HLT_VALIDATION_1.root",
-			  "rfio:///castor/cern.ch/user/f/federica/NeutralHadron_4_3_0_pre2/TTbar_Tauola_7TeV_cfi_py_GEN_FASTSIM_HLT_VALIDATION_2.root",
-			  "rfio:///castor/cern.ch/user/f/federica/NeutralHadron_4_3_0_pre2/TTbar_Tauola_7TeV_cfi_py_GEN_FASTSIM_HLT_VALIDATION_3.root",
-			  "rfio:///castor/cern.ch/user/f/federica/NeutralHadron_4_3_0_pre2/TTbar_Tauola_7TeV_cfi_py_GEN_FASTSIM_HLT_VALIDATION_4.root",
-			  "rfio:///castor/cern.ch/user/f/federica/NeutralHadron_4_3_0_pre2/TTbar_Tauola_7TeV_cfi_py_GEN_FASTSIM_HLT_VALIDATION_5.root"],
-	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/42x/NeutralHadron_4_3_0_pre2/PAT"]
+                "aoddir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar2l-PYTHIA6-std-FastSim/AODSIM"],
+	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar2l-PYTHIA6-std-FastSim/PAT"]
                 }
 	  ]
 	}
