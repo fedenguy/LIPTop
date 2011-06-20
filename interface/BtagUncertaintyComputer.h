@@ -29,12 +29,12 @@ namespace btag
       p0_err = (nb>0 ? pow(nb*sfb_err*eb*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl),2)  : 0. );
       p0_err += (nl>0 ? pow(nl*sfl_err*el*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-1),2) : 0. );
       p0_err = sqrt(p0_err);
-
-      p1_err = (nb>0 ? pow(nb*sfb_err*eb*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl),2) : 0.);
-      p1_err += (nb>1 ? pow(nb*(nb-1)*sfb_err*sfb*pow(eb,2)*pow(1-sfb*eb,nb-2)*pow(1-sfl*el,nl),2) : 0.);
-      p1_err += (nl>0 ? pow(nl*sfl_err*el*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-1),2) : 0.);
-      p1_err += (nl>1 ? pow(nl*(nl-1)*sfl_err*sfl*pow(el,2)*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-2),2) : 0. );
-      p1_err = sqrt(p1_err);
+      
+      double a = (nb>1         ? nb*(nb-1)*pow(sfb_err*eb,2)*pow(1-sfb*eb,nb-2)*pow(1-sfl*el,nl) : 0.);
+      a       -= (nb>0 && nl>0 ? nb*sfb_err*eb*nl*sfl_err*el*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl-1) : 0.);
+      double b = (nl>1         ? nl*(nl-1)*pow(sfl_err*el,2)*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-2) : 0.);
+      b       -= (nb>0 && nl>0 ? nb*sfb_err*eb*nl*sfl_err*el*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl-1) : 0.);
+      p1_err = sqrt(pow(a,2)+pow(b,2));
       
       p2_err = sqrt( pow(p1_err,2) + pow(p0_err,2) );
     }
@@ -51,7 +51,6 @@ namespace btag
   private:
     double p0,p1,p2;
     double p0_err,p1_err,p2_err;
-    double p0_down, p1_down,p2_down;
     double eb,sfb,sfb_err;
     double el,sfl,sfl_err;
   };
