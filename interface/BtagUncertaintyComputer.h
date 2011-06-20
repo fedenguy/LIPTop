@@ -10,7 +10,9 @@ namespace btag
   {
   public:
     
-    UncertaintyComputer(double eb,double sfb,double sfb_err,double el,double sfl, double sfl_err) {}
+    UncertaintyComputer(double meb,double msfb,double msfb_err,double mel,double msfl, double msfl_err) 
+      : eb(meb), sfb(msfb), sfb_err(msfb_err), el(mel), sfl(msfl), sfl_err(msfl_err)
+      {}
     ~UncertaintyComputer() {}
     
     inline void compute(double nb, double nl)
@@ -37,7 +39,7 @@ namespace btag
       p2_err = sqrt( pow(p1_err,2) + pow(p0_err,2) );
     }
     
-    inline std::vector<Weight_t> getWeights(int nbtags)
+    inline std::vector<Weight_t> getWeights()
       {
 	std::vector<Weight_t> results;
 	results.push_back( std::make_pair(p0,p0_err) );
