@@ -167,7 +167,7 @@
 		{
 		  "dtag":"QCD_Pt-470to600_Spring11",	
 		  "dset":"/QCD_Pt_470to600_TuneZ2_7TeV_pythia6/Spring11-PU_S1_START311_V1G1-v1/AODSIM",
-		  "patdir":"[/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/QCD_Pt-470to600/QCD_Pt-470to600_Spring11"],
+		  "patdir":["/castor/cern.ch//cms/store/cmst3/user/psilva/Dileptons/QCD_Pt-470to600/QCD_Pt-470to600_Spring11"],
                   "xsec":70.22,
 		  "br":1
                 },
