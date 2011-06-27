@@ -283,7 +283,7 @@ int main(int argc, char* argv[])
             fixExtremities(hit->second,true,true);
 	  if(hit->first.BeginsWith("cutflow") && hit->first!="cutflow")
 	    {
-	      hit->second->Add( controlHistos.getHisto("cutflow","all"), -1);
+	      //      hit->second->Add( controlHistos.getHisto("cutflow","all"), -1);
 	    }
 	  hit->second->Write();
 
