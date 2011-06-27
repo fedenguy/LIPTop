@@ -19,9 +19,13 @@ process.load('LIP.Top.DileptonEventAnalysis_cfi')
 process.evAnalyzer.dtag=cms.string('top')
 process.TFileService = cms.Service("TFileService", fileName = cms.string(outFile) )
 
+#from CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi import getNormalizationForScenario
+#process.puWeights.normalizationDistribution = getNormalizationForScenario("nopileup")
+#process.cleanEvent.Generator.filterSignal=cms.bool(True)
+
 #process the analysis
-#process.p = cms.Path(process.puWeights*process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
-process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
+process.p = cms.Path(process.puWeights*process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
+#process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
 
 # message logger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")

@@ -10,3 +10,4 @@ cleanEvent = cms.EDProducer("TopDileptonEventProducer",
                             Jets = BaseJetSelection.clone(),
                             MET = BaseMetSelection.clone()
                             )
+cleanEvent.Generator.filterSignal = cms.bool(False)

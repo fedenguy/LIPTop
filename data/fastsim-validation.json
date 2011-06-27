@@ -3,7 +3,7 @@
 	{
 	 "tag":"Modified FastSim",
          "isdata":true,
-         "color":"kGreen+3",
+         "color":"kRed+3",
 	 "marker":24,
          "data":[
 		{
@@ -20,7 +20,7 @@
 	 "tag":"FastSim",
          "isdata":true,
          "color":"kBlue",
-	 "marker":24,
+	 "marker":20,
          "data":[
 		{
  	        "dtag":"FastSim",
@@ -29,6 +29,21 @@
 	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
                 "aoddir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar2l-PYTHIA6-std-FastSim/AODSIM"],
 	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar2l-PYTHIA6-std-FastSim/PAT"]
+                }
+	  ]
+	},
+	{
+	 "tag":"FullSim",
+         "isdata":false,
+         "color":"1",
+	 "marker":20,
+         "data":[
+		{
+ 	        "dtag":"FullSim",
+	        "normto":1,
+		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
+	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"]
                 }
 	  ]
 	}

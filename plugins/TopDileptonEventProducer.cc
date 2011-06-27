@@ -154,6 +154,36 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   selLeptons.insert(selLeptons.end(), selElectrons.begin(), selElectrons.end());
   if(selLeptons.size()>0) selStep=2;
 
+  //if event is MC filter out the genparticle collection also
+  int tteventcode=gen::top::Event::UNKNOWN;
+  if(!iEvent.isRealData())
+    {
+      genEvent_.genLabel_=objConfig["Generator"].getParameter<edm::InputTag>("source");
+      tteventcode = genEvent_.assignTTEvent(iEvent,iSetup);
+      
+      if(objConfig["Generator"].getParameter<bool>("filterSignal") 
+	 && tteventcode!=gen::top::Event::EE 
+	 && tteventcode != gen::top::Event::EMU 
+	 && tteventcode!= gen::top::Event::MUMU) 
+	selStep=0;
+
+      //save the generator level event
+      std::map<std::string, std::list<reco::CandidatePtr> > genParticles;
+      genParticles["top"] = genEvent_.tops;
+      genParticles["quarks"] = genEvent_.quarks;
+      genParticles["leptons"] = genEvent_.leptons;
+      genParticles["neutrinos"]  = genEvent_.neutrinos;
+      for(std::map<std::string,std::list<reco::CandidatePtr> >::iterator it = genParticles.begin();
+	  it != genParticles.end(); it++)
+	{
+       	  for(std::list<reco::CandidatePtr>::iterator itt = it->second.begin();
+       	      itt != it->second.end();
+       	      itt++)
+	    hyp.add( *itt, it->first );
+       	}
+    }
+  
+
   //build the dilepton (all tightly isolated leptons will be returned)
   if(selStep==2)
     {
@@ -232,29 +262,7 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	  hyp.add(met, "met");
 	}
     }
-  
-  //if event is MC filter out the genparticle collection also
-  int tteventcode=gen::top::Event::UNKNOWN;
-  if(!iEvent.isRealData())
-    {
-      genEvent_.genLabel_=objConfig["Generator"].getParameter<edm::InputTag>("source");
-      tteventcode = genEvent_.assignTTEvent(iEvent,iSetup);
-      
-      std::map<std::string, std::list<reco::CandidatePtr> > genParticles;
-      genParticles["top"] = genEvent_.tops;
-      genParticles["quarks"] = genEvent_.quarks;
-      genParticles["leptons"] = genEvent_.leptons;
-      genParticles["neutrinos"]  = genEvent_.neutrinos;
-      for(std::map<std::string,std::list<reco::CandidatePtr> >::iterator it = genParticles.begin();
-	  it != genParticles.end(); it++)
-	{
-       	  for(std::list<reco::CandidatePtr>::iterator itt = it->second.begin();
-       	      itt != it->second.end();
-       	      itt++)
-	    hyp.add( *itt, it->first );
-       	}
-    }
-      
+     
   // work done, save results
   auto_ptr<std::vector<pat::EventHypothesis> > hyps(new std::vector<pat::EventHypothesis>() );
   hyps->push_back(hyp);

@@ -210,6 +210,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
    
     int selPath = (*(selInfo.product()))[0];
     int selStep = (*(selInfo.product()))[1];
+    int tteventcode = (*(selInfo.product()))[2]; 
 
     //require that a dilepton has benn selected
     if(selPath==0 or selStep<3) return;
