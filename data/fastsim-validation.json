@@ -3,8 +3,8 @@
 	{
 	 "tag":"Modified FastSim",
          "isdata":true,
-         "color":"kRed+3",
-	 "marker":24,
+         "color":"1",
+	 "marker":20,
          "data":[
 		{
  	        "dtag":"ModifiedFastSim",
@@ -19,8 +19,8 @@
 	{
 	 "tag":"FastSim",
          "isdata":true,
-         "color":"kBlue",
-	 "marker":20,
+         "color":"kRed",
+	 "marker":24,
          "data":[
 		{
  	        "dtag":"FastSim",
@@ -35,7 +35,7 @@
 	{
 	 "tag":"FullSim",
          "isdata":false,
-         "color":"1",
+         "color":"kOrange",
 	 "marker":20,
          "data":[
 		{

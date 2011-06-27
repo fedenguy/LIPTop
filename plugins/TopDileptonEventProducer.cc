@@ -56,9 +56,9 @@ TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iCon
     {
       TFileDirectory newDir=fs->mkdir(cats[icat].Data());
       controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_rho", "; #rho; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_ecaliso", ";ECAL isolation; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_hcaliso", ";HCAL isolation; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_caloiso", ";Calorimeter isolation; Events", 100, 0.,10.),false );
+      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_ecaliso", ";Photon isolation; Events", 100, 0.,10.),false );
+      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_hcaliso", ";Neutral hadron isolation; Events", 100, 0.,10.),false );
+      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_caloiso", ";Charged isolation; Events", 100, 0.,10.),false );
       controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_trackiso", ";Tracker Isolation; Events", 100, 0.,10.),false );
       controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_reliso", "; Isolation; Events", 100, 0.,10.),false );
    
