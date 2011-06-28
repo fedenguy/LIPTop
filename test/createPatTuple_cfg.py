@@ -28,9 +28,10 @@ if(not runOnMC): addTriggerSequence(process,trigFilter)
 # pat sequences
 from CMGTools.HtoZZ2l2nu.PatSequences_cff import addPatSequence
 addPatSequence(process,runOnMC)
+
 #to process modified fastsim
-#process.pfPileUp.PFCandidates=cms.InputTag("FSparticleFlow")
-#process.pfNoPileUp.bottomCollection=cms.InputTag("FSparticleFlow")
+#from PhysicsTools.PatAlgos.tools.helpers import massSearchReplaceAnyInputTag
+#massSearchReplaceAnyInputTag(process.patDefaultSequence,"particleFlow","FSparticleFlow",True)
 
 # dilepton filters
 from CMGTools.HtoZZ2l2nu.DileptonFilterSequences_cff import addDileptonFilters
