@@ -1,23 +1,23 @@
 {
     "proc":[
-	{
+     {
 	 "tag":"VV",
          "isdata":false,
          "color":"10",
-	 "fill":0,
+	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
  	        "dtag":"WW",
-		"xsec":1
+		"xsec":0.00002086
                 },
 		{
  	        "dtag":"WZ",
-		"xsec":1
+		"xsec":0.00000863
                 },
 		{
  	        "dtag":"ZZ",
-		"xsec":1
+		"xsec":0.00000280
                 }
 	  ]
 	},
@@ -25,7 +25,7 @@
 	 "tag":"Z/#gamma^{*}#rightarrow ll",
          "isdata":false,
          "color":"kAzure-2",
-	 "fill":0,
+	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
@@ -38,7 +38,7 @@
 	 "tag":"Single top",
          "isdata":false,
          "color":"kMagenta",
-	 "fill":0,
+	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
@@ -56,23 +56,10 @@
 	  ]
 	},
 	{
-	 "tag":"t#bar{t}",
-         "isdata":false,
-         "color":"kRed+1",
-	 "fill":0,
-	 "marker":1,
-         "data":[
-		{
- 	        "dtag":"ttbar",
-		"xsec":0.000141729
-                }
-	  ]
-	},
-	{
 	 "tag":"W+jets",
          "isdata":false,
          "color":"kGreen-3",
-	 "fill":0,
+	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
@@ -82,9 +69,23 @@
 	  ]
 	},
 	{
+	 "tag":"t#bar{t}",
+         "isdata":false,
+         "color":"kRed+1",
+	 "lcolor":1,
+	 "marker":1,
+         "data":[
+		{
+ 	        "dtag":"ttbar",
+		"xsec":0.000141729
+                }
+	  ]
+	},
+	{
 	 "tag":"data",
          "isdata":true,
          "color":"1",
+	 "fill":0,
 	 "marker":20,
          "data":[
 		{

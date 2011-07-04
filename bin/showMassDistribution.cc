@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 
   //book histos
   std::map<TString, TH1 *> results;
-  TString cats[]={"all","ee","mumu","emu"};
+  TString cats[]={"all","ee","mumu","emu","etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"eq0btags","eq1btags","geq2btags"};
   size_t nsubcats=sizeof(subcats)/sizeof(TString);
@@ -66,6 +66,10 @@ int main(int argc, char* argv[])
       results[cats[icat]+"_leadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_subleadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_met"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_met", "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_ht"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_ht", "; #sum_{jets} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_st"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_st", "; #sum_{leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_sumpt"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_sumpt", "; #sum_{leptons} p_{T} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_htlep"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_htlep", "; #sum_{jets,leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (10 GeV/c^{2})", 50, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
       for(size_t isubcat=0; isubcat<nsubcats; isubcat++)
 	{
@@ -143,16 +147,16 @@ int main(int argc, char* argv[])
     if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
     if(ev.cat==dilepton::EE)  categs.push_back("ee");
     if(ev.cat==dilepton::EMU) categs.push_back("emu");
-    
+    if(ev.cat==dilepton::ETAU) categs.push_back("etau");
+    if(ev.cat==dilepton::MUTAU) categs.push_back("mutau");
+    cout << ev.cat << endl;
     //get particles from the event
     int njets(0),nbtags(0);
-    KinCandidateCollection_t leptons, jets, mets;
-    float htlep(0);
+    KinCandidateCollection_t leptons, jets, mets,vtx;
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
 	if(isnan(p4.Pt()) || isinf(p4.Pt())) continue;
-	htlep+= p4.Pt();
 	switch( ev.id[ipart] )
 	  {
 	  case 0:
@@ -163,18 +167,17 @@ int main(int argc, char* argv[])
 	    njets++;
 	    if(ev.info1[ipart]>1.7) nbtags++;
             break;
+	  case 500:
+	    vtx.push_back( KinCandidate_t(p4,p4.Pt()) );
+	    break;
           default:
             leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
             break;
-
 	  }
       }
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
-
-    //select same sign
-    //if(leptons[0].second*leptons[1].second<0) continue;
 
     TString subcat="eq0btags";
     if(nbtags==1) subcat="eq1btags";
@@ -194,7 +197,7 @@ int main(int argc, char* argv[])
     //compute dilepton/dijet invariant mass
     TLorentzVector dil = leptons[0].first+leptons[1].first;
     float dilmass = dil.M();
-    if(fabs(dilmass-91)<15 && ev.cat!=dilepton::EMU)continue;
+    if(fabs(dilmass-91)<15 && (ev.cat==dilepton::EE || ev.cat==dilepton::MUMU))continue;
     double ptlep1(max(leptons[0].first.Pt(),leptons[1].first.Pt())), ptlep2(min(leptons[0].first.Pt(),leptons[1].first.Pt()));    
     TLorentzVector dij = jets[0].first+jets[1].first;
     float mjj=dij.M();
@@ -204,7 +207,13 @@ int main(int argc, char* argv[])
     TLorentzVector lj1=leptons[0].first+jets[icomb==1?0:1].first;
     TLorentzVector lj2=leptons[1].first+jets[icomb==1?1:0].first;
 
-    
+    //ht
+    double ht(0);
+    for(size_t ijet=0; ijet<jets.size(); ijet++) ht += jets[ijet].first.Pt();
+    double sumptlep(leptons[0].first.Pt()+leptons[1].first.Pt()+mets[0].first.Pt());
+    double st(sumptlep+mets[0].first.Pt());
+    double htlep(st+ht);
+
     //fill histos
     float weight = ev.weight;
 
@@ -217,6 +226,10 @@ int main(int argc, char* argv[])
 	results[*cIt+"_leadlepton"]->Fill(ptlep1,weight);
 	results[*cIt+"_subleadlepton"]->Fill(ptlep2,weight);
 	results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
+	results[*cIt+"_ht"]->Fill(ht,weight);
+	results[*cIt+"_st"]->Fill(st,weight);
+	results[*cIt+"_sumpt"]->Fill(sumptlep,weight);
+	results[*cIt+"_htlep"]->Fill(htlep,weight);
 	if(mtop>0)
 	  {
 	    results[*cIt+"_mtop"]->Fill(mtop,weight);

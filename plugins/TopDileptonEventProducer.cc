@@ -4,7 +4,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
-
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "DataFormats/PatCandidates/interface/EventHypothesis.h"
 #include "DataFormats/PatCandidates/interface/EventHypothesisLooper.h"
 #include "DataFormats/Common/interface/ValueMap.h"
@@ -16,7 +16,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
-#include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
+#include "CMGTools/HtoZZ2l2nu/interface/TSelectionMonitor.h"
 
 #include "LIP/Top/interface/GenTopEvent.h"
 
@@ -30,7 +30,7 @@ public:
   virtual void produce( edm::Event &iEvent, const edm::EventSetup &iSetup) ;
 private:
   std::map<std::string, edm::ParameterSet > objConfig;
-  SelectionMonitor controlHistos_;
+  TSelectionMonitor controlHistos_;
   gen::top::Event genEvent_;
 };
 
@@ -40,6 +40,7 @@ using namespace std;
 
 //
 TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iConfig)
+  : controlHistos_("top") 
 {
   produces<std::vector<pat::EventHypothesis> >("selectedEvent");
   produces<reco::VertexCollection>("selectedVertices");
@@ -49,43 +50,38 @@ TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iCon
     objConfig[ objs[iobj] ] = iConfig.getParameter<edm::ParameterSet>( objs[iobj] );
 
   //create the control histograms
-  edm::Service<TFileService> fs;
-  TString cats[]={"electron","muon"};
-  size_t ncats=sizeof(cats)/sizeof(TString);
-  for(size_t icat=0; icat<ncats; icat++)
+  controlHistos_.addHistogram("ngenpu", "; Generated pileup; Events", 25, 0.,25.);
+  controlHistos_.addHistogram("vertexmult", "; Reconstructed vertices; Events", 100, 0.,25.);
+  controlHistos_.addHistogram("rho", "; #rho; Events", 100, 0.,10.);
+  controlHistos_.addHistogram("ecaliso", ";Photon isolation; Events", 100, 0.,10.);
+  controlHistos_.addHistogram("hcaliso", ";Neutral hadron isolation; Events", 100, 0.,10.);
+  controlHistos_.addHistogram("caloiso", ";Charged+neutral hadron isolation; Events", 100, 0.,10.);
+  controlHistos_.addHistogram("trackiso", ";Charged hadron isolation; Events", 100, 0.,10.);
+  controlHistos_.addHistogram("reliso", ";Relative isolation; Events", 100, 0.,10.);
+  TString subcat[]={"eb","ee"};
+  for(size_t isubcat=0; isubcat<2; isubcat++)
     {
-      TFileDirectory newDir=fs->mkdir(cats[icat].Data());
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_rho", "; #rho; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_ecaliso", ";Photon isolation; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_hcaliso", ";Neutral hadron isolation; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_caloiso", ";Charged isolation; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_trackiso", ";Tracker Isolation; Events", 100, 0.,10.),false );
-      controlHistos_.addHistogram( newDir.make<TH1F>(cats[icat]+"_reliso", "; Isolation; Events", 100, 0.,10.),false );
-   
-      if(icat==0)
-	{
-	  TString subcat[]={"eb","ee"};
-	  for(size_t isubcat=0; isubcat<2; isubcat++)
-	    {
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"eoverp",";E/p;Electrons",100,0,5), false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"einoverp",";E_{seed}/p;Electrons",100,0,5),false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"fbrem",";f_{bremm};Electrons",100,0,1.1),false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"hovere",";H/E;Electrons",100,0,0.5), false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"sigmaietaieta",";#sigma_{i-#eta,i-#eta};Electrons",100,0,0.04),false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"dphiin",";#Delta#phi(SC,track_{in});Electrons",100,-0.1,0.1),false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"detain",";#Delta#eta(SC,track_{in});Electrons",100,-0.1,0.1),false);
-	      controlHistos_.addHistogram(newDir.make<TH1F>("electron_"+subcat[isubcat]+"misshits",";N_{miss hits};Electrons",5,0,5),false);
-	    }
-	}
+      controlHistos_.addHistogram(subcat[isubcat]+"eoverp",";E/p;Electrons",100,0,5);
+      controlHistos_.addHistogram(subcat[isubcat]+"einoverp",";E_{seed}/p;Electrons",100,0,5);
+      controlHistos_.addHistogram(subcat[isubcat]+"fbrem",";f_{bremm};Electrons",100,0,1.1);
+      controlHistos_.addHistogram(subcat[isubcat]+"hovere",";H/E;Electrons",100,0,0.5);
+      controlHistos_.addHistogram(subcat[isubcat]+"sigmaietaieta",";#sigma_{i-#eta,i-#eta};Electrons",100,0,0.04);
+      controlHistos_.addHistogram(subcat[isubcat]+"dphiin",";#Delta#phi(SC,track_{in});Electrons",100,-0.1,0.1);
+      controlHistos_.addHistogram(subcat[isubcat]+"detain",";#Delta#eta(SC,track_{in});Electrons",100,-0.1,0.1);
+      controlHistos_.addHistogram(subcat[isubcat]+"misshits",";N_{miss hits};Electrons",5,0,5);
     }
-
-  TString dilcats[]={"ee","mumu","emu"};
-  size_t ndilcats=sizeof(dilcats)/sizeof(TString);
-  for(size_t icat=0; icat<ndilcats; icat++)
-    {
-      TFileDirectory newDir=fs->mkdir(dilcats[icat].Data());
-      controlHistos_.addHistogram( newDir.make<TH1F>(dilcats[icat]+"_dz", "; #Delta Z; Events", 100, -5.,5.),false );
-    }
+  
+  controlHistos_.addHistogram("jetmult", "; Jet multiplicity; Events", 100, 0.,10.);
+  controlHistos_.addHistogram("jetchconst", "; Charged hadron multiplicity in jets; Jets", 25, 0.,25.);
+  controlHistos_.addHistogram("jetneutconst", "; Neutral hadron multiplicity in jets; Jets", 25, 0.,25.);
+  controlHistos_.addHistogram("jetpt", "; p_{T} [GeV/c]; Jet", 100, 0.,250.);
+  controlHistos_.addHistogram("jetbeta", "; #beta(dilepton vertex); Jets", 100, 0.,1.);
+ 
+  controlHistos_.initMonitorForStep("electron");
+  controlHistos_.initMonitorForStep("muon");
+  controlHistos_.initMonitorForStep("ee");
+  controlHistos_.initMonitorForStep("emu");
+  controlHistos_.initMonitorForStep("mumu");
 }
 
 //
@@ -107,13 +103,23 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
       edm::Handle<float> puWeightHandle;
       iEvent.getByLabel("puWeights","puWeight",puWeightHandle);
       if(puWeightHandle.isValid()) weight = *(puWeightHandle.product());
-    }
 
+      int npuIT(0); 
+      edm::Handle<std::vector<PileupSummaryInfo> > puInfoH;
+      iEvent.getByType(puInfoH);
+      if(puInfoH.isValid())
+	{
+	  for(std::vector<PileupSummaryInfo>::const_iterator it = puInfoH->begin(); it != puInfoH->end(); it++)
+	    if(it->getBunchCrossing()==0) npuIT += it->getPU_NumInteractions();
+	}
+      controlHistos_.fillHisto("ngenpu","all",npuIT,weight);
+    }
   
   //pre-select vertices
   Handle<reco::VertexCollection> hVtx;
   iEvent.getByLabel(objConfig["Vertices"].getParameter<edm::InputTag>("source"), hVtx);  
   std::vector<reco::VertexRef> selVertices = vertex::filter(hVtx,objConfig["Vertices"]);
+  controlHistos_.fillHisto("vertexmult","all",selVertices.size(),weight);
   std::vector<reco::VertexRef> primaryVertexHyps;
   if(selVertices.size()>0) selStep=1;
 
@@ -138,15 +144,15 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
     {
       const pat::Electron &electron=dynamic_cast<const pat::Electron &>(*eIt);
       TString cat(electron.isEB() ? "eb":"ee");
-      controlHistos_.fillHisto("electron_"+cat+"eoverp","all",electron.eSuperClusterOverP(),weight);
-      controlHistos_.fillHisto("electron_"+cat+"einoverp","all", electron.eSeedClusterOverP(),weight);
-      controlHistos_.fillHisto("electron_"+cat+"fbrem","all",electron.fbrem(),weight);
-      controlHistos_.fillHisto("electron_"+cat+"hovere","all",electron.hadronicOverEm(),weight);
-      controlHistos_.fillHisto("electron_"+cat+"sigmaietaieta","all",electron.sigmaIetaIeta(),weight); 
-      controlHistos_.fillHisto("electron_"+cat+"dphiin","all",electron.deltaPhiSuperClusterTrackAtVtx(),weight);
-      controlHistos_.fillHisto("electron_"+cat+"detain","all",electron.deltaEtaSuperClusterTrackAtVtx(),weight);
+      controlHistos_.fillHisto(cat+"eoverp","electron",electron.eSuperClusterOverP(),weight);
+      controlHistos_.fillHisto(cat+"einoverp","electron", electron.eSeedClusterOverP(),weight);
+      controlHistos_.fillHisto(cat+"fbrem","electron",electron.fbrem(),weight);
+      controlHistos_.fillHisto(cat+"hovere","electron",electron.hadronicOverEm(),weight);
+      controlHistos_.fillHisto(cat+"sigmaietaieta","electron",electron.sigmaIetaIeta(),weight); 
+      controlHistos_.fillHisto(cat+"dphiin","electron",electron.deltaPhiSuperClusterTrackAtVtx(),weight);
+      controlHistos_.fillHisto(cat+"detain","electron",electron.deltaEtaSuperClusterTrackAtVtx(),weight);
       if(electron.gsfTrack().isNull()) continue;
-      controlHistos_.fillHisto("electron_"+cat+"misshits","all",electron.gsfTrack()->trackerExpectedHitsInner().numberOfHits(),weight);
+      controlHistos_.fillHisto("electron_"+cat+"misshits","electron",electron.gsfTrack()->trackerExpectedHitsInner().numberOfHits(),weight);
     }
 
   //build inclusive collection
@@ -194,12 +200,12 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	  int id = getLeptonId(selLeptons[ilep].first);
 	  std::vector<double> isol=getLeptonIso(selLeptons[ilep].first,objConfig["Dileptons"].getParameter<double>("minPt"));
 	  TString ptype(fabs(id)==ELECTRON ? "electron" : "muon");
-	  controlHistos_.fillHisto(ptype+"_rho","all",*rho,weight);
-	  controlHistos_.fillHisto(ptype+"_ecaliso","all",isol[ECAL_ISO],weight);
-	  controlHistos_.fillHisto(ptype+"_hcaliso","all",isol[HCAL_ISO],weight);
-	  controlHistos_.fillHisto(ptype+"_trackiso","all",isol[TRACKER_ISO],weight);
-	  controlHistos_.fillHisto(ptype+"_caloiso","all",isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
-	  controlHistos_.fillHisto(ptype+"_reliso","all",isol[REL_ISO],weight);
+	  controlHistos_.fillHisto("rho",ptype,*rho,weight);
+	  controlHistos_.fillHisto("ecaliso",ptype,isol[ECAL_ISO],weight);
+	  controlHistos_.fillHisto("hcaliso",ptype,isol[HCAL_ISO],weight);
+	  controlHistos_.fillHisto("trackiso",ptype,isol[TRACKER_ISO],weight);
+	  controlHistos_.fillHisto("caloiso",ptype,isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
+	  controlHistos_.fillHisto("reliso",ptype,isol[REL_ISO],weight);
 	}
       
       //search for dileptons
@@ -213,8 +219,9 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
       if(selPath!= dilepton::UNKNOWN)
 	{
 	  std::vector<TString> dilCats;
-	  if(selPath==dilepton::EE) dilCats.push_back("ee"); 
-	  if(selPath==dilepton::EMU) dilCats.push_back("emu"); 
+	  dilCats.push_back("all"); 
+	  if(selPath==dilepton::EE)   dilCats.push_back("ee"); 
+	  if(selPath==dilepton::EMU)  dilCats.push_back("emu"); 
 	  if(selPath==dilepton::MUMU) dilCats.push_back("mumu"); 
 
 	  //add to the event
@@ -224,13 +231,6 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	  hyp.add(dileptonWithVertex.second.first,"leg2");
 	  primaryVertexHyps.push_back(dileptonWithVertex.second.second);
 
-	  //control histos
-	  double dz =-1000;
-	  if(dileptonWithVertex.first.second.isNonnull() && dileptonWithVertex.second.second.isNonnull())
-	    dz=dileptonWithVertex.first.second->position().z()-dileptonWithVertex.second.second->position().z();
-	  for(size_t icat=0; icat<dilCats.size(); icat++)
-	    controlHistos_.fillHisto(dilCats[icat]+"_dz","all",dz,weight);
-	  
 	  //add the remaining isolated leptons now
 	  for(CandidateWithVertexCollection::iterator lIt = isolLeptons.begin(); lIt != isolLeptons.end(); lIt++)
 	    {
@@ -245,11 +245,24 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 		hyp.add( lIt->first , fabs(lepton::getLeptonId(lIt->first))==lepton::MUON ? "pumuon" : "puelectron" );
 	      
 	    }
-  
+	  
 	  //add also the jets
 	  Handle<View<Candidate> > hJet; 
 	  iEvent.getByLabel(objConfig["Jets"].getParameter<edm::InputTag>("source"), hJet);
 	  CandidateWithVertexCollection selJets = jet::filter(hJet, isolLeptons, selVertices, objConfig["Jets"]);
+	  for(size_t icat=0; icat<dilCats.size(); icat++)
+	    {
+	      controlHistos_.fillHisto("jetmult",dilCats[icat],selJets.size(),weight);
+	      for(CandidateWithVertexCollection::iterator jit = selJets.begin(); jit!=selJets.end(); jit++)
+		{
+		  const pat::Jet *j = dynamic_cast<const pat::Jet *>(jit->first.get());
+		  controlHistos_.fillHisto("jetpt",dilCats[icat],j->pt(),weight);
+		  controlHistos_.fillHisto("jetchconst",dilCats[icat],j->chargedHadronMultiplicity(),weight);
+		  controlHistos_.fillHisto("jetneutconst",dilCats[icat],j->neutralHadronMultiplicity(),weight);
+		  if(dileptonWithVertex.first.second.isNonnull())
+		    controlHistos_.fillHisto("jetbeta",dilCats[icat],jet::fAssoc(j,dileptonWithVertex.first.second.get()),weight);
+		}
+	    }
 	  CandidateWithVertexCollection assocJets, puJets;
 	  jet::classifyJetsForDileptonEvent(selJets,dileptonWithVertex,assocJets,puJets,objConfig["Dileptons"].getParameter<double>("maxDz"));
 	  for(CandidateWithVertexCollection::iterator jIt = assocJets.begin(); jIt != assocJets.end(); jIt++) hyp.add(jIt->first,"jet");
