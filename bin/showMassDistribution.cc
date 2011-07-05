@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
     if(ev.cat==dilepton::EMU) categs.push_back("emu");
     if(ev.cat==dilepton::ETAU) categs.push_back("etau");
     if(ev.cat==dilepton::MUTAU) categs.push_back("mutau");
-    cout << ev.cat << endl;
+    
     //get particles from the event
     int njets(0),nbtags(0);
     KinCandidateCollection_t leptons, jets, mets,vtx;

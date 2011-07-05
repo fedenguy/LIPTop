@@ -1,0 +1,30 @@
+{
+    "proc":[
+	{
+	 "tag":"t#bar{t} (PFAK5 chs)",
+         "isdata":true,
+	 "spimpose":true,
+         "color":"1",
+	 "marker":20,
+         "data":[
+		{
+ 	        "dtag":"TTbar_AK5chs",
+	        "normto":1
+                }
+	  ]
+	},
+	{
+	 "tag":"t#bar{t} (PFAK5)",
+         "isdata":true,
+	 "spimpose":true,
+         "color":"kOrange",
+	 "marker":24,
+         "data":[
+		{
+ 	        "dtag":"TTbar_AK5",
+	        "normto":1
+                }
+	  ]
+	}
+    ]
+}
