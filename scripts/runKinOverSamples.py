@@ -4,6 +4,7 @@ import os,sys
 import json
 import ROOT
 import getopt
+import os.path
 
 #print usage
 def usage(msg='') :
@@ -63,6 +64,7 @@ for proc in procList :
         for d in data :
             dtag = d['dtag']
             fileName=summaryDir + '/' + dtag + '.root'
+            if(not os.path.isfile(fileName) ): continue
 
             print "*****"
 
