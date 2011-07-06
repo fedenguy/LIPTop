@@ -33,6 +33,8 @@
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/Common/interface/MergeableCounter.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "FWCore/Common/interface/TriggerNames.h"
 
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
 
@@ -159,6 +161,27 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 {
   
   try{
+
+
+    //get trigger results
+//     edm::Handle<edm::TriggerResults> allTriggerBits_;
+//     edm::InputTag trigSource("TriggerResults::HLT");
+//     event.getByLabel( trigSource, allTriggerBits_);
+//     const edm::TriggerNames &triggerNames = event.triggerNames( *allTriggerBits_);
+
+//     bool hasTrigger(false);
+//     for (size_t itrig = 0; itrig != allTriggerBits_->size(); ++itrig)
+//       {
+// 	if( !allTriggerBits_->wasrun(itrig) ) continue;
+// 	if( allTriggerBits_->error(itrig) ) continue;
+// 	if( !allTriggerBits_->accept(itrig) ) continue;
+// 	std::string trigName = triggerNames.triggerName(itrig);
+//         if(trigName!="HLT_Mu8_Ele17_CaloIdL_v2" 
+// 	   && trigName != "HLT_Mu17_Ele8_CaloIdL_v2") continue;
+// 	hasTrigger=true;
+//       }
+//     if(!hasTrigger) return;
+
 
     //get the weight for the event
     float weight=1;

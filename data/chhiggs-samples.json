@@ -92,22 +92,22 @@
         "color":"kBlue-4",
         "data":[
              {
- 	       "dtag":"TToBLNu_tW-channel_Spring11",
-	       "dset":"/TToBLNu_TuneZ2_tW-channel_7TeV-madgraph/Fall10-START38_V12-v2/GEN-SIM-RECO",
-               "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/TToBLNu_tW-channel/TToBLNu_tW-channel_Spring11"],
-               "xsec":10.6
+ 	       "dtag":"TToBLNu_s-channel",
+	       "dset":"TToBLNu_s-channel_Spring11",
+               "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/TToBLNu_tW-channel/TToBLNu_s-channel_Spring11"],
+               "xsec":4.6
              },
              {
- 	       "dtag":"TToBLNu_t-channel_Spring11",
-	       "dset":"/TToBLNu_TuneZ2_t-channel_7TeV-madgraph/Fall10-START38_V12-v2/GEN-SIM-RECO",
+ 	       "dtag":"TToBLNu_t-channel"
+	       "dset":"TToBLNu_t-channel_Spring11",
                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/TToBLNu_t-channel/TToBLNu_t-channel_Spring11"],
-               "xsec":64.6
+               "xsec":63
              },
              {
- 	       "dtag":"TToBLNu_s-channel_Spring11",
-	       "dset":"/TToBLNu_TuneZ2_s-channel_7TeV-madgraph/Spring11-PU_S1_START311_V1G1-v1/AODSIM",	
-               "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/TToBLNu_s-channel/TToBLNu_s-channel_Spring11"],
-               "xsec":4.21
+ 	       "dtag":"TToBLNu_tW-channel",
+	       "dset":"TToBLNu_tW-channel_Spring11",
+               "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/TToBLNu_s-channel/TToBLNu_tW-channel_Spring11"],
+               "xsec":10.6
              }
            ]
 	},
