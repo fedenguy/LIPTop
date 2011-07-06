@@ -1,5 +1,7 @@
 from PhysicsTools.PatAlgos.patTemplate_cfg import *
 
+process.setName_('DileptonPAT')
+
 # global tag
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 if ( not runOnMC ): process.GlobalTag.globaltag = 'GR_R_42_V13::All'

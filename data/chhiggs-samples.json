@@ -1,5 +1,62 @@
 {
     "proc":[
+        {
+        "tag":"QCD",
+        "isdata":false,
+        "color":"kOrange-2",
+        "lcolor":1,
+        "marker":1,
+        "data":[
+             {
+                "dtag":"QCD_Pt-50to80_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-50to80_Summer11"],
+                "xsec":6359000
+             },
+             {
+                "dtag":"QCD_Pt-80to120_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-80to120_Summer11"],
+                "xsec":784305
+             },
+             {
+                "dtag":"QCD_Pt-120to170_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-120to170_Summer11"],
+                "xsec":115105
+             },
+             {
+                "dtag":"QCD_Pt-170to300_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-170to300_Summer11"],
+                "xsec":24260.4
+             },
+             {
+                "dtag":"QCD_Pt-300to470_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-300to470_Summer11"],
+                "xsec":1168
+             },
+             {
+                "dtag":"QCD_Pt-470to600_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-470to600_Summer11"],
+                "xsec":70.22
+             },
+             {
+                "dtag":"QCD_Pt-600to800_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-600to800_Summer11"],
+                "xsec":15.55
+             },
+             {
+                "dtag":"QCD_Pt-800to1000_Summer11",
+                "dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/QCD_Pt-800to1000_Summer11"],
+                "xsec":18.44
+             }
+	  ]
+        },
 	{
 	"tag":"VV",
         "isdata":false,
@@ -11,13 +68,27 @@
 		"dtag":"ZZTo2L2Nu",
 		"dset":"ZZTo2L2Nu_TuneZ2_7TeV_pythia6_tauola",
 		"patdir":["/castor/cern.ch/cms/store/cmst3/user/querten//11_06_22_HtoZZ2l2n//VV/ZZTo2L2Nu_TuneZ2_7TeV_pythia6_tauola"],
-		"xsec":5.9
+		"xsec":5.9,
+		"br":[0.043896]
+	     },
+	     {	
+		"dtag":"WWTo2L2Nu",
+		"dset":"WWTo2L2Nu_TuneZ2_7TeV_pythia6_tauola",
+		"patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/WWTo2l2Nu"],
+		"xsec":4.51
+	     },
+	     {	
+		"dtag":"WZTo3LNu",
+		"dset":"WZTo3LNu_TuneZ2_7TeV_pythia6_tauola",
+		"patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/WZTo3LNu"],
+		"xsec":0.596
 	     }
 	]
     	},
 	{
 	"tag":"Single top",
         "isdata":false,
+        "lcolor":1,
         "color":"kBlue-4",
         "data":[
              {
@@ -43,6 +114,7 @@
 	{
 	 "tag":"W+jets",
          "isdata":false,
+         "lcolor":1,
          "color":"kOrange+9",
          "data":[
 		{
@@ -56,6 +128,7 @@
 	{
 	 "tag":"Z/#gamma^{*}+jets#rightarrow ll",
          "isdata":false,
+         "lcolor":1,
          "color":"kTeal-9",
          "data":[
 	      {
@@ -69,6 +142,7 @@
 	{
 	 "tag":"t#bar{t}",
          "isdata":false,
+         "lcolor":1,
          "color":"kMagenta-2",
          "data":[
 		{
@@ -85,7 +159,7 @@
          "color":"kPink-9",
          "spimpose":true,
    	 "lwidth":4,
-         "fill":0,
+          "fill":0,
          "marker":1,
          "data":[
 		{
@@ -119,6 +193,13 @@
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-90"],
                 "xsec":165,
 		"br":[0.32]
+                },
+		{
+ 	        "dtag":"HH_90_Summer11",
+		"dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-90"],
+                "xsec":165,
+		"br":[0.04]
                 }
 	  ]
 	},
@@ -162,6 +243,13 @@
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-120"],
                 "xsec":165,
 		"br":[0.32]
+                },
+		{
+ 	        "dtag":"HH_120_Summer11",
+		"dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-120"],
+                "xsec":165,
+		"br":[0.04]
                 }
 	  ]
 	},
@@ -235,6 +323,31 @@
  	        "dtag":"HH_155_Summer11",
 		"dset":"",
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-155"],
+                "xsec":165,
+		"br":[0.04]
+                }
+	  ]
+	},
+	{
+	 "tag":"H^{#pm} (160 GeV/c^{2})",
+         "isdata":false,
+         "color":"kPink-9",
+         "spimpose":true,
+   	 "lwidth":4,
+         "fill":0,
+         "marker":1,
+         "data":[
+		{
+ 	        "dtag":"WH_160_Summer11",
+		"dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-160"],
+                "xsec":165,
+		"br":[0.32]
+                },
+		{
+ 	        "dtag":"HH_160_Summer11",
+		"dset":"",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-160"],
                 "xsec":165,
 		"br":[0.04]
                 }
