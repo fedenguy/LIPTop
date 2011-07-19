@@ -17,6 +17,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
+#include "CMGTools/HtoZZ2l2nu/interface/TransverseMassComputer.h"
 
 #include "TSystem.h"
 #include "TFile.h"
@@ -73,29 +74,34 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1D("mlj","Lepton-jet spectrum;Invariant Mass(l,j) [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );
   controlHistos.addHistogram( new TH1D("btagdisc",";TCHE (b-jets);Events",100,-5,40) );
   controlHistos.addHistogram( new TH1D("ltagdisc",";TCHE (udcsg-jets);Events",100,-5,40) );
+  controlHistos.addHistogram( new TH1D("dilmass",";M(l,l');Events",100,0,250) );
+  controlHistos.addHistogram( new TH1D("mtsum",";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("met", "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.) );
   TH1F *bmultH=new TH1F ("btags", ";b-tag multiplicity;Events", 6, 0.,6.) ;
+  TH1F *bmultsfH=new TH1F ("btagssf", ";b-tag multiplicity;Events", 6, 0.,6.) ;
   for(int ibin=1; ibin<=bmultH->GetXaxis()->GetNbins(); ibin++)
     {
       TString label(""); label += ibin-1;
       if(ibin==bmultH->GetXaxis()->GetNbins()) label ="#geq" + label;
       bmultH->GetXaxis()->SetBinLabel(ibin,label + " btags");
+      bmultsfH->GetXaxis()->SetBinLabel(ibin,label + " btags");
     }
   controlHistos.addHistogram(bmultH);
+  controlHistos.addHistogram(bmultsfH);
 
   //cutflow histograms
   TString labels[]={"start","#geq 2 jets","=0 b-tags", "=1 b-tags","=2 b-tags"};
   int nsteps=sizeof(labels)/sizeof(TString);
-  TH1D *cutflowH=new TH1D("cutflow",";Cutflow;Events",nsteps,0,nsteps);
+  TH1D *cutflowH=new TH1D("evtflow",";Cutflow;Events",nsteps,0,nsteps);
   for(int ibin=0; ibin<nsteps; ibin++) cutflowH->GetXaxis()->SetBinLabel(ibin+1,labels[ibin]);
   controlHistos.addHistogram( cutflowH );
   TString cats[]={"","jer","jesdown","jesup","btagcen","btagup","btagdown"};
   int nvarcats=sizeof(cats)/sizeof(TString);
-  for(int icat=0;icat<nvarcats; icat++)  controlHistos.addHistogram( new TH1D("cutflow"+cats[icat],";Cutflow;Events",nsteps,0,nsteps) );
+  for(int icat=0;icat<nvarcats; icat++)  controlHistos.addHistogram( new TH1D("evtflow"+cats[icat],";Cutflow;Events",nsteps,0,nsteps) );
   
   //process events file
   TFile *evfile = TFile::Open(evurl);
@@ -109,6 +115,8 @@ int main(int argc, char* argv[])
     }  
   TTree *evTree=evSummaryHandler.getTree();
 
+  //aux
+  TransverseMassComputer mtComp;
  
   //loop over events
   if(evEnd<0 || evEnd>evSummaryHandler.getEntries() ) evEnd=evSummaryHandler.getEntries();
@@ -126,6 +134,7 @@ int main(int argc, char* argv[])
     evTree->GetEvent(inum);
     EventSummary_t &ev = evSummaryHandler.getEvent();
     float weight = ev.weight;    
+    if(isMC) weight *= 0.69; //trigger efficiency
 
     //classify event
     if(ev.cat!=dilepton::EMU)  continue;
@@ -159,13 +168,19 @@ int main(int argc, char* argv[])
             break;
 	  }
       }
-   
-    //jet variations
-    jcomp.compute(jets,mets[0]);
-    LorentzVectorCollection jerVariedJets=jcomp.getVariedJets(jet::UncertaintyComputer::JER);
-    LorentzVectorCollection jesupVariedJets=jcomp.getVariedJets(jet::UncertaintyComputer::JES_UP);
-    LorentzVectorCollection jesdownVariedJets=jcomp.getVariedJets(jet::UncertaintyComputer::JES_DOWN);
+      LorentzVector dilepton = leptons[0]+leptons[1];
+      
+      //jet variations
+      jcomp.compute(jets,mets[0]);
+      LorentzVectorCollection jerVariedJets=jcomp.getVariedJets(jet::UncertaintyComputer::JER);
+      LorentzVectorCollection jesupVariedJets=jcomp.getVariedJets(jet::UncertaintyComputer::JES_UP);
+      LorentzVectorCollection jesdownVariedJets=jcomp.getVariedJets(jet::UncertaintyComputer::JES_DOWN);
 
+      double mtsum=
+	mtComp.compute(leptons[0],mets[0]) +
+	mtComp.compute(leptons[1],mets[0]);
+
+      
     //btag variations
     bcomp.compute(nbjets,nljets);
     std::vector<btag::Weight_t> wgt = bcomp.getWeights();
@@ -176,7 +191,7 @@ int main(int argc, char* argv[])
     //the cutflow
     for(int ivar=0;ivar<nvarcats; ivar++) 
       {
-	// 	controlHistos.fillHisto("cutflow"+cats[ivar],"all",0,weight);
+	controlHistos.fillHisto("evtflow"+cats[ivar],"all",0,weight);
 
 	//jet energy variations
 	LorentzVectorCollection jetColl=jets;
@@ -189,14 +204,19 @@ int main(int argc, char* argv[])
 	
 	if(cats[ivar]=="")
 	  {
+	    controlHistos.fillHisto("mtsum","all",mtsum,weight);
 	    controlHistos.fillHisto("leadjet","all",max(jets[0].pt(),jets[1].pt()),weight);
 	    controlHistos.fillHisto("subleadjet","all",min(jets[0].pt(),jets[1].pt()),weight);
 	    controlHistos.fillHisto("leadlepton","all",max(leptons[0].pt(),leptons[1].pt()),weight);
 	    controlHistos.fillHisto("subleadlepton","all",min(leptons[0].pt(),leptons[1].pt()),weight);
 	    controlHistos.fillHisto("met","all",mets[0].pt(),weight);
+	    controlHistos.fillHisto("dilmass","all",dilepton.mass(),weight);
 	    controlHistos.fillHisto("btags","all",nbtags,weight);
+	    controlHistos.fillHisto("btagssf","all",0,p0btags*weight);
+	    controlHistos.fillHisto("btagssf","all",1,p1btags*weight);
+	    controlHistos.fillHisto("btagssf","all",2,p2btags*weight);
 	  }
- 	controlHistos.fillHisto("cutflow"+cats[ivar],"all",1,weight);
+ 	controlHistos.fillHisto("evtflow"+cats[ivar],"all",1,weight);
 
 	//b-tag variations
 	if(cats[ivar].Contains("btag"))
@@ -206,15 +226,15 @@ int main(int argc, char* argv[])
 	      p0weight += p0btags_err; p1weight += p1btags_err; p2weight += p2btags_err;   
 	    }
 	    else if(cats[ivar]=="btagdown") { 
-	      p0weight = max(p0weight-p0btags_err,0.); p1weight = max(p1weight-p1btags_err,0.); p2weight = max(p2weight-p2btags_err,0.); 
+	      p0weight = p0weight-p0btags_err; p1weight = p1weight-p1btags_err; p2weight = p2weight-p2btags_err;
 	    }
-	    double sum=p0weight+p1weight+p2weight;
-	    p0weight /= sum; p1weight /= sum; p2weight /= sum;
+	    //	    double sum=p0weight+p1weight+p2weight;
+	    //	    p0weight /= sum; p1weight /= sum; p2weight /= sum;
 	    
 	    //	    if(cats[ivar]=="btagcen")   cout << sum << " " << p0weight << " "<< p1weight << " " << p2weight << endl; 
-	    controlHistos.fillHisto("cutflow"+cats[ivar],"all",2,weight*p0weight);
-	    controlHistos.fillHisto("cutflow"+cats[ivar],"all",3,weight*p1weight);
-	    controlHistos.fillHisto("cutflow"+cats[ivar],"all",4,weight*p2weight);
+	    controlHistos.fillHisto("evtflow"+cats[ivar],"all",2,weight*p0weight);
+	    controlHistos.fillHisto("evtflow"+cats[ivar],"all",3,weight*p1weight);
+	    controlHistos.fillHisto("evtflow"+cats[ivar],"all",4,weight*p2weight);
 	  }
 
 	//standard b-tag
@@ -222,7 +242,7 @@ int main(int argc, char* argv[])
 	  {
 	    int btagbin(nbtags);
 	    if(btagbin>2) btagbin=2;
-	    controlHistos.fillHisto("cutflow"+cats[ivar],"all",2+btagbin,weight);
+	    controlHistos.fillHisto("evtflow"+cats[ivar],"all",2+btagbin,weight);
 	  }
       }
     
@@ -244,9 +264,7 @@ int main(int argc, char* argv[])
   float cnorm=1.0;
   if(isMC)
     {
-      TString tag=gSystem->BaseName(evurl);
-      tag.ReplaceAll(".root","");
-      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/"+tag+"/cutflow");
+      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/cutflow");
       if(cutflowH) cnorm=cutflowH->GetBinContent(1);
     }
 
@@ -281,10 +299,10 @@ int main(int argc, char* argv[])
           if( !((TClass*)hit->second->IsA())->InheritsFrom("TH2")
               && !((TClass*)hit->second->IsA())->InheritsFrom("TGraph") )
             fixExtremities(hit->second,true,true);
-	  if(hit->first.BeginsWith("cutflow") && hit->first!="cutflow")
-	    {
-	      //      hit->second->Add( controlHistos.getHisto("cutflow","all"), -1);
-	    }
+	  //	  if(hit->first.BeginsWith("evtflow") && hit->first!="evtflow")
+	  //	    {
+	      //	      hit->second->Add( controlHistos.getHisto("evtflow","all"), -1);
+	  //	    }
 	  hit->second->Write();
 
 

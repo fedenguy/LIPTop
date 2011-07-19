@@ -1,83 +1,108 @@
 {
     "proc":[
      {
-	 "tag":"VV",
+	 "tag":"Diboson",
          "isdata":false,
-         "color":"10",
+         "color":"596",
 	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
  	        "dtag":"WW",
-		"xsec":0.00002086
+		"xsec":0.01316068,
+		"br":[0.000917431192661]
                 },
 		{
  	        "dtag":"WZ",
-		"xsec":0.00000863
+		"xsec":0.00488909,
+		"br":[0.000917431192661]
                 },
 		{
  	        "dtag":"ZZ",
-		"xsec":0.00000280
+		"xsec":0.00310483,
+		"br":[0.000917431192661]
                 }
 	  ]
 	},
 	{
-	 "tag":"Z/#gamma^{*}#rightarrow ll",
+	 "tag":"DY+jets",
          "isdata":false,
-         "color":"kAzure-2",
+         "color":"831",
 	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
  	        "dtag":"dyfrom50",
-		"xsec":0.0013126575
+		"xsec":0.41954265,
+		"br":[0.000917431192661]
                 }
 	  ]
 	},
 	{
-	 "tag":"Single top",
+	 "tag":"Single t",
          "isdata":false,
-         "color":"kMagenta",
+         "color":"824",
 	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
  	        "dtag":"singletops",
-		"xsec":0.000003072565
+		"xsec":0.00335522,
+		"br":[0.000917431192661]
                 },
 		{
  	        "dtag":"singletopt",
-		"xsec":0.0000451056
+		"xsec":0.05090053,
+		"br":[0.000917431192661]
                 },
 		{
  	        "dtag":"singletoptW",
-		"xsec":0.0000233269
+		"xsec":0.02203949,
+		"br":[0.000917431192661]
                 }
 	  ]
 	},
 	{
 	 "tag":"W+jets",
          "isdata":false,
-         "color":"kGreen-3",
+         "color":"809",
 	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
  	        "dtag":"WJetsToLNu",
-		"xsec":0.0022162094
+		"xsec":0.77898170,
+		"br":[0.000917431192661]
                 }
 	  ]
 	},
 	{
-	 "tag":"t#bar{t}",
+	 "tag":"other t#bar{t}",
          "isdata":false,
-         "color":"kRed+1",
+	 "mctruthmode":2,
+         "color":"8",
 	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
  	        "dtag":"ttbar",
-		"xsec":0.000141729
+		"xsec":0.05108684,
+		"br":[0.000917431192661]
+                }
+	  ]
+	},
+	{
+	 "tag":"t#bar{t}#rightarrow #mu+#tau",
+         "isdata":false,
+	 "mctruthmode":1,
+         "color":"614",
+	 "lcolor":1,
+	 "marker":1,
+         "data":[
+		{
+ 	        "dtag":"ttbar_signal",
+		"xsec":0.05108684,
+		"br":[0.000917431192661]
                 }
 	  ]
 	},
@@ -97,6 +122,18 @@
 		{
  	        "dtag":"Electron3"
                 },
+    	        {
+ 	        "dtag":"EleJet4"
+                },
+    	        {
+ 	        "dtag":"EleJet5"
+                },
+    	        {
+ 	        "dtag":"EleJet6"
+                },
+    	        {
+ 	        "dtag":"EleJet7"
+                },
 		{
  	        "dtag":"Muon1"
                 },
@@ -105,6 +142,18 @@
                 },
 		{
  	        "dtag":"Muon3"
+                },
+		{
+ 	        "dtag":"Muon4"
+                },
+		{
+ 	        "dtag":"Muon5"
+                },
+		{
+ 	        "dtag":"Muon6"
+                },
+		{
+ 	        "dtag":"Muon7"
                 }
 	  ]
 	}

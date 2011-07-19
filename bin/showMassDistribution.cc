@@ -41,13 +41,14 @@ int main(int argc, char* argv[])
   TString outUrl=runProcess.getParameter<std::string>("outdir");
   TString kindir = runProcess.getParameter<std::string>("kindir");
   bool isMC = runProcess.getParameter<bool>("isMC");
+  int mcTruthMode = runProcess.getParameter<int>("mctruthmode");
   TString dirname = runProcess.getParameter<std::string>("dirName");
 
   //book histos
   std::map<TString, TH1 *> results;
   TString cats[]={"all","ee","mumu","emu","etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
-  TString subcats[]={"eq0btags","eq1btags","geq2btags"};
+  TString subcats[]={"","eq0btags","eq1btags","geq2btags"};
   size_t nsubcats=sizeof(subcats)/sizeof(TString);
   for( size_t icat=0; icat<ncats; icat++)
     {
@@ -66,18 +67,19 @@ int main(int argc, char* argv[])
       results[cats[icat]+"_leadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_subleadlepton"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_met"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_met", "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_ht"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_ht", "; #sum_{jets} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_st"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_st", "; #sum_{leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_sumpt"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_sumpt", "; #sum_{leptons} p_{T} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_htlep"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_htlep", "; #sum_{jets,leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (10 GeV/c^{2})", 50, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_ht"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_ht", "; #sum_{jets} [GeV/c]; Events / (20 GeV/c)",40, 0.,800.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_st"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_st", "; #sum_{leptons,E_{T}^{miss}} p_{T} [GeV/c]; Events / (20 GeV/c)",40, 0.,800.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_sumpt"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_sumpt", "; #sum_{leptons} p_{T} [GeV/c]; Events / (20 GeV/c)",25, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_htlep"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_htlep", "; #sum_{jets,leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",70, 0.,1400.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (15 GeV/c^{2})", 40, 0.,450.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_ptttbar"] = (TH1*) formatPlot( new  TH1F (cats[icat]+"_ptttbar", "; p_{t#bar{t}} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.), 1,1,1,20,0,true,true,1,1,1);
       for(size_t isubcat=0; isubcat<nsubcats; isubcat++)
 	{
-	  results[cats[icat]+subcats[isubcat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+subcats[isubcat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (10 GeV/c^{2})", 50, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
+	  results[cats[icat]+subcats[isubcat]+"_mtop"] = (TH1*) formatPlot( new TH1F (cats[icat]+subcats[isubcat]+"_mtop", "; m_{Top} [GeV/c^{2}]; Events / (15 GeV/c^{2})", 30, 0.,450.), 1,1,1,20,0,true,true,1,1,1);
 	  results[cats[icat]+subcats[isubcat]+"_dilmass"] = (TH1F*)formatPlot( new TH1F (cats[icat]+subcats[isubcat]+"_dilmass", "; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
 	}
       results[cats[icat]+"_afb"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_afb", "; #Delta #eta(t,#bar{t}); Events / (0.1)", 100, -5.,5.), 1,1,1,20,0,true,true,1,1,1);
-      results[cats[icat]+"_mttbar"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (20 GeV/c^{2})", 100, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
+      results[cats[icat]+"_mttbar"] = (TH1*) formatPlot( new TH1F (cats[icat]+"_mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (50 GeV/c^{2})", 40, 0.,2000.), 1,1,1,20,0,true,true,1,1,1);
     
       results[cats[icat]+"_mtopvsdilmass"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
       results[cats[icat]+"_mtopvsmlj"] = (TH1F*)formatPlot( new TH2F (cats[icat]+"_mtopvsmlj", "; m_{Top} [GeV/c^{2}]; Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.), 1,1,1,20,0,true,true,1,1,1);
@@ -142,6 +144,12 @@ int main(int argc, char* argv[])
 
     //get event summary
     EventSummary_t &ev = evSummaryHandler.getEvent();
+    if(isMC)
+      {
+	if(mcTruthMode==1 && !ev.isSignal) continue;
+	if(mcTruthMode==2 && ev.isSignal) continue;
+      }
+    
     std::vector<TString> categs;
     categs.push_back("all");
     if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
@@ -202,6 +210,8 @@ int main(int argc, char* argv[])
     TLorentzVector dij = jets[0].first+jets[1].first;
     float mjj=dij.M();
     double ptjet1(max(jets[0].first.Pt(),jets[1].first.Pt())), ptjet2(min(jets[0].first.Pt(),jets[1].first.Pt()));
+
+    TLorentzVector ptttbar=leptons[0].first+leptons[1].first+jets[0].first+jets[1].first+mets[0].first;
     
     //get the lepton-jet pairs
     TLorentzVector lj1=leptons[0].first+jets[icomb==1?0:1].first;
@@ -216,24 +226,27 @@ int main(int argc, char* argv[])
 
     //fill histos
     float weight = ev.weight;
+    //  if(isMC) weight *=0.69; //trigger eff
 
     for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
       {
-	results[*cIt+"_njets"]->Fill(njets,weight);
-	results[*cIt+"_btags"]->Fill(nbtags,weight);
-	results[*cIt+"_leadjet"]->Fill(ptjet1,weight);
-	results[*cIt+"_subleadjet"]->Fill(ptjet2,weight);
-	results[*cIt+"_leadlepton"]->Fill(ptlep1,weight);
-	results[*cIt+"_subleadlepton"]->Fill(ptlep2,weight);
-	results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
-	results[*cIt+"_ht"]->Fill(ht,weight);
-	results[*cIt+"_st"]->Fill(st,weight);
-	results[*cIt+"_sumpt"]->Fill(sumptlep,weight);
-	results[*cIt+"_htlep"]->Fill(htlep,weight);
 	if(mtop>0)
 	  {
-	    results[*cIt+"_mtop"]->Fill(mtop,weight);
+	    results[*cIt+"_njets"]->Fill(njets,weight);
+	    results[*cIt+"_btags"]->Fill(nbtags,weight);
+	    results[*cIt+"_leadjet"]->Fill(ptjet1,weight);
+	    results[*cIt+"_subleadjet"]->Fill(ptjet2,weight);
+	    results[*cIt+"_leadlepton"]->Fill(ptlep1,weight);
+	    results[*cIt+"_subleadlepton"]->Fill(ptlep2,weight);
+	    results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
+	    results[*cIt+"_ht"]->Fill(ht,weight);
+	    results[*cIt+"_st"]->Fill(st,weight);
+	    results[*cIt+"_sumpt"]->Fill(sumptlep,weight);
+	    results[*cIt+"_htlep"]->Fill(htlep,weight);
+	    results[*cIt+"_ptttbar"]->Fill(ptttbar.Pt(),weight);
+	    
 	    results[*cIt+subcat+"_mtop"]->Fill(mtop,weight);
+	    results[*cIt+"_mtop"]->Fill(mtop,weight);
 	    results[*cIt+subcat+"_dilmass"]->Fill(dilmass,weight);
 	    ((TH2F *)results[*cIt+"_mtopvsdilmass"])->Fill(mtop,dilmass,weight);
 	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj1.M(),weight);
@@ -246,9 +259,9 @@ int main(int argc, char* argv[])
 	    results[*cIt+"_mttbar"]->Fill(mttbar);
 	  }
       }
-
+    
     //for data only
-    if (!isMC && mtop>350) 
+    if (!isMC) 
       *outf << "| " << irun << ":" << ilumi << ":" << ievent 
 	    << " | " << categs[1] 
 	    << " | " << mtop 
@@ -271,9 +284,7 @@ int main(int argc, char* argv[])
   if(isMC && nresults)
     {
       double scaleFactor=selEvents.size()/nresults;
-      TString tag=gSystem->BaseName(evurl);
-      tag.ReplaceAll(".root","");
-      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/"+tag+"/cutflow");
+      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/cutflow");
       if(cutflowH)
 	{
 	  float cnorm=cutflowH->GetBinContent(1);

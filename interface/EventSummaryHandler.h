@@ -20,6 +20,7 @@ struct EventSummary_t
 {
   Int_t run,lumi,event;
   Int_t cat;
+  Bool_t isSignal;
   Int_t nvtx,ngenpu;
   Float_t rho,weight;
   Int_t nparticles,nmcparticles;

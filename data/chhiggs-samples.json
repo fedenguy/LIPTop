@@ -98,7 +98,7 @@
                "xsec":4.6
              },
              {
- 	       "dtag":"TToBLNu_t-channel"
+ 	       "dtag":"TToBLNu_t-channel",
 	       "dset":"TToBLNu_t-channel_Spring11",
                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons/TToBLNu_t-channel/TToBLNu_t-channel_Spring11"],
                "xsec":63
@@ -135,7 +135,8 @@
                "dtag":"DYJetsToLL",
 	       "dset":"/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola",
 	       "patdir":["/castor/cern.ch//cms/store/cmst3/user/psilva/ZZ/DYToLL/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola"],
-               "xsec":3048
+               "xsec":3048,
+	       "br":[1.55]
               }
 	    ]
 	},
@@ -150,81 +151,6 @@
 		"dset":"TTJets_TuneZ2_7TeV-madgraph-tauola",
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten//11_06_22_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
                 "xsec":165
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (80 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-          "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_80_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-80"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_80_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-80"],
-                "xsec":165,
-		"br":[0.04]
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (90 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_90_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-90"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_90_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-90"],
-                "xsec":165,
-		"br":[0.04]
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (100 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_100_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-100"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_100_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-100"],
-                "xsec":165,
-		"br":[0.04]
                 }
 	  ]
 	},
@@ -245,109 +171,9 @@
 		"br":[0.32]
                 },
 		{
- 	        "dtag":"HH_120_Summer11",
+ 	        "dtag":"HH_100_Summer11",
 		"dset":"",
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-120"],
-                "xsec":165,
-		"br":[0.04]
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (140 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_140_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-140"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_140_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-140"],
-                "xsec":165,
-		"br":[0.04]
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (150 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_150_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-150"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_150_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-150"],
-                "xsec":165,
-		"br":[0.04]
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (155 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_155_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-155"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_155_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-155"],
-                "xsec":165,
-		"br":[0.04]
-                }
-	  ]
-	},
-	{
-	 "tag":"H^{#pm} (160 GeV/c^{2})",
-         "isdata":false,
-         "color":"kPink-9",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"WH_160_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBWB_M-160"],
-                "xsec":165,
-		"br":[0.32]
-                },
-		{
- 	        "dtag":"HH_160_Summer11",
-		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTToHplusBHminusB_M-160"],
                 "xsec":165,
 		"br":[0.04]
                 }
