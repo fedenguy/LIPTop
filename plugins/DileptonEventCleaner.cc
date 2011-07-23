@@ -37,6 +37,7 @@
 #include "FWCore/Common/interface/TriggerNames.h"
 
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
+#include "LIP/Top/interface/GenTopEvent.h"
 
 #include "Math/LorentzVector.h"
 
@@ -59,7 +60,7 @@ private:
   
   EventSummaryHandler summaryHandler_;
   SelectionMonitor controlHistos_;
-
+  gen::top::Event genEvent_;
 };
 
 using namespace std;
@@ -75,6 +76,7 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 
     objConfig_["Vertices"] = cfg.getParameter<edm::ParameterSet>("Vertices");
     objConfig_["Jets"] = cfg.getParameter<edm::ParameterSet>("Jets");
+    objConfig_["Generator"] = cfg.getParameter<edm::ParameterSet>("Generator");
 
     TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
@@ -417,8 +419,46 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);
     leptons.push_back(lepton2);
-    saveEvent(event,selPath,leptons,selJets,evmet,selVertices.size(),npuIT,rho,weight);
-    
+
+
+    //if event is MC filter out the genparticle collection also
+    int gentteventcode=gen::top::Event::UNKNOWN;
+    if(!event.isRealData())
+      {
+	genEvent_.genLabel_=objConfig_["Generator"].getParameter<edm::InputTag>("source");
+	gentteventcode = genEvent_.assignTTEvent(event,iSetup);
+	summaryHandler_.evSummary_.isSignal = ( gentteventcode==gen::top::Event::EE ||
+						gentteventcode != gen::top::Event::EMU ||
+						gentteventcode!= gen::top::Event::MUMU ); 
+	
+	//save the generator level event
+	std::map<std::string, std::list<reco::CandidatePtr> > genParticles;
+	genParticles["top"] = genEvent_.tops;
+	genParticles["quarks"] = genEvent_.quarks;
+	genParticles["leptons"] = genEvent_.leptons;
+	genParticles["neutrinos"]  = genEvent_.neutrinos;
+	summaryHandler_.evSummary_.nmcparticles=0;
+	for(std::map<std::string,std::list<reco::CandidatePtr> >::iterator it = genParticles.begin();
+	    it != genParticles.end(); it++)
+	  {
+	    for(std::list<reco::CandidatePtr>::iterator itt = it->second.begin();
+		itt != it->second.end();
+		itt++)
+	      {
+		int ipart=summaryHandler_.evSummary_.nmcparticles;
+		summaryHandler_.evSummary_.mcpx[ipart]= itt->get()->px();
+		summaryHandler_.evSummary_.mcpy[ipart]=itt->get()->py();
+		summaryHandler_.evSummary_.mcpz[ipart]=itt->get()->pz();
+		summaryHandler_.evSummary_.mcen[ipart]=itt->get()->energy();
+		summaryHandler_.evSummary_.mcid[ipart]=itt->get()->pdgId();
+		summaryHandler_.evSummary_.nmcparticles++;
+	    }
+	  }
+      }
+      
+  
+  saveEvent(event,selPath,leptons,selJets,evmet,selVertices.size(),npuIT,rho,weight);
+  
   }catch(std::exception &e){
     std::cout << "[DileptonEventCleaner][analyze] failed with " << e.what() << std::endl;
   }
@@ -453,7 +493,7 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
   summaryHandler_.evSummary_.ngenpu=npuIT;
   summaryHandler_.evSummary_.rho=rho;
   summaryHandler_.evSummary_.nparticles=leptons.size()+jets.size()+1;
-  
+
   //save the leptons
   for(size_t ilepton=0; ilepton<leptons.size(); ilepton++)
     {

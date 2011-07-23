@@ -1,39 +1,147 @@
 {
     "proc":[
 	{
-	 "tag":"RelVal",
+	"tag":"ZZ",
+        "isdata":false,
+	"color":"590",
+        "lcolor":1,
+	"marker":1,
+	"data":[
+	     {	
+		"dtag":"ZZto2l2Nu",
+		"dset":"/ZZTo2L2Nu_TuneZ2_7TeV_pythia6_tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+		"patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/VV/ZZTo2L2Nu_TuneZ2_7TeV_pythia6_tauola"],
+		"xsec":5.9,
+		"br":[0.043896]
+	     }
+	]
+	},
+	{
+        "tag":"WW",
+        "isdata":false,
+        "color":"592",
+        "lcolor":1,
+        "marker":1,
+        "data":[
+	     {
+		"dtag":"WWTo2L2Nu",
+	        "dset":"WWTo2L2Nu_TuneZ2_7TeV_pythia6_tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/WWTo2l2Nu"],
+                "xsec":4.51
+             }
+	]
+	},
+	{
+	"tag":"WZ",
+        "isdata":false,
+        "color":"596",
+        "lcolor":1,
+        "marker":1,
+        "data":[
+	     {
+		"dtag":"WZTo3LNu",
+	        "dset":"WZTo3LNu_TuneZ2_7TeV_pythia6_tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/WZTo3LNu"],
+                "xsec":0.596
+             }
+	   ]
+    	},
+	{
+	"tag":"Single top",
+        "isdata":false,
+        "color":"kSpring+4",
+        "lcolor":1,
+        "marker":1,
+        "data":[
+	     {
+		"dtag":"SingleT_tW",
+	        "dset":"T_TuneZ2_tW-channel-DR_7TeV-powheg-tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleTop/T_TuneZ2_tW-channel-DR_7TeV-powheg-tauola"],
+                "xsec":7.87
+             },
+	     {
+		"dtag":"SingleTbar_tW",
+	        "dset":"Tbar_TuneZ2_tW-channel-DR_7TeV-powheg-tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleTop/Tbar_TuneZ2_tW-channel-DR_7TeV-powheg-tauola"],
+                "xsec":7.87
+             }
+	   ]
+    	},
+	{
+	 "tag":"t#bar{t}",
          "isdata":false,
-         "color":"1",
-	 "fill":0,
-	 "marker":1,
+         "color":"8",
+	 "lcolor":1,
          "data":[
 		{
- 	        "dtag":"RelValTTbar",
-	        "normto":1,
-		"dset":"/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1",
-	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
-                "aoddir":["/castor/cern.ch/cms/store/relval/CMSSW_4_3_0_pre5/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1/0073",
-			  "/castor/cern.ch/cms/store/relval/CMSSW_4_3_0_pre5/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1/0079"],
-	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/42x/RelValTTbar/GEN-SIM-RECO/MC_43_V1-v1/PAT"]
+ 	        "dtag":"TTJets",
+		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
+                "xsec":165
                 }
 	  ]
 	},
 	{
-	 "tag":"Default FastSim",
-         "isdata":true,
-         "color":"kRed+1",
-	 "marker":20,
+	 "tag":"W+jets",
+         "isdata":false,
+         "color":"809",
+	 "lcolor":1,
          "data":[
 		{
- 	        "dtag":"DefaultFastSim",
-	        "normto":1,
-		"dset":"TTbar2l-PYTHIA6-std-FastSim",
-	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
-                "aoddir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar2l-PYTHIA6-std-FastSim/AODSIM"],
-	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar2l-PYTHIA6-std-FastSim/PAT"]
+		 "dtag":"WJetsToLNu",
+                 "dset":"/WJetsToLNu_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/WJetsToLNu/WJetsToLNu_TuneZ2_7TeV-madgraph-tauola"],
+                 "xsec":31314
                 }
-	  ]
+	 ]
+	},
+	{
+	 "tag":"Z/#gamma^{*}+jets#rightarrow ll",
+         "isdata":false,
+         "color":"831",
+	 "lcolor":1,
+         "data":[
+	      {
+               "dtag":"DYJetsToLL",
+	       "dset":"/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+	       "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/ZZ/DYToLL/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola"],
+               "xsec":3048
+              }
+          ]
+	},
+	{
+           "tag":"data",
+           "isdata":true,
+           "color":1,
+           "fill":0,
+           "marker":20,
+           "data":[
+                {
+                  "dtag":"MuEGMay10ReReco",
+                  "dset":"MuEG-May10ReReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/MuEGMay10ReReco"]
+		},
+                {
+                  "dtag":"DoubleMuMay10ReReco",
+                  "dset":"DoubleMu-May10ReReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/DoubleMuMay10ReReco"]
+		},
+                {
+                  "dtag":"DoubleElectronMay10ReReco",
+                  "dset":"DoubleElectron-May10ReReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/DoubleElectronMay10ReReco"]
+		},
+                {
+                  "dtag":"DoubleMuPromptReco",
+                  "dset":"DoubleMu-PromptReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/DoubleMuon/DoubleMuPromptReco"]
+		},
+                {
+                  "dtag":"DoubleElectronPromptReco",
+                  "dset":"DoubleElectron-PromptReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/DoubleElectron/DoubleElectronPromptReco"]
+		}
+             ]
 	}
     ]	
 }
-	

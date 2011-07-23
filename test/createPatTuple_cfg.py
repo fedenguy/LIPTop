@@ -45,9 +45,13 @@ process.endCounter = process.startCounter.clone()
 
 # define the paths
 if(runOnMC):
-    process.eePath = cms.Path(process.startCounter * process.patDefaultSequence * process.eeCandidateSequence )
-    process.mumuPath  = cms.Path(process.startCounter * process.patDefaultSequence * process.mumuCandidateSequence )
-    process.emuPath  = cms.Path(process.startCounter * process.patDefaultSequence * process.emuCandidateSequence )
+#    process.eePath = cms.Path(process.startCounter * process.patDefaultSequence * process.eeCandidateSequence )
+#    process.mumuPath  = cms.Path(process.startCounter * process.patDefaultSequence * process.mumuCandidateSequence )
+#    process.emuPath  = cms.Path(process.startCounter * process.patDefaultSequence * process.emuCandidateSequence )
+
+    process.eePath = cms.Path(process.startCounter * process.patDefaultSequence )
+    process.mumuPath  = cms.Path(process.startCounter * process.patDefaultSequence )
+    process.emuPath  = cms.Path(process.startCounter * process.patDefaultSequence )
 else:
     process.eePath = cms.Path(process.startCounter * process.preselection * process.trigSequence * process.patDefaultSequence * process.eeCandidateSequence )
     process.mumuPath  = cms.Path(process.startCounter * process.preselection * process.trigSequence * process.patDefaultSequence * process.mumuCandidateSequence )

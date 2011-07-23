@@ -76,7 +76,22 @@ TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iCon
   controlHistos_.addHistogram("jetneutconst", "; Neutral hadron multiplicity in jets; Jets", 25, 0.,25.);
   controlHistos_.addHistogram("jetpt", "; p_{T} [GeV/c]; Jet", 100, 0.,250.);
   controlHistos_.addHistogram("jetbeta", "; #beta(dilepton vertex); Jets", 100, 0.,1.);
- 
+
+  TString flavs[]={"b","udcsg"};
+  TString jetkin[]={"20to30","30to50","geq50"};
+  for(size_t i=0; i<sizeof(flavs)/sizeof(TString); i++)
+    {
+      for(size_t j=0; j<sizeof(jetkin)/sizeof(TString); j++)
+	{
+	  controlHistos_.addHistogram(flavs[i]+jetkin[j]+"tche", "; TCHE discriminator; Jets", 100, -25.,25.);
+	  controlHistos_.addHistogram(flavs[i]+jetkin[j]+"tchp", "; TCHP discriminator; Jets", 100, -25.,25.);
+	  controlHistos_.addHistogram(flavs[i]+jetkin[j]+"ssvhe", "; SSVHE discriminator; Jets", 100, -5.,5.);
+	  controlHistos_.addHistogram(flavs[i]+jetkin[j]+"ssvhp", "; SSVHP discriminator; Jets", 100, -5.,5.);
+	  controlHistos_.addHistogram(flavs[i]+jetkin[j]+"jp", "; JP discriminator; Jets", 100, -3., 3.);
+	  controlHistos_.addHistogram(flavs[i]+jetkin[j]+"jbp", "; JBP discriminator; Jets", 100, -5., 5.);
+	}
+    }
+
   controlHistos_.initMonitorForStep("electron");
   controlHistos_.initMonitorForStep("muon");
   controlHistos_.initMonitorForStep("ee");
@@ -253,9 +268,28 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	  for(size_t icat=0; icat<dilCats.size(); icat++)
 	    {
 	      controlHistos_.fillHisto("jetmult",dilCats[icat],selJets.size(),weight);
+	      
 	      for(CandidateWithVertexCollection::iterator jit = selJets.begin(); jit!=selJets.end(); jit++)
 		{
 		  const pat::Jet *j = dynamic_cast<const pat::Jet *>(jit->first.get());
+		
+		  const reco::Candidate *genParton = j->genParton();
+		  TString flav="udcsg";
+		  int pdgid(genParton ? genParton->pdgId() : 0);
+		  if(fabs(pdgid)==5) flav="b";
+		  if(j->pt()<30)      flav +="20to30";
+		  else if(j->pt()<50) flav += "30to50";
+		  else                flav += "geq50";
+		 
+		  double mass = j->userFloat("secvtxMass");
+
+		  controlHistos_.fillHisto(flav+"tche",  dilCats[icat], j->bDiscriminator("trackCountingHighEffBJetTags"));
+		  controlHistos_.fillHisto(flav+"tchp",  dilCats[icat], j->bDiscriminator("trackCountingHighPurBJetTags"));
+		  controlHistos_.fillHisto(flav+"ssvhe", dilCats[icat], j->bDiscriminator("simpleSecondaryVertexHighEffBJetTags"));
+		  controlHistos_.fillHisto(flav+"ssvhp", dilCats[icat], j->bDiscriminator("simpleSecondaryVertexHighPurBJetTags"));
+		  controlHistos_.fillHisto(flav+"jp", dilCats[icat], j->bDiscriminator("jetProbabilityBJetTags"));
+		  controlHistos_.fillHisto(flav+"jbp", dilCats[icat], j->bDiscriminator("jetBProbabilityBJetTags"));
+
 		  controlHistos_.fillHisto("jetpt",dilCats[icat],j->pt(),weight);
 		  controlHistos_.fillHisto("jetchconst",dilCats[icat],j->chargedHadronMultiplicity(),weight);
 		  controlHistos_.fillHisto("jetneutconst",dilCats[icat],j->neutralHadronMultiplicity(),weight);
@@ -266,7 +300,11 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	  CandidateWithVertexCollection assocJets, puJets;
 	  jet::classifyJetsForDileptonEvent(selJets,dileptonWithVertex,assocJets,puJets,objConfig["Dileptons"].getParameter<double>("maxDz"));
 	  for(CandidateWithVertexCollection::iterator jIt = assocJets.begin(); jIt != assocJets.end(); jIt++) hyp.add(jIt->first,"jet");
-	  for(CandidateWithVertexCollection::iterator jIt = puJets.begin(); jIt != puJets.end(); jIt++) hyp.add(jIt->first,"pujet");
+	  for(CandidateWithVertexCollection::iterator jIt = puJets.begin(); jIt != puJets.end(); jIt++) 
+	    {
+	      hyp.add(jIt->first,"pujet");
+	      hyp.add(jIt->first,"jet");
+	    }
 	  
 	  //add the met
 	  Handle<View<Candidate> > hMET; 

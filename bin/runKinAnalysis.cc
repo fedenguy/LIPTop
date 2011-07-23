@@ -81,7 +81,6 @@ int main(int argc, char* argv[])
   //TString localFile("/tmp/KinAnalysis.root");  
   TString localFile(argv[1]);
   localFile.ReplaceAll("_cfg.py",".root"); 
-  //TString localFile("/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_1_3_patch2/src/LIP/Top/KinAnalysis_0.root");
   KinAnalysis kin(scheme,maxTries,maxJetMult,mw,mb,localFile,true);
   for( int iev=evStart; iev<evEnd; iev++)
     {
@@ -98,7 +97,7 @@ int main(int argc, char* argv[])
   url.ReplaceAll("/","");
   TString mkcmd( output.Contains("/castor") ? "rfmkdir -p" : "mkdir -p");
   gSystem->Exec(mkcmd + " " + output);
-  output += "/" +  url;
+  output += "/" +  url + "/" + scheme;
   gSystem->Exec(mkcmd + " " + output);
   TString cpcmd( output.Contains("/castor") ? "rfcp" : "cp -v");
   TString outUrl(output+"/KinAnalysis_");  
