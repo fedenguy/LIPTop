@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
   }
 
   //loop over kin results
-  int nresults(0);
+  int nresults(0),neventsused(0);
   for (int inum=0; inum < t->GetEntries(); ++inum){
     t->GetEvent(inum);
  
@@ -226,7 +226,6 @@ int main(int argc, char* argv[])
 
     //fill histos
     float weight = ev.weight;
-    //  if(isMC) weight *=0.69; //trigger eff
 
     for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
       {
@@ -259,7 +258,8 @@ int main(int argc, char* argv[])
 	    results[*cIt+"_mttbar"]->Fill(mttbar);
 	  }
       }
-    
+    neventsused++;
+
     //for data only
     if (!isMC) 
       *outf << "| " << irun << ":" << ilumi << ":" << ievent 
@@ -280,17 +280,18 @@ int main(int argc, char* argv[])
 
 
   //if MC: rescale to number of selected events and to units of pb
-  cout << "Selected " << selEvents.size() << " found " << nresults << " kin results " << endl;
+  cout << "From " << selEvents.size() << "original events found " << nresults << " kin results - used " << neventsused << endl; 
+
   if(isMC && nresults)
     {
-      double scaleFactor=selEvents.size()/nresults;
+      double scaleFactor=double(selEvents.size())/double(nresults);
       TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/cutflow");
       if(cutflowH)
 	{
 	  float cnorm=cutflowH->GetBinContent(1);
 	  if(cnorm>0) scaleFactor/=cnorm;
 	}
-      cout << scaleFactor << endl;
+      cout << selEvents.size() << " " << nresults << " " << scaleFactor << endl;
       for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
 

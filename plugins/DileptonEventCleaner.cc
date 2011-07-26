@@ -427,9 +427,9 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       {
 	genEvent_.genLabel_=objConfig_["Generator"].getParameter<edm::InputTag>("source");
 	gentteventcode = genEvent_.assignTTEvent(event,iSetup);
-	summaryHandler_.evSummary_.isSignal = ( gentteventcode==gen::top::Event::EE ||
-						gentteventcode != gen::top::Event::EMU ||
-						gentteventcode!= gen::top::Event::MUMU ); 
+	summaryHandler_.evSummary_.isSignal = ( gentteventcode == gen::top::Event::EE ||
+						gentteventcode == gen::top::Event::EMU ||
+						gentteventcode == gen::top::Event::MUMU ); 
 	
 	//save the generator level event
 	std::map<std::string, std::list<reco::CandidatePtr> > genParticles;
