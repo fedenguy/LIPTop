@@ -54,7 +54,7 @@ public:
 private:
 
   void saveEvent(const edm::Event& event, int evCat, std::vector<reco::CandidatePtr> &leptons, std::vector<const pat::Jet *> &jets, const pat::MET *met, 
-		 int nvertices, int npuIT, float rho, float weight);
+		 int nvertices, int npuIT, float rho, float weight, float normWeight);
 
   std::map<std::string, edm::ParameterSet> objConfig_;
   
@@ -74,6 +74,7 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 
     summaryHandler_.initTree( fs->make<TTree>("data","Event Summary") );
 
+    objConfig_["Trigger"] = cfg.getParameter<edm::ParameterSet>("Trigger");
     objConfig_["Vertices"] = cfg.getParameter<edm::ParameterSet>("Vertices");
     objConfig_["Jets"] = cfg.getParameter<edm::ParameterSet>("Jets");
     objConfig_["Generator"] = cfg.getParameter<edm::ParameterSet>("Generator");
@@ -164,35 +165,38 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
   
   try{
 
-
-    //get trigger results
-    edm::Handle<edm::TriggerResults> allTriggerBits_;
-//     edm::InputTag trigSource("TriggerResults::HLT");
-//     event.getByLabel( trigSource, allTriggerBits_);
-//      const edm::TriggerNames &triggerNames = event.triggerNames( *allTriggerBits_);
-
-//      bool hasTrigger(false);
-//      for (size_t itrig = 0; itrig != allTriggerBits_->size(); ++itrig)
-//        {
-//  	if( !allTriggerBits_->wasrun(itrig) ) continue;
-//  	if( allTriggerBits_->error(itrig) ) continue;
-//  	if( !allTriggerBits_->accept(itrig) ) continue;
-//  	std::string trigName = triggerNames.triggerName(itrig);
-// 	if(trigName!="HLT_Mu8_Ele17_CaloIdL_v2" 
-// 		    && trigName != "HLT_Mu17_Ele8_CaloIdL_v2") continue;
-//  	hasTrigger=true;
-// 	cout << trigName << endl;
-//        }
-//      if(!hasTrigger) return;
-
+    summaryHandler_.evSummary_.hasTrigger=true;
 
     //get the weight for the event
-    float weight=1;
+    float weight(1),normWeight(1);
     if(!event.isRealData())
       {
+	
+	//get trigger results (data is pre-triggered)
+	edm::Handle<edm::TriggerResults> allTriggerBits_;
+	edm::InputTag trigSource("TriggerResults::HLT");
+	event.getByLabel( trigSource, allTriggerBits_);
+	const edm::TriggerNames &triggerNames = event.triggerNames( *allTriggerBits_);
+	std::vector<std::string> triggerPaths = objConfig_["Trigger"].getParameter<std::vector<std::string> >("triggerPaths"); 
+	summaryHandler_.evSummary_.hasTrigger=false;
+	for (size_t itrig = 0; itrig != allTriggerBits_->size(); ++itrig)
+	  {
+	    std::string trigName = triggerNames.triggerName(itrig);
+	    if( !allTriggerBits_->wasrun(itrig) ) continue;
+	    if( allTriggerBits_->error(itrig) ) continue;
+	    if( !allTriggerBits_->accept(itrig) ) continue;
+	    if( find(triggerPaths.begin(), triggerPaths.end(), trigName) == triggerPaths.end() ) continue;
+	    summaryHandler_.evSummary_.hasTrigger=true;
+	    break;
+	  }
+	
 	edm::Handle<float> puWeightHandle;
 	event.getByLabel("puWeights","puWeight",puWeightHandle);
 	if(puWeightHandle.isValid()) weight = *(puWeightHandle.product());
+
+	edm::Handle<float> normPuWeightHandle;
+	event.getByLabel("puWeights","normPuReweight", normPuWeightHandle );
+	if(normPuWeightHandle.isValid()) normWeight = *(normPuWeightHandle.product());
       }
 
     //get objects for this event
@@ -457,7 +461,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       }
       
   
-  saveEvent(event,selPath,leptons,selJets,evmet,selVertices.size(),npuIT,rho,weight);
+    saveEvent(event,selPath,leptons,selJets,evmet,selVertices.size(),npuIT,rho,weight,normWeight);
   
   }catch(std::exception &e){
     std::cout << "[DileptonEventCleaner][analyze] failed with " << e.what() << std::endl;
@@ -481,7 +485,7 @@ void DileptonEventCleaner::endLuminosityBlock(const edm::LuminosityBlock & iLumi
 
 //
 void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::vector<reco::CandidatePtr> &leptons, std::vector<const pat::Jet *> &jets, const pat::MET *met, 
-				     int nvertices, int npuIT, float rho, float weight)
+				     int nvertices, int npuIT, float rho, float weight, float normWeight)
 {
   //save event header
   summaryHandler_.evSummary_.run=event.id().run();
@@ -489,6 +493,7 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
   summaryHandler_.evSummary_.event=event.id().event();
   summaryHandler_.evSummary_.cat=evCat; 
   summaryHandler_.evSummary_.weight=weight; 
+  summaryHandler_.evSummary_.normWeight=normWeight; 
   summaryHandler_.evSummary_.nvtx=nvertices;
   summaryHandler_.evSummary_.ngenpu=npuIT;
   summaryHandler_.evSummary_.rho=rho;
@@ -524,6 +529,7 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
 
       summaryHandler_.evSummary_.id[ilepton] = id;
       summaryHandler_.evSummary_.genid[ilepton] = genid;
+      summaryHandler_.evSummary_.genflav[ilepton] = genid;
     }
 
   //save the jets
@@ -537,11 +543,12 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
       summaryHandler_.evSummary_.id[pidx] = 1;
       const reco::Candidate *genParton = jets[ijet]->genParton();
       summaryHandler_.evSummary_.genid[pidx] = genParton ? genParton->pdgId() : -9999;
+      summaryHandler_.evSummary_.genflav[pidx] = jets[ijet]->partonFlavour();
       summaryHandler_.evSummary_.info1[pidx]=jets[ijet]->bDiscriminator("trackCountingHighEffBJetTags");
       summaryHandler_.evSummary_.info2[pidx]=jets[ijet]->bDiscriminator("trackCountingHighPurBJetTags");
       summaryHandler_.evSummary_.info3[pidx]=jets[ijet]->bDiscriminator("simpleSecondaryVertexHighEffBJetTags");	  
-      summaryHandler_.evSummary_.info4[pidx]=jets[ijet]->bDiscriminator("simpleSecondaryVertexHighPurBJetTags");
-      summaryHandler_.evSummary_.info5[pidx]=jets[ijet]->bDiscriminator("combinedSecondaryVertexBJetTags");
+      summaryHandler_.evSummary_.info4[pidx]=jets[ijet]->bDiscriminator("jetBProbabilityBJetTags");
+      summaryHandler_.evSummary_.info5[pidx]=jets[ijet]->bDiscriminator("jetProbabilityBJetTags");
     }
 
   //save met
@@ -552,6 +559,10 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
   summaryHandler_.evSummary_.en[pidx]=met->energy();
   summaryHandler_.evSummary_.id[pidx] = 0;
   summaryHandler_.evSummary_.genid[pidx] = -9999;
+  summaryHandler_.evSummary_.genflav[pidx] = -9999;
+
+  //no further measurements for now
+  summaryHandler_.evSummary_.nmeasurements=0;
 
   //all done
   summaryHandler_.fillTree();

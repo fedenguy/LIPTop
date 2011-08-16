@@ -1,12 +1,15 @@
-<use   name="FWCore/Framework"/>
-<use   name="FWCore/ParameterSet"/>
-<use   name="FWCore/FWLite"/>
-<use   name="CondFormats/JetMETObjects"/>
-<use   name="CMGTools/HtoZZ2l2nu"/>
-<use   name="root"/>
-<use   name="roottmva"/>
-<use   name="rootrflx"/>
-<use   name="roofit"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/FWLite"/>
+<use name="CondFormats/JetMETObjects"/>
+<use name="CMGTools/HtoZZ2l2nu"/>
+<use name="root"/>
+<use name="roottmva"/>
+<use name="rootrflx"/>
+<use name="roofit"/>
+<use name="boost"/>
+<use name="rootmath"/>
 <export>
-  <lib    name="1"/>
+  <lib name="1"/>
 </export>
+<Flags CXXFLAGS="-g" />

@@ -43,6 +43,7 @@ int main(int argc, char* argv[])
   bool isMC = runProcess.getParameter<bool>("isMC");
   int mcTruthMode = runProcess.getParameter<int>("mctruthmode");
   TString dirname = runProcess.getParameter<std::string>("dirName");
+  bool saveSummaryTree = runProcess.getParameter<bool>("saveSummaryTree");
 
   //book histos
   std::map<TString, TH1 *> results;
@@ -107,6 +108,22 @@ int main(int argc, char* argv[])
       return -1;
     }  
   TTree *evTree=evSummaryHandler.getTree();
+
+  //init event spy
+  EventSummaryHandler *spyEvents=0;
+  TFile *spyFile=0;
+  TDirectory *spyDir=0;  
+  if(saveSummaryTree)
+    {
+      spyEvents = new EventSummaryHandler;
+      spyFile = TFile::Open("EventSummaries.root","UPDATE");
+      TString evtag=gSystem->BaseName(evurl);
+      evtag.ReplaceAll(".root","");
+      spyFile->rmdir(evtag);
+      spyDir = spyFile->mkdir(evtag);
+      TTree *outT = new TTree("data","Event summary");
+      spyEvents->initTree(outT);
+    }
 
   //process kin file
   TString kinUrl(evurl);
@@ -260,6 +277,21 @@ int main(int argc, char* argv[])
       }
     neventsused++;
 
+    //save for further study
+    //if(mtop>0 && spyEvents && ev.normWeight==1)
+    if(mtop>0 && spyEvents && ev.weight>1.7)
+      {
+	std::vector<float> measurements;
+	measurements.push_back(mtop);
+	measurements.push_back(mttbar);
+	measurements.push_back(afb);
+	measurements.push_back(ptttbar.Pt());
+	measurements.push_back(nbtags);
+	measurements.push_back(njets);
+	measurements.push_back(htlep);
+	spyEvents->fillTreeWithEvent( ev, measurements );
+      }
+
     //for data only
     if (!isMC) 
       *outf << "| " << irun << ":" << ilumi << ":" << ievent 
@@ -315,4 +347,13 @@ int main(int argc, char* argv[])
     }
 
   file->Close(); 
+
+
+  if(spyEvents)
+    {
+      spyDir->cd();
+      spyEvents->getTree()->Write();
+      spyFile->Write();
+      spyFile->Close();
+    }
 }  
