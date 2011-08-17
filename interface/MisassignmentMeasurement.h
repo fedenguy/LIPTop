@@ -47,26 +47,27 @@ class MisassignmentMeasurement
   /**
      @short runs the measurement
   */
-  void measureMisassignments(EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false);
+  void measureMisassignments(EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1);
   
   /**
      @short getters
   */
-  std::vector<double> getCorrectPairsFraction() 
+  std::vector<double> getCorrectPairsFraction(TString cat="all") 
     {
       std::vector<double> res(2,0);
-      res[0]=fCorrectPairsEst;
-      res[1]=fCorrectPairsEstErr;
+      res[0]=fCorrectPairsEst[cat];
+      res[1]=fCorrectPairsEstErr[cat];
       return res;
     }
-  std::vector<double> getAlpha() 
+  std::vector<double> getAlpha(TString cat="all") 
     {
       std::vector<double> res(2,0);
-      res[0]=alphaEst;
-      res[1]=alphaEstErr;
+      res[0]=alphaEst[cat];
+      res[1]=alphaEstErr[cat];
       return res;
     }
-  double getNorm() { return kNorm; }
+  double getNorm(TString cat="all") { return kNorm[cat]; }
+  double getTrueCorrectPairsFraction(TString cat="all") { return fTrueCorrectPairs[cat]; }
 
  private:
   /**
@@ -74,10 +75,9 @@ class MisassignmentMeasurement
   void resetHistograms();
 
   int nMeasurements;
-
-  double kNorm;
-  double fCorrectPairsEst, fCorrectPairsEstErr;
-  double alphaEst,alphaEstErr;
+  std::map<TString,double> kNorm;
+  std::map<TString,double> fTrueCorrectPairs, fCorrectPairsEst, fCorrectPairsEstErr;
+  std::map<TString,double> alphaEst,alphaEstErr;
 };
 
 

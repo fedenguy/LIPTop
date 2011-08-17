@@ -3,6 +3,7 @@
 import os,sys
 import json
 import getopt
+from math import sqrt,pow
 
 """
 Gets the value of a given item
@@ -22,13 +23,14 @@ def usage() :
     print '  -j : json file containing the samples'
     print '  -i : event summary file'
     print '  -n : number of ensembles to test'
-    print ' '
+    print '  -b : jet bin (2=2 jets exclusive, 3=3 jets inclusive, otherwise all inclusive)' 
+    print '  -p : plot only'
     exit(-1)
 
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "l:j:i:n:h?"
+    shortopts  = "b:l:j:i:n:p:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -37,10 +39,12 @@ except getopt.GetoptError:
     sys.exit(1)
 
 #configure
-lumi=50
+lumi=215.3
 samplesDB=''
 ifile=''
 nensemble=1
+plotOnly=False
+jetbin=0
 for o,a in opts:
     if o in("-?", "-h"):
         usage()
@@ -49,110 +53,127 @@ for o,a in opts:
     elif o in('-j'): samplesDB = a
     elif o in('-i'): ifile=a
     elif o in('-n'): nensemble=int(a)
-                        
+    elif o in('-p'): plotOnly = (a=='True')
+    elif o in('-b'): jetbin=int(a)
     
 # load macros
 import ROOT
 ROOT.gSystem.Load('${CMSSW_BASE}/lib/${SCRAM_ARCH}/libLIPTop.so')
 from ROOT import HFCMeasurement, MisassignmentMeasurement, EventSummaryHandler, getNewCanvas, showPlotsAndMCtoDataComparison, setStyle, formatForCmsPublic, formatPlot
 
-# inF=ROOT.TFile.Open(ifile)
+if(not plotOnly) :
+    inF=ROOT.TFile.Open(ifile)
 
-# jsonFile = open(samplesDB,'r')
-# procList=json.load(jsonFile,encoding='utf-8').items()
-# #run over sample
-# evHandler       = EventSummaryHandler()
-# misMeasurement  = MisassignmentMeasurement()
-# ensembleInfo=''
-# print '[HFCmeasurement]',
-# for ipe in xrange(0,nensemble+1) :
+    jsonFile = open(samplesDB,'r')
+    procList=json.load(jsonFile,encoding='utf-8').items()
 
-#     #progress bar
-#     print '.',
-#     sys.stdout.flush()
-    
-#     ensembleHandler = EventSummaryHandler()
-#     ensembleInfo  += '<table>'
-#     ensembleInfo += '<tr><th><b>Info for '
-#     if(ipe==0) : ensembleInfo += 'data'
-#     else       : ensembleInfo += ' ensemble #' + str(ipe)
-#     ensembleInfo += '</b></th></tr>'
-
-#     for proc in procList :
-
-#         #run over processes
-#         id=0
-#         for desc in proc[1] :
-#             isdata = getByLabel(desc,'isdata',False)
-#             if(ipe>0 and isdata) : continue
-#             if(ipe==0 and not isdata) : continue
-            
-#             #run over items in process
-#             data = desc['data']
-#             for d in data :
-#                 tag = getByLabel(d,'dtag','')
-
-#                 #get tree of events from file
-#                 t=inF.Get(tag+'/data')
-#                 try :
-#                     t.GetEntriesFast()
-#                 except:
-#                     continue
-#                 attResult=evHandler.attachToTree(t)
-#                 nevtsSel = evHandler.getEntries()
-#                 if(attResult is False) : continue
-
-#                 #clone (will use the same address as the original tree)
-#                 id=id+1
-#                 if(id==1):
-#                     ROOT.gROOT.cd()
-#                     ensembleHandler.initTree(t.CloneTree(0), False)
-#                     ensembleHandler.getTree().SetDirectory(0)
-                    
-#                 #generate number of events for ensemble
-#                 nevtsExpected=evHandler.getEntries()
-#                 nevts=nevtsExpected
-#                 if(ipe>0):
-#                     evHandler.getEntry(0)
-#                     nevtsExpected=lumi*(evHandler.evSummary_.weight)*nevtsSel
-#                     nevts = int(ROOT.gRandom.Poisson( nevtsExpected ))
-
-#                 genEvts=[]
-#                 for ievt in xrange(0,nevts) :
-#                     rndEvt=ievt
-#                     if(ipe>0):
-#                         rndEvt = int(ROOT.gRandom.Uniform(0,nevtsSel))
-#                         if( rndEvt in genEvts ) : continue
-#                     genEvts.append(rndEvt)
-#                     evHandler.getEntry(rndEvt)
-#                     ensembleHandler.fillTree()
-
-#                 ensembleInfo += '<tr><td><b>' + tag + '<b></td></tr>'
-#                 if(ipe>0) : ensembleInfo += '<tr><td>&lt;N<sub>expected</sub>&gt;=' + str(nevtsExpected) + '</td></tr>'
-#                 ensembleInfo += '<tr><td>&lt;N<sub>generated</sub>&gt;=' + str(nevts) + '</td></tr>'
-#                 if(ipe>0) : ensembleInfo += '<tr><td><small>' + str(genEvts) + '</small></td></tr>'
-                
-#         #take control of the filled tree now
-#         ensembleHandler.attachToTree( ensembleHandler.getTree() )
-#         misMeasurement.measureMisassignments( ensembleHandler, 180, 40, (ipe==0) )
-#         ncorrectEst   = misMeasurement.getCorrectPairsFraction()
-#         fcorrect      = ncorrectEst[0]
-#         fcorrectErr   = ncorrectEst[1]
-#         alpha         = misMeasurement.getAlpha()
-#         kNorm         = misMeasurement.getNorm()
-#         ensembleInfo += '<tr><td>k-factor=' + str(kNorm) + '</td></tr>'
-#         ensembleInfo += '<tr><td>f<sub>correct</sub>=' + str(fcorrect) + "+/-" + str(fcorrectErr) + "</td><tr>"
-#         ensembleInfo += '<tr><td>&alpha;=' + str(alpha[0]) + "+/-" + str(alpha[1]) + "</td><tr>"
-#         ensembleInfo += '<tr><td></td></tr>'
-#         ensembleHandler.getTree().Delete("all")
+    #run over sample
+    evHandler       = EventSummaryHandler()
+    misMeasurement  = MisassignmentMeasurement()
+    ensembleInfo = '<big><b>Summary of ensemble tests (data/MC) for events with'
+    if(jetbin==2):   ensembleInfo += '= 2 jets'
+    elif(jetbin==3): ensembleInfo += '&gt;= 3 jets'
+    else :           ensembleInfo += '&gt;= 2 jets'
+    ensembleInfo += '</b></big>'
+    print '[HFCmeasurement]',
+    for ipe in xrange(0,nensemble+1) :
         
-# misMeasurement.saveMonitoringHistograms()
-# inF.Close()
+        #progress bar
+        print '.',
+        sys.stdout.flush()
+        
+        ensembleHandler = EventSummaryHandler()
+        ensembleInfo  += '<table>'
+        ensembleInfo += '<tr><th><b>Info for '
+        if(ipe==0) : ensembleInfo += 'data'
+        else       : ensembleInfo += ' ensemble #' + str(ipe)
+        ensembleInfo += '</b></th></tr>'
+        
+        for proc in procList :
 
-# #save ensemble info to file
-# fout = open('ensemble_info.html', 'w')
-# fout.write(ensembleInfo)
-# fout.close()
+            #run over processes
+            id=0
+            for desc in proc[1] :
+                isdata = getByLabel(desc,'isdata',False)
+                
+                if(ipe>0 and isdata) : continue
+                if(ipe==0 and not isdata) : continue
+            
+                #run over items in process
+                data = desc['data']
+                for d in data :
+                    tag = getByLabel(d,'dtag','')
+ 
+                    #get tree of events from file
+                    t=inF.Get(tag+'/data')
+                    
+                    try :
+                        t.GetEntriesFast()
+                    except:
+                        continue
+            
+                    attResult=evHandler.attachToTree(t)
+                    nevtsSel = evHandler.getEntries()
+                    if(attResult is False) : continue
+                    
+                    #clone (will use the same address as the original tree)
+                    id=id+1
+                    if(id==1):
+                        ROOT.gROOT.cd()
+                        ensembleHandler.initTree(t.CloneTree(0), False)
+                        ensembleHandler.getTree().SetDirectory(0)
+                    
+                    #generate number of events for ensemble
+                    nevts=nevtsSel
+                    nevtsExpected=nevts
+                    if(ipe>0):
+                        evHandler.getEntry(0)
+                        nevtsExpected=lumi*(evHandler.evSummary_.weight)*nevtsSel
+                        nevts = int(ROOT.gRandom.Poisson( nevtsExpected ))
+
+                    genEvts=[]
+                    for ievt in xrange(0,nevts) :
+                        rndEvt=ievt
+                        if(ipe>0):
+                            rndEvt = int(ROOT.gRandom.Uniform(0,nevtsSel))
+                            if( rndEvt in genEvts ) : continue
+                        evHandler.getEntry(rndEvt)
+                        ensembleHandler.fillTree()
+                        genEvts.append(rndEvt)
+
+            ensembleInfo += '<tr><td><b>' + tag + '<b></td></tr>'
+            if(ipe>0) : ensembleInfo += '<tr><td>&lt;N<sub>expected</sub>&gt;=' + str(nevtsExpected) + '</td></tr>'
+            ensembleInfo += '<tr><td>&lt;N<sub>generated</sub>&gt;=' + str(nevts) + '</td></tr>'
+            #if(ipe>0) : ensembleInfo += '<tr><td><small>' + str(genEvts) + '</small></td></tr>'
+                
+            #take control of the filled tree now
+            ensembleHandler.attachToTree( ensembleHandler.getTree() )
+            misMeasurement.measureMisassignments( ensembleHandler, 180, 40, (ipe==0), jetbin )
+
+            #print info
+            categories=['all', 'emu','ll']
+            for cat in categories : 
+                fcorrectTrue  = misMeasurement.getTrueCorrectPairsFraction(cat)
+                fcorrectEst   = misMeasurement.getCorrectPairsFraction(cat)
+                fcorrect      = fcorrectEst[0]
+                fcorrectErr   = fcorrectEst[1]
+                kNorm         = misMeasurement.getNorm(cat)
+                ensembleInfo += '<tr><td><i>' + cat + ' events</i></td></tr>'
+                ensembleInfo += '<tr><td>k-factor=' + str(kNorm) + '</td></tr>'
+                ensembleInfo += '<tr><td>f<sub>correct</sub>=' + str(fcorrect) + "+/-" + str(fcorrectErr)
+                if(ipe>0) : ensembleInfo += ' (MC truth=' + str(fcorrectTrue)+ ')'
+                ensembleInfo += '</td><tr>'
+                ensembleInfo += '<tr><td></td></tr>'
+            
+            ensembleHandler.getTree().Delete("all")
+        
+    misMeasurement.saveMonitoringHistograms()
+    inF.Close()
+
+    #save ensemble info to file
+    fout = open('ensemble_info.html', 'w')
+    fout.write(ensembleInfo)
+    fout.close()
                 
 
 #display results
@@ -200,13 +221,12 @@ for c in cats:
     data    .Add(dataH)
     
     pad=cnv.cd(icnv)
-    print pad
     leg=showPlotsAndMCtoDataComparison(pad,stack,spimpose,data)
     subpad1=pad.cd(1)    
     subpad1.SetLogx()
     subpad2=pad.cd(2)
     subpad2.SetLogx()
-    if(icnv==1) : formatForCmsPublic(pad.cd(1),leg,'CMS preliminary',2)
+    if(icnv==1) : formatForCmsPublic(pad.cd(1),leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
     else        : leg.Delete()
 
 
@@ -231,24 +251,36 @@ for c in cats:
     stack2.Add(mcCorrectH)
     
     pad2=cnv2.cd(icnv)
-    print pad2
     leg=showPlotsAndMCtoDataComparison(pad2,stack2,spimpose2,data2)
     subpad12=pad2.cd(1)
     subpad12.SetLogx()
     subpad22=pad2.cd(2)
     subpad22.SetLogx()
-    if(icnv==1) : formatForCmsPublic(pad2.cd(1),leg,'CMS preliminary',2)
+    if(icnv==1) : formatForCmsPublic(pad2.cd(1),leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
     else        : leg.Delete()
 
-    
 
+    fcorrH=plotF.Get('localAnalysis/'+c+'/'+prefix+'fcorr')
+    truefCorrH=plotF.Get('localAnalysis/'+c+'/'+prefix+'truefcorr')
+    avgFcorr=fcorrH.GetMean()
+    fCorrErr=fcorrH.GetRMS()
+    avgFcorrTrue=truefCorrH.GetMean()
+    fCorrTrueErr=truefCorrH.GetRMS()
+    fCorrBias=avgFcorr-avgFcorrTrue
+    fCorrBiasErr=sqrt(pow(fCorrErr,2)+pow(fCorrTrueErr,2))
+    print c + ' f_{correct}=' + str(avgFcorr) + ' +/- ' + str(fCorrErr) + ' <f_{correct}^{MC}>=' + str(avgFcorrTrue) + ' +/- ' + str(fCorrTrueErr) + ' bias=' + str(fCorrBias) + ' +/- ' + str(fCorrBiasErr)
+    
 cnv.cd()
+cnv.Draw()
 cnv.Modified()
 cnv.Update()
+cnv.SaveAs('mljwithmodel.C')
 
 cnv2.cd()
+cnv2.Draw()
 cnv2.Modified()
 cnv2.Update()
+cnv2.SaveAs('mljsubtracted.C')
 
     
 raw_input(' *** Any key to end')    

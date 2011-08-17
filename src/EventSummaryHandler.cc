@@ -170,7 +170,7 @@ EventSummaryHandler::~EventSummaryHandler()
 PhysicsEvent_t getPhysicsEventFrom(EventSummary_t &ev)
 {
   PhysicsEvent_t newev;
-  newev.jets.clear(); newev.leptons.clear(); newev.genTDecay.clear(); newev.genTbarDecay.clear();
+  newev.jets.clear(); newev.leptons.clear(); newev.topdecay.clear(); newev.antitopdecay.clear();
   newev.nbjets=0; newev.nljets=0;
 
   //get particles from the event
@@ -196,8 +196,23 @@ PhysicsEvent_t getPhysicsEventFrom(EventSummary_t &ev)
 	  break;
 	}
     }
-
   if(newev.leptons.size()>1)  newev.dil = newev.leptons[0]+newev.leptons[1]; 
+
+
+  //get gen level info
+  for(Int_t ipart=0; ipart<ev.nmcparticles; ipart++)
+    {
+      LorentzVector p4(ev.mcpx[ipart],ev.mcpy[ipart],ev.mcpz[ipart],ev.mcen[ipart]);
+      int id=ev.mcid[ipart];
+      if(id==6)  newev.top=p4;
+      if(fabs(id)<6 && id<0)  newev.topdecay.push_back( PhysicsObject(p4,id) );
+      if(id<0 && (fabs(id)==11 || fabs(id)==13 || fabs(id)==15))  newev.topdecay.push_back( PhysicsObject(p4,id) );
+      
+      if(id==-6) newev.antitop=p4;
+      if(fabs(id)<6 && id>0)  newev.antitopdecay.push_back( PhysicsObject(p4,id) );
+      if(id>0 && (fabs(id)==11 || fabs(id)==13 || fabs(id)==15))  newev.antitopdecay.push_back( PhysicsObject(p4,id) );
+    }
+
   return newev;
 }
 

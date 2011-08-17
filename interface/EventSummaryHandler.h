@@ -115,7 +115,8 @@ struct PhysicsEvent_t
   Int_t nbjets,nljets;
   LorentzVector dil;
   PhysicsObjectLeptonCollection leptons;
-  PhysicsObjectCollection genTDecay, genTbarDecay;
+  LorentzVector top,antitop;
+  PhysicsObjectCollection topdecay,antitopdecay;
 };
 
 //

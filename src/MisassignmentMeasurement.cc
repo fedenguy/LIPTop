@@ -12,20 +12,26 @@ void MisassignmentMeasurement::bookMonitoringHistograms()
   TString spec[]={"","avg","data"};
   for(size_t is=0; is<3; is++)
     {
-      controlHistos.addHistogram( new TH1D(spec[is]+"inclusivemlj","Lepton-jet spectrum;Invariant Mass [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );
-      controlHistos.addHistogram( new TH1D(spec[is]+"correctmlj","Correct assignments;Invariant Mass [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );     
-      controlHistos.addHistogram( new TH1D(spec[is]+"wrongmlj","Misassignments;Invariant Mass [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );          
-      controlHistos.addHistogram( new TH1D(spec[is]+"rotmlj","Random Rotation model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );        
-      controlHistos.addHistogram( new TH1D(spec[is]+"swapmlj","Swap model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );                 
-      controlHistos.addHistogram( new TH1D(spec[is]+"wrongmodelmlj","Missassignment model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) ); 
+      TH1D *h=new TH1D(spec[is]+"jetflavor","Jet flavor;Jet flavor;Jets",3,0,3);
+      h->GetXaxis()->SetBinLabel(1,"udsg");
+      h->GetXaxis()->SetBinLabel(2,"c");
+      h->GetXaxis()->SetBinLabel(3,"b");
+      controlHistos.addHistogram( h );
+      controlHistos.addHistogram( new TH1D(spec[is]+"inclusivemlj","Lepton-jet spectrum;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );
+      controlHistos.addHistogram( new TH1D(spec[is]+"correctmlj","Correct assignments;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );     
+      controlHistos.addHistogram( new TH1D(spec[is]+"wrongmlj","Misassignments;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );          
+      controlHistos.addHistogram( new TH1D(spec[is]+"rotmlj","Random Rotation model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );        
+      controlHistos.addHistogram( new TH1D(spec[is]+"swapmlj","Swap model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );                 
+      controlHistos.addHistogram( new TH1D(spec[is]+"wrongmodelmlj","Missassignment model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) ); 
     }
  
   //pull plots
-  controlHistos.addHistogram( new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",100,-0.99,1.01) );
+  controlHistos.addHistogram( new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",100,-0.436,0.404) );
   controlHistos.addHistogram( new TH1D("pull",";pull=#Delta f_{correct assignments} / #sigma_{stat};Pseudo-experiments",100,-2.97,3.03) );
   controlHistos.addHistogram( new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",100,0,1) );
-  controlHistos.addHistogram( new TH1D("fcorr",";f_{correct};Pseudo-experiments",200,0,2) );
-  controlHistos.addHistogram( new TH1D("knorm",";Model k-factor;Pseudo-experiments",200,0,2) );
+  controlHistos.addHistogram( new TH1D("fcorr",";f_{correct};Pseudo-experiments",200,0,0.5) );
+  controlHistos.addHistogram( new TH1D("truefcorr",";f_{correct} (MC truth);Pseudo-experiments",200,0,0.5) );
+  controlHistos.addHistogram( new TH1D("knorm",";Model k-factor;Pseudo-experiments",200,0,1.5) );
 
   //instantiate for different categories
   controlHistos.initMonitorForStep("ee");
@@ -41,6 +47,7 @@ void MisassignmentMeasurement::resetHistograms()
   TString cats[]={"all","ee","mumu","emu","ll"};
   for(size_t icat=0; icat<sizeof(cats)/sizeof(TString); icat++)
     {
+      controlHistos.getHisto("jetflavor",cats[icat])->Reset("ICE");
       controlHistos.getHisto("inclusivemlj",cats[icat])->Reset("ICE");
       controlHistos.getHisto("correctmlj",cats[icat])->Reset("ICE");
       controlHistos.getHisto("wrongmlj",cats[icat])->Reset("ICE");
@@ -74,7 +81,7 @@ void MisassignmentMeasurement::saveMonitoringHistograms()
 	      if(nMeasurements>0) hit->second->Scale(1./nMeasurements);
 	      hit->second->Fit("gaus","Q");
 	    }
-	  if( (hname.Contains("knorm") || hname.Contains("fcorr") || hname.Contains("avg") || hname.Contains("staterr")) && nMeasurements>0)  hit->second->Scale(1./nMeasurements); 
+	  if( (hname.Contains("jetflavor") || hname.Contains("knorm") || hname.Contains("fcorr") || hname.Contains("avg") || hname.Contains("staterr")) && nMeasurements>0)  hit->second->Scale(1./nMeasurements); 
           hit->second->Write();
         }
     }
@@ -129,141 +136,173 @@ PhysicsObjectLeptonCollection MisassignmentMeasurement::randomlyRotate( PhysicsO
 }
 
 //
-void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHandler, double mcut, double minMlj, bool isData)
+void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHandler, double mcut, double minMlj, bool isData, int jetbin)
 {
   if(evHandler.getEntries()==0) return;
-
-  nMeasurements++;
+  
+  if(!isData) nMeasurements++;
   resetHistograms();    
   std::map<TString,int> nCorrectAssignments, totalPairs, totalEventsUsed;
       
   //run over the entries
   TTree *evTree=evHandler.getTree();
-  for(unsigned int i=0; i<evTree->GetEntriesFast(); i++)
+  unsigned int ntrials(10);
+  for( unsigned int itrial=0; itrial<ntrials; itrial++)
     {
-      evTree->GetEntry(i);
-      
-      EventSummary_t &ev = evHandler.getEvent();
-      int evcat=ev.cat;
-      
-      std::vector<TString> categs;
-      categs.push_back("all");
-      if(evcat==dilepton::MUMU) { categs.push_back("mumu"); categs.push_back("ll"); }
-      if(evcat==dilepton::EE)   { categs.push_back("ee");   categs.push_back("ll"); }
-      if(evcat==dilepton::EMU)  { categs.push_back("emu"); }
-      for(size_t icat=0; icat<categs.size(); icat++)
+      for(unsigned int i=0; i<evTree->GetEntriesFast(); i++)
 	{
-	  if(totalEventsUsed.find(categs[icat]) == totalEventsUsed.end())  totalEventsUsed[categs[icat]]=0;
-	  totalEventsUsed[categs[icat]]++;
-	}
+	  evTree->GetEntry(i);
       
-      //save local event
-      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-      PhysicsObjectLeptonCollection ileptons = phys.leptons;
-      PhysicsObjectJetCollection ijets = phys.jets;
-	
-      //
-      // MODEL 1 get event mixed jets in equal number to current event's jet multiplicity
-      //
-      PhysicsObjectJetCollection mixjets;
-      do{
-	unsigned int j=rndGen.Uniform(0,evTree->GetEntriesFast());
-	if(j==i) continue;
-	evTree->GetEntry(j);
-	EventSummary_t &mixev = evHandler.getEvent();
-	if(evcat!= mixev.cat) continue;
+	  EventSummary_t &ev = evHandler.getEvent();
+	  int evcat=ev.cat;
 
-	//check for object separation
-	PhysicsEvent_t mixphys = getPhysicsEventFrom(ev);
-	for(size_t ijet=0; ijet< mixphys.jets.size(); ijet++)
-	  {
-	    double minDR(1000);
-	    for(PhysicsObjectLeptonCollection::iterator lit = ileptons.begin(); lit!=ileptons.end(); lit++)
-	      {
-		double dR = deltaR(lit->eta(),lit->phi(),mixphys.jets[ijet].eta(),mixphys.jets[ijet].phi());
-		if(dR>minDR) continue;
-		minDR=dR;
-	      }
-	    if(minDR<0.4) continue;
-		    
-	    //save jets
-	    if(mixjets.size()<ijets.size()) mixjets.push_back( mixphys.jets[ijet] );
-	  }
-		
-	//continue until jet multiplicity is filled
-	if(mixjets.size()<ijets.size()) continue;	
-	break;
-      }while(1);
-	  
-      //
-      // MODEL 2 get rotated leptons
-      //
-      PhysicsObjectLeptonCollection rotLeptons = randomlyRotate(ileptons,ijets);
+	  //save local event
+	  PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+	  PhysicsObjectLeptonCollection ileptons = phys.leptons;
+	  PhysicsObjectJetCollection ijets = phys.jets;
+	  if(jetbin==2 && ijets.size()!=2) continue;
+	  if(jetbin==3 && ijets.size()<3)  continue;
       
-      //
-      // Fill the control histograms
-      //
-      for(PhysicsObjectLeptonCollection::iterator lit = ileptons.begin(); lit != ileptons.end(); lit++)
-	{
-
-	  //std pairs
-	  for(PhysicsObjectJetCollection::iterator jit = ijets.begin(); jit != ijets.end(); jit++)
+	  std::vector<TString> categs;
+	  categs.push_back("all");
+	  if(evcat==dilepton::MUMU) { categs.push_back("mumu"); categs.push_back("ll"); }
+	  if(evcat==dilepton::EE)   { categs.push_back("ee");   categs.push_back("ll"); }
+	  if(evcat==dilepton::EMU)  { categs.push_back("emu"); }
+	  if(itrial==0)
 	    {
-	      //the lepton-jet system
-	      LorentzVector sum = *lit + *jit;
-	      double mlj=sum.M();
-
-	      //control if assignment is correct
-	      int assignCode=(lit->genid*jit->genid);
-	      bool isCorrect( (assignCode<0) && fabs(jit->flavid)==5 );
-	      
-	      for(size_t icateg=0; icateg<categs.size(); icateg++)
+	      for(size_t icat=0; icat<categs.size(); icat++)
 		{
-		  TString ctf=categs[icateg];
-		  if(nCorrectAssignments.find(ctf)==nCorrectAssignments.end())
-		    {
-		      nCorrectAssignments[ctf]=0;
-		      totalPairs[ctf]=0;
-		    }
-		  if(mlj>minMlj) nCorrectAssignments[ctf] += isCorrect;
-		  if(mlj>minMlj) totalPairs[ctf]++;
-		 
-		  controlHistos.fillHisto("inclusivemlj",ctf,mlj,1,true);
-		  controlHistos.fillHisto(isCorrect ? "correctmlj" : "wrongmlj",ctf,mlj,1,true);
+		  if(totalEventsUsed.find(categs[icat]) == totalEventsUsed.end())  totalEventsUsed[categs[icat]]=0;
+		  totalEventsUsed[categs[icat]]++;
 		}
 	    }
-	      
-	  //event mixing spectrum
-	  for(PhysicsObjectJetCollection::iterator jit = mixjets.begin(); jit != mixjets.end(); jit++)
-	    {
-	      //mixed lepton-jet system
-	      LorentzVector sum = *lit + *jit;
-              double mlj=sum.M();
-	      for(size_t icateg=0; icateg<categs.size(); icateg++)
-                {
-                  TString ctf=categs[icateg];
-		  controlHistos.fillHisto("swapmlj",ctf,mlj,1,true);
-		}	  
-	    }
-	}
+      
+	  //
+	  // MODEL 1 get event mixed jets in equal number to current event's jet multiplicity
+	  //
+	  PhysicsObjectJetCollection mixjets;
+	  do{
+	    unsigned int j=rndGen.Uniform(0,evTree->GetEntriesFast());
+	    if(j==i) continue;
+	    evTree->GetEntry(j);
+	    EventSummary_t &mixev = evHandler.getEvent();
+	    if(evcat!= mixev.cat) continue;
 
-      //random rotation
-      for(PhysicsObjectLeptonCollection::iterator lit = rotLeptons.begin(); lit != rotLeptons.end(); lit++)
-	{
-	  for(PhysicsObjectJetCollection::iterator jit = ijets.begin(); jit != ijets.end(); jit++)
+	    //check for object separation
+	    PhysicsEvent_t mixphys = getPhysicsEventFrom(ev);
+	    for(size_t ijet=0; ijet< mixphys.jets.size(); ijet++)
+	      {
+		double minDR(1000);
+		for(PhysicsObjectLeptonCollection::iterator lit = ileptons.begin(); lit!=ileptons.end(); lit++)
+		  {
+		    double dR = deltaR(lit->eta(),lit->phi(),mixphys.jets[ijet].eta(),mixphys.jets[ijet].phi());
+		    if(dR>minDR) continue;
+		    minDR=dR;
+		  }
+		if(minDR<0.4) continue;
+		    
+		//save jets
+		if(mixjets.size()<ijets.size()) mixjets.push_back( mixphys.jets[ijet] );
+	      }
+		
+	    //continue until jet multiplicity is filled
+	    if(mixjets.size()<ijets.size()) continue;	
+	    break;
+	  }while(1);
+	  
+	  //
+	  // MODEL 2 get rotated leptons
+	  //
+	  PhysicsObjectLeptonCollection rotLeptons = randomlyRotate(ileptons,ijets);
+      
+	  //
+	  // Fill the control histograms
+	  //
+	  //control jet flavor
+	  if(itrial==0)
 	    {
-	      //randomly rotated lepton-jet system
-	      LorentzVector sum = *lit + *jit;
-	      double mlj=sum.M();
-	      for(size_t icateg=0; icateg<categs.size(); icateg++)
-                {
-                  TString ctf=categs[icateg];
-                  controlHistos.fillHisto("rotmlj",ctf,mlj,1,true);
-                }
+	      for(PhysicsObjectJetCollection::iterator jit = ijets.begin(); jit != ijets.end(); jit++)
+		{
+		  int flavbin=jit->flavid;
+		  if(fabs(jit->flavid)==5) flavbin=2;
+		  else if(fabs(jit->flavid)==4) flavbin=1;
+		  else flavbin=0;
+		  for(size_t icateg=0; icateg<categs.size(); icateg++)
+		    {
+		      TString ctf=categs[icateg];
+		      controlHistos.fillHisto("jetflavor",ctf,flavbin);
+		    }
+		}
+	    }
+      
+	  //invariant mass spectron
+	  for(PhysicsObjectLeptonCollection::iterator lit = ileptons.begin(); lit != ileptons.end(); lit++)
+	    {
+
+	      //std pairs
+	      if(itrial==0)
+		{
+		  for(PhysicsObjectJetCollection::iterator jit = ijets.begin(); jit != ijets.end(); jit++)
+		    {
+		      //the lepton-jet system
+		      LorentzVector sum = *lit + *jit;
+		      double mlj=sum.M();
+		  
+		      //control if assignment is correct
+		      int assignCode=(lit->genid*jit->genid);
+		      bool isCorrect( (assignCode<0) && fabs(jit->flavid)==5 );
+		  
+		      for(size_t icateg=0; icateg<categs.size(); icateg++)
+			{
+			  TString ctf=categs[icateg];
+			  if(nCorrectAssignments.find(ctf)==nCorrectAssignments.end())
+			    {
+			      nCorrectAssignments[ctf]=0;
+			      totalPairs[ctf]=0;
+			    }
+			  if(mlj>minMlj) 
+			    {
+			      nCorrectAssignments[ctf] += isCorrect;
+			      totalPairs[ctf]++;
+			    }
+		      
+			  controlHistos.fillHisto("inclusivemlj",ctf,mlj,1,true);
+			  controlHistos.fillHisto(isCorrect ? "correctmlj" : "wrongmlj",ctf,mlj,1,true);
+			}
+		    }
+		}
+	  
+	      //event mixing spectrum
+	      for(PhysicsObjectJetCollection::iterator jit = mixjets.begin(); jit != mixjets.end(); jit++)
+		{
+		  //mixed lepton-jet system
+		  LorentzVector sum = *lit + *jit;
+		  double mlj=sum.M();
+		  for(size_t icateg=0; icateg<categs.size(); icateg++)
+		    {
+		      TString ctf=categs[icateg];
+		      controlHistos.fillHisto("swapmlj",ctf,mlj,1./ntrials,true);
+		    }	  
+		}
+	    }
+
+	  //random rotation
+	  for(PhysicsObjectLeptonCollection::iterator lit = rotLeptons.begin(); lit != rotLeptons.end(); lit++)
+	    {
+	      for(PhysicsObjectJetCollection::iterator jit = ijets.begin(); jit != ijets.end(); jit++)
+		{
+		  //randomly rotated lepton-jet system
+		  LorentzVector sum = *lit + *jit;
+		  double mlj=sum.M();
+		  for(size_t icateg=0; icateg<categs.size(); icateg++)
+		    {
+		      TString ctf=categs[icateg];
+		      controlHistos.fillHisto("rotmlj",ctf,mlj,1./ntrials,true);
+		    }
+		}
 	    }
 	}
     }
-
 
   //
   // finalize model and estimate the misassignments
@@ -321,24 +360,23 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       double e = nPairsModelAboveCut;
 	  
       //re-scale misassignment models
-      kNorm = c*d/(a*e);
-      mljWrongModelH->Scale(kNorm);
-      controlHistos.getHisto("swapmlj",ctf)->Scale(kNorm);
-      controlHistos.getHisto("rotmlj",ctf)->Scale(kNorm);
+      kNorm[ctf] = c*d/(a*e);
+      mljWrongModelH->Scale(kNorm[ctf]);
+      controlHistos.getHisto("swapmlj",ctf)->Scale(kNorm[ctf]);
+      controlHistos.getHisto("rotmlj",ctf)->Scale(kNorm[ctf]);
 
       //determine corect pairs fraction
-      double nCorrectPairsEst = a-c*kNorm;
+      double nCorrectPairsEst = a-c*kNorm[ctf];
       double nCorrectPairsEstErr = sqrt( pow(1-c*c*d/(a*a*e),2)*a
 					 + pow(-2*c*d/(a*e),2)*c
 					 + pow(-c*c/(a*e),2)*d
 					 + pow(c*c/(a*e*e),2)*e )/sqrt(2.);      
       
-      alphaEst = nCorrectPairsEst/(2*b);
-      alphaEstErr = nCorrectPairsEstErr/(2*b);
-      fCorrectPairsEst =nCorrectPairsEst/nPairsTotal;
-      fCorrectPairsEstErr = nCorrectPairsEstErr/nPairsTotal;
-      
-      //cout << "[" << ctf << "] f_{correct}=" << fCorrectPairsEst << "+/-" << fCorrectPairsEstErr << " (" << nCorrectAssignments[ctf]/nPairsTotal << ")" << endl;
+      alphaEst[ctf]            = nCorrectPairsEst/(2*b);
+      alphaEstErr[ctf]         = nCorrectPairsEstErr/(2*b);
+      fCorrectPairsEst[ctf]    = nCorrectPairsEst/nPairsTotal;
+      fCorrectPairsEstErr[ctf] = nCorrectPairsEstErr/nPairsTotal;
+      fTrueCorrectPairs[ctf]   = double(nCorrectAssignments[ctf])/double(nPairsTotal);
 
       //average models for posterity
       TString prefix( isData ? "data" : "avg" );
@@ -352,8 +390,10 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       //estimate monitoring distributions
       if(!isData)
 	{
-	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst);
-	  controlHistos.fillHisto("knorm",ctf,kNorm);
+	  controlHistos.getHisto( "avgjetflavor", ctf )->Add( controlHistos.getHisto("jetflavor",ctf) );
+	  controlHistos.fillHisto("truefcorr", ctf, fTrueCorrectPairs[ctf]);
+	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst[ctf]);
+	  controlHistos.fillHisto("knorm",ctf,kNorm[ctf]);
 	  controlHistos.fillHisto("bias",ctf, (nCorrectPairsEst-nCorrectAssignments[ctf])/nCorrectAssignments[ctf] );
 	  controlHistos.fillHisto("pull",ctf, (nCorrectPairsEst-nCorrectAssignments[ctf])/nCorrectPairsEstErr );
 	  controlHistos.fillHisto("staterr",ctf, nCorrectPairsEstErr/nCorrectPairsEst);
