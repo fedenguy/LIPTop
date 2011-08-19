@@ -1,12 +1,13 @@
 #ifndef hfcmeasurement_hh
 #define hfcmeasurement_hh
 
-#if !defined(__CINT__) || defined(__MAKECINT__)
-
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
+#include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
+
 #include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/HeavyFlavorPDF.h"
 
+#include "TFile.h"
 #include "TRandom2.h"
 #include "TH1D.h"
 #include "TCanvas.h"
@@ -23,19 +24,19 @@
 #include "RooAddPdf.h"
 #include "RooFitResult.h"
 
-#endif
-
 //
-#define MAXJETMULT 5
-enum JetMultBins{BIN_2=0,BIN_3,BIN_4,BIN_5};
+#define MAXJETMULT 8
+enum JetMultBins{BIN_2=0,BIN_3,BIN_4,BIN_5, BIN_6, BIN_7, BIN_8};
 struct CombinedHFCModel_t
 {
   RooArgSet pdfSet,constrPDFSet;
   RooRealVar *bmult, *r, *lfacceptance;
-  RooRealVar *eb,*eb_mean_constrain,*eb_sigma_constrain;
-  RooGaussian *eb_constrain;
-  RooRealVar *eq,*eq_mean_constrain,*eq_sigma_constrain;
-  RooGaussian *eq_constrain;
+  RooRealVar *abseb,*sfeb,*sfeb_mean_constrain,*sfeb_sigma_constrain;
+  RooFormulaVar *eb;
+  RooGaussian *sfeb_constrain;
+  RooRealVar *abseq,*sfeq,*sfeq_mean_constrain,*sfeq_sigma_constrain;
+  RooFormulaVar *eq;
+  RooGaussian *sfeq_constrain;
   RooRealVar *alpha2,*alpha2_mean_constrain,*alpha2_sigma_constrain;
   RooGaussian *alpha2_constrain;
   RooFormulaVar *alpha1;
@@ -48,58 +49,96 @@ class HFCMeasurement
 {
  public:
 
-  HFCMeasurement(int maxJets=4,TString wp="loose",int fitType=0) : maxJets_(maxJets), wp_(wp), fitType_(fitType)
+  enum EventCategoriesForMeasurement { ALLDileptons=500, SFDileptons, OFDileptons };
+  enum FitTypes { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ };
+  
+  /**
+     @short CTOR
+   */
+  HFCMeasurement(int maxJets=4,TString btagAlgo="TCHEL", int eventCategory=OFDileptons, int fitType=0) : maxJets_(maxJets), btagAlgo_(btagAlgo), eventCategory_(eventCategory), fitType_(fitType), smR_(1.0), nMeasurements_(0)  
     {
-      bookMonitoringHistograms(maxJets_);
+      bookMonitoringHistograms();
       
-      //btagcut["loose"]=1.7;  
-      btagcut["loose"]=2.0;  
-      btageff["loose"]=0.788;
-      btageffunc["loose"]=0.006;
-      //      mistagrate["loose"]=0.182;
-      //      mistagrateunc["loose"]=0.005;
-      mistagrate["loose"]=0.137;
-      mistagrateunc["loose"]=0.005;
+      algoCut["TCHEL"]=1.7; 
+      effb["TCHEL"]=0.78;  sfb["TCHEL"]=0.95;  sfbUnc["TCHEL"]=sqrt(pow(0.01,2)+pow(0.1,2)); 
+      effq["TCHEL"]=0.1;   sfq["TCHEL"]=1.11;  sfqUnc["TCHEL"]=sqrt(pow(0.01,2)+pow(0.12,2));
 
-      btagcut["medium"]=3.3;  
-      btageff["medium"]=0.644;
-      btageffunc["medium"]=0.006;
-      mistagrate["medium"]=0.067;
-      mistagrateunc["medium"]=0.003;
+      algoCut["TCHEM"]=3.3;   
+      effb["TCHEM"]=0.78;  sfb["TCHEM"]=0.94;  sfbUnc["TCHEM"]=sqrt(pow(0.01,2)+pow(0.09,2)); 
+      effq["TCHEM"]=0.1;   sfq["TCHEM"]=1.21;  sfqUnc["TCHEM"]=sqrt(pow(0.02,2)+pow(0.17,2));
 
-      btagcut["tight"]=3.41; 
-      btageff["tight"]=0.433;
-      btageffunc["tight"]=0.004;
-      mistagrate["tight"]=0.031;
-      mistagrateunc["tight"]=0.002;
+      algoCut["TCHPT"]=3.41; 
+      effb["TCHPT"]=0.78;  sfb["TCHPT"]=0.88;  sfbUnc["TCHPT"]=sqrt(pow(0.02,2)+pow(0.09,2)); 
+      effq["TCHPT"]=0.1;   sfq["TCHPT"]=1.21;  sfqUnc["TCHPT"]=sqrt(pow(0.10,2)+pow(0.18,2));
 
-      initHFCModel(maxJets_,wp_,fitType_);
+      algoCut["JBPL"]=1.33; 
+      effb["JBPL"]=0.78;  sfb["JBPL"]=sfb["TCHEL"]; sfbUnc["JBPL"]=sfbUnc["TCHEL"];
+      effq["JBPL"]=0.1;   sfq["JBPL"]=sfq["TCHEL"]; sfqUnc["JBPL"]=sfqUnc["TCHEL"];
+
+      algoCut["JBPM"]=2.55; 
+      effb["JBPM"]=0.78;  sfb["JBPM"]=sfb["TCHEM"]; sfbUnc["JBPM"]=sfbUnc["TCHEM"];
+      effq["JBPM"]=0.1;   sfq["JBPM"]=sfq["TCHEM"]; sfqUnc["JBPM"]=sfqUnc["TCHEM"];
+
+      algoCut["JBPT"]=3.74; 
+      effb["JBPT"]=0.78;  sfb["JBPT"]=sfb["TCHET"]; sfbUnc["JBPT"]=sfbUnc["TCHET"];
+      effq["JBPT"]=0.1;   sfq["JBPT"]=sfq["TCHET"]; sfqUnc["JBPT"]=sfqUnc["TCHET"];
+
+      algoCut["SSVHEM"]=1.74;
+      effb["SSVHEM"]=0.78;  sfb["SSVHEM"]=0.95;  sfbUnc["SSVHEM"]=sqrt(pow(0.01,2)+pow(0.1,2)); 
+      effq["SSVHEM"]=0.1;   sfq["SSVHEM"]=0.91;  sfqUnc["SSVHEM"]=sqrt(pow(0.02,2)+pow(0.10,2));
+
+      alpha2[0] = 0.63;      alpha2Unc[0]=sqrt(pow(0.01,2)+pow((0.03+0.01)*0.5,2));
+      alpha2[2] =alpha0[0];  alpha2Unc[2]=alpha2Unc[0];
+      alpha2[3] =alpha0[2];  alpha2Unc[3]=alpha2Unc[2];
+
+      alpha0[0]=0.135;       alpha0[0]=sqrt(pow(0.007,2)+pow((0.006+0.003)/2,2));
+      alpha0[2] =alpha0[0];  alpha0Unc[2]=alpha0Unc[0];
+      alpha0[3] =alpha0[2];  alpha0Unc[3]=alpha0Unc[2];
     }
 
+    /**
+       @short DTOR
+    */
+    ~HFCMeasurement() { }
+    
+    /**
+       @short steer the fit
+    */
+    void fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString btagAlgo);
+    
+    /**
+       @short setters for parameters
+    */
+    void setStandardModelR(float r=1.0) { smR_=r; }
+    
+    /**
+       @short save results
+    */
+    void saveMonitoringHistograms(TString tag);
 
-  ~HFCMeasurement()
-    {
-    }
-
-  void fitHFCtoEnsemble(TTree *t, EventSummary_t *evt, bool debug=true);
-  void fitHFCto(std::vector<TH1D *> &bmultH, bool debug=true);
-
-  void bookMonitoringHistograms(int maxJets);
-  void showMonitoringHistograms(bool debug=true);
-
-  int maxJets_;
-  TString wp_;
-  int fitType_;
-  TRandom2 rndGen;
-  TH1D * biasMonH, *statMonH, *pullMonH;
-  CombinedHFCModel_t model;
-  std::vector<TH1D *> bmultH;
-  std::map<TString,Float_t> btagcut, btageff, btageffunc, mistagrate, mistagrateunc;
+    CombinedHFCModel_t model;
 
  private:
 
-  void initHFCModel(int maxJets=4,TString wp="loose",int fitType=0);
+    void initHFCModel();
+    void bookMonitoringHistograms();
+    void runHFCFit();
+    void resetHistograms();
 
+    int maxJets_;
+    TString btagAlgo_;
+    int eventCategory_;
+    int fitType_;
+    
+    SelectionMonitor controlHistos_;
+    
+    //ugly containers for values
+    std::map<TString,Float_t> algoCut, effb, sfb, sfbUnc, effq, sfq, sfqUnc;
+    std::map<Int_t, Float_t> alpha2,alpha2Unc, alpha0, alpha0Unc;
+    
+    double smR_;
+    
+    int nMeasurements_;
 };
 
 

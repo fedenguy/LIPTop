@@ -94,11 +94,19 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1D("dilmass",";M(l,l');Events",100,0,250) );
   controlHistos.addHistogram( new TH1D("dilcharge",";Charge;Events",3,-1.5,1.5) );
   controlHistos.addHistogram( new TH1D("mtsum",";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
+  controlHistos.addHistogram( new TH1D("alpha",";#alpha_{i};Events",3,0,3) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("met", "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.) );
+  controlHistos.addHistogram( new TH1F ("nvertices", "; Vertex multiplicity; Events", 25, 0.,25.) );
+  TH1F * h = new TH1F ("njets", "; Jet multiplicity; Events", 4, 0.,4.);
+  h->GetXaxis()->SetBinLabel(1,"=2 jets");
+  h->GetXaxis()->SetBinLabel(2,"=3 jets");
+  h->GetXaxis()->SetBinLabel(3,"=4 jets");
+  h->GetXaxis()->SetBinLabel(4,"#geq 5 jets");
+  controlHistos.addHistogram( h );
 
   TString btagalgos[]={"TCHE","TCHP","SSVHE","JBP"};
   int nbtagalgos=sizeof(btagalgos)/sizeof(TString);
@@ -124,7 +132,7 @@ int main(int argc, char* argv[])
 	}
     }
  
-  TString labels[]={"start","#geq 2 jets","=0 b-tags", "=1 b-tags","=2 b-tags"};
+  TString labels[]={"E_{T}^{miss}>40,0","#geq 2 jets","op. sign", "=0 b-tags", "=1 b-tags","=2 b-tags"};
   int nsteps=sizeof(labels)/sizeof(TString);
   TH1D *cutflowH=new TH1D("evtflow",";Cutflow;Events",nsteps,0,nsteps);
   for(int ibin=0; ibin<nsteps; ibin++) cutflowH->GetXaxis()->SetBinLabel(ibin+1,labels[ibin]);
@@ -232,6 +240,7 @@ int main(int argc, char* argv[])
       //reinforce Z-mass window veto for same flavor
       bool isZcand(isSameFlavor && fabs(phys.dil.mass()-91)<15);
       float dilcharge=(phys.leptons[0].id/fabs(phys.leptons[0].id)) *(phys.leptons[1].id/fabs(phys.leptons[1].id));
+      bool isOS(dilcharge<0);
 
       //b-tag analysis
       bcomp.compute(phys.nbjets,phys.nljets);
@@ -242,13 +251,21 @@ int main(int argc, char* argv[])
       std::map<TString,int> nbtags;
       for(std::map<TString,float>::iterator it = btagCuts.begin(); it!= btagCuts.end(); it++) nbtags[it->first]=0;
       LorentzVectorCollection jets;
+      int nGoodassigments(0);
       for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
 	{
 	  jets.push_back(phys.jets[ijet]);
+
+	  int assignCode=(phys.leptons[0].genid*phys.jets[ijet].genid);
+	  bool isCorrect( (assignCode<0) && fabs(phys.jets[ijet].flavid)==5 );
+	  assignCode=(phys.leptons[1].genid*phys.jets[ijet].genid);
+	  isCorrect |= ( (assignCode<0) && fabs(phys.jets[ijet].flavid)==5 );
+	  nGoodassigments+=isCorrect;
+
 	  if(!isZcand)
 	    {
 	      nbtags["TCHEL"]  += (phys.jets[ijet].btag1>btagCuts["TCHEL"]);
-	      nbtags["TCHEM"]  += (phys.jets[ijet].btag2>btagCuts["TCHEM"]);
+	      nbtags["TCHEM"]  += (phys.jets[ijet].btag1>btagCuts["TCHEM"]);
 	      nbtags["TCHPT"]  += (phys.jets[ijet].btag2>btagCuts["TCHPT"]);
 	      nbtags["SSVHEM"] += (phys.jets[ijet].btag3>btagCuts["SSVHEM"]);		
 	      nbtags["JBPL"]   += (phys.jets[ijet].btag4>btagCuts["JBPL"]);
@@ -278,19 +295,29 @@ int main(int argc, char* argv[])
 	{
 	  for(size_t ictf=0; ictf<2; ictf++)
 	    {
+	      //MET cut has been applied
 	      if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],0,weight);
-
+		
 	      //jet energy variations
 	      LorentzVectorCollection    jetColl=jets;
 	      LorentzVector              theMET=phys.met;     
 	      if(cats[ivar]=="jer")      { jetColl=jerVariedJets;      theMET=jerVariedMet;     }
 	      if(cats[ivar]=="jesdown")  { jetColl=jesdownVariedJets;  theMET=jesUpVariedMet;   }
 	      if(cats[ivar]=="jesup" )   { jetColl=jesupVariedJets;    theMET=jesDownVariedMet; }
-	    
+	      
+	      // check selected jets
 	      int nseljets(0);
 	      for(size_t ijet=0; ijet<jetColl.size(); ijet++) nseljets += (jetColl[ijet].pt()>30);
 	      if(nseljets<2) continue;
-	      if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],1,weight);
+	      if(!isZcand) 
+		{
+		  controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],1,weight);
+		  if(ivar==0) controlHistos.fillHisto("dilcharge",catsToFill[ictf],dilcharge,weight);
+		}
+		
+	      //op. sign requirement
+	      if(!isOS) continue;
+	      if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],2,weight);
 
 	      //b-tag variations
 	      if(isMC && cats[ivar].Contains("btag"))
@@ -304,9 +331,9 @@ int main(int argc, char* argv[])
 		  }
 		  if(!isZcand)
 		    {
-		      controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],2,weight*p0weight);
-		      controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],3,weight*p1weight);
-		      controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],4,weight*p2weight);
+		      controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],3,weight*p0weight);
+		      controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],4,weight*p1weight);
+		      controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],5,weight*p2weight);
 		    }
 		}
 	      //standard b-tag
@@ -314,7 +341,7 @@ int main(int argc, char* argv[])
 		{
 		  int btagbin(nbtags["TCHEL"]);
 		  if(btagbin>2) btagbin=2;
-		  if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],2+btagbin,weight);
+		  if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],3+btagbin,weight);
 		}
 	      
 	      double mtsum=mtComp.compute(phys.leptons[0],theMET) + mtComp.compute(phys.leptons[1],theMET);
@@ -326,6 +353,7 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("dilmass",catsToFill[ictf],phys.dil.mass(),weight);
 		  if(!isZcand)
 		    {
+		      controlHistos.fillHisto("alpha",catsToFill[ictf],min(nGoodassigments,2),weight);
 		      controlHistos.fillHisto("mtsum",catsToFill[ictf],mtsum,weight);
 		      controlHistos.fillHisto("leadjet",catsToFill[ictf],max(jetColl[0].pt(),jetColl[0].pt()),weight);
 		      controlHistos.fillHisto("subleadjet",catsToFill[ictf],min(jetColl[0].pt(),jetColl[1].pt()),weight);
@@ -333,7 +361,6 @@ int main(int argc, char* argv[])
 		      controlHistos.fillHisto("subleadlepton",catsToFill[ictf],min(phys.leptons[0].pt(),phys.leptons[1].pt()),weight);
 		      controlHistos.fillHisto("met",catsToFill[ictf],theMET.pt(),weight);
 		      controlHistos.fillHisto("dilmass",catsToFill[ictf],phys.dil.mass(),weight);
-		      controlHistos.fillHisto("dilcharge",catsToFill[ictf],dilcharge,weight);
 		      for(std::map<TString,int>::iterator it = nbtags.begin(); it!= nbtags.end(); it++) controlHistos.fillHisto(it->first,catsToFill[ictf],it->second,weight);
 		      
 		      for(size_t ijet=0; ijet<jetColl.size(); ijet++)
@@ -349,7 +376,10 @@ int main(int argc, char* argv[])
 			      controlHistos.fillHisto("mlj",catsToFill[ictf],mlj2,weight,true);
 			    }
 			}
-		      		
+		      
+		      controlHistos.fillHisto("njets",catsToFill[ictf],jetColl.size()-2,weight,true);
+		      controlHistos.fillHisto("nvertices",catsToFill[ictf],ev.nvtx,weight,true);
+
 		      //save summary if required
 		      if(spyEvents && normWeight==1)
 			{
