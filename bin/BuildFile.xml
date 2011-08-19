@@ -13,6 +13,6 @@
    <bin name="runKinAnalysis" file="../src/EventSummaryHandler.cc ../src/KinResultsHandler.cc ../src/TopKinSolver.cc ../src/KinAnalysis.cc runKinAnalysis.cc"></bin>
    <bin name="displayKinResults" file="../../../CMGTools/HtoZZ2l2nu/src/setStyle.C ../src/EventSummaryHandler.cc ../src/KinResultsHandler.cc ../src/TopKinSolver.cc ../src/KinAnalysis.cc displayKinResults.cc"></bin>
    <bin name="showControlDistributions" file="../../../CMGTools/HtoZZ2l2nu/src/setStyle.C ../../../CMGTools/HtoZZ2l2nu/src/JetEnergyUncertaintyComputer.cc ../src/EventSummaryHandler.cc showControlDistributions.cc"></bin>
-   <bin name="showMassDistribution" file="../../../CMGTools/HtoZZ2l2nu/src/setStyle.C ../../../CMGTools/HtoZZ2l2nu/src/TMVAUtils.cc ../src/EventSummaryHandler.cc ../src/KinResultsHandler.cc showMassDistribution.cc"></bin>
+   <bin name="showMassDistribution" file="../../../CMGTools/HtoZZ2l2nu/src/setStyle.C ../../../CMGTools/HtoZZ2l2nu/src/TMVAUtils.cc ../src/EventSummaryHandler.cc ../src/KinResultsHandler.cc ../src/HistogramAnalyzer.cc showMassDistribution.cc"></bin>
 </environment>
 <Flags CXXFLAGS="-g"/>

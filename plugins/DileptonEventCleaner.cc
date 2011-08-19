@@ -101,6 +101,7 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.),false ); 
+        controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_reliso", "; Isolation; Events", 100, 0.,10.),false );
 
 	//vertex control
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_vertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.),false ); 
@@ -278,6 +279,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     controlHistos_.fillHisto(istream+"_dilepton_sumpt","all",lepton1P.pt()+lepton2P.pt(),weight);
     controlHistos_.fillHisto(istream+"_dilepton_pt","all",dileptonP.pt(),weight);
     controlHistos_.fillHisto(istream+"_dilepton_mass","all",dileptonP.mass(),weight);
+    
 
     //Z+quarkonia veto
     bool isZCand(false);
@@ -531,7 +533,7 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
       summaryHandler_.evSummary_.genid[ilepton] = genid;
       summaryHandler_.evSummary_.genflav[ilepton] = genid;
     }
-
+  
   //save the jets
   for(size_t ijet=0; ijet<jets.size(); ijet++)
     {
@@ -550,7 +552,7 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
       summaryHandler_.evSummary_.info4[pidx]=jets[ijet]->bDiscriminator("jetBProbabilityBJetTags");
       summaryHandler_.evSummary_.info5[pidx]=jets[ijet]->bDiscriminator("jetProbabilityBJetTags");
     }
-
+  
   //save met
   int pidx=leptons.size()+jets.size();
   summaryHandler_.evSummary_.px[pidx]=met->px();

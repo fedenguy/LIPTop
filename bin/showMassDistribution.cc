@@ -4,6 +4,7 @@
 
 #include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
+#include "LIP/Top/interface/HistogramAnalyzer.h"
 #include "LIP/Top/interface/KinAnalysis.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
@@ -30,6 +31,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
   SelectionMonitor controlHistos; //plot storage
+  HistogramAnalyzer histoAnalyzer; 
 
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
@@ -89,6 +91,7 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsmttbar", "; m_{Top} [GeV/c^{2}]; Mass(t,#bar{t}) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,2000.) );
   controlHistos.addHistogram( new TH2F ("mtopvsafb", "; m_{Top} [GeV/c^{2}]; #Delta #eta(t,#bar{t}) ); Events", 100, 0.,500.,100, -5.,5.) );
   controlHistos.addHistogram( new TH2F ("mttbarvsafb", "; Mass(t,#bar{t}) [GeV/c^{2}];#Delta #eta(t,#bar{t}); Events", 100, 0.,2000.,100,-5.,5.) );
+  controlHistos.addHistogram( new TH1F("assignmentdecision",";Good decisions",2,0.,2.) );
   
   TString cats[]={"all","ee","mumu","emu","etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
@@ -141,7 +144,7 @@ int main(int argc, char* argv[])
 	  //variables to use
 	  for(size_t ivar=0; ivar<varsList.size(); ivar++)   tmvaReader->AddVariable( varsList[ivar], &tmvaVarsF[ivar] );
 	  tmvaReader->AddSpectator("eventCategory", &tmvaVarsF[varsList.size()]);
-
+	  
 	  //read the methods already trained
 	  for(size_t imet=0; imet<methodList.size(); imet++)
 	    {
@@ -151,15 +154,16 @@ int main(int argc, char* argv[])
 	      tmvaReader->BookMVA(methodList[imet], weightFile);
 	      TH1 *h=tmva::getHistogramForDiscriminator( methodList[imet] );
 	      controlHistos.addHistogram( h );
+	      controlHistos.addHistogram( new TH1F(methodList[imet]+TString("decision"),";Good decisions",2,0.,2.) );
 	    }
 	}
     }
   
-
+  
   //fix entries flag
   ofstream *outf=0;
-  if(!isMC) outf=new ofstream("highmassevents.txt",ios::app);
-
+  //if(!isMC) outf=new ofstream("highmassevents.txt",ios::app);
+  
   //process events file
   gSystem->ExpandPathName(evurl);
   TFile *evfile = TFile::Open(evurl);
@@ -226,6 +230,10 @@ int main(int argc, char* argv[])
 
     //get event summary
     EventSummary_t &ev = evSummaryHandler.getEvent();
+
+    //fill histos
+    float weight = ev.weight;
+
     if(isMC)
       {
 	if(mcTruthMode==1 && !ev.isSignal) continue;
@@ -269,6 +277,8 @@ int main(int argc, char* argv[])
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
 
+    int iCorrectComb=1; //fixme: 
+
     TString subcat="eq0btags";
     if(nbtags==1) subcat="eq1btags";
     if(nbtags>=2) subcat="geq2btags";
@@ -276,6 +286,11 @@ int main(int argc, char* argv[])
     //get the combination preferred by KIN
     TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
     h1->Rebin(2); h2->Rebin(2);
+    
+    std::map<TH1*, std::vector<Double_t> > histoVars;
+    histoVars[h1]=histoAnalyzer.analyzeHistogram(h1);
+    histoVars[h2]=histoAnalyzer.analyzeHistogram(h2);
+
     Int_t icomb=(h1->Integral()< h2->Integral())+1;
     TH1F *mpref=kinHandler.getHisto("mt",icomb);
     double mtop = kinHandler.getMPVEstimate(mpref) [1];
@@ -289,44 +304,40 @@ int main(int argc, char* argv[])
     //
     if(useMVA)
       {
-	std::map<TH1 *,bool> assignedResults;
-	std::map<TH1 *,std::map<int,double> > discriResults;
-	//	    assignedResults[h1] = (goodAssignment==1);
-	//	    assignedResults[h2] = (goodAssignment==2);
-	for(std::map<TH1 *,bool>::iterator resIt = assignedResults.begin();
-	    resIt != assignedResults.end();
-	    resIt++)
+	if(trainMVA)
 	  {
+	    TH1 *correctH = (iCorrectComb==1 ? h1 : h2);
+	    TH1 *wrongH   = (iCorrectComb==1 ? h2 : h1);
+
+	    tmvaVarsD = histoVars[correctH];
+	    if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
+	    else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD,1. ); nsigtest++; }
+	  
+	    tmvaVarsD = histoVars[wrongH];
+	    if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
+	    else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
+	  }
+	else
+	  {
+	    std::vector<double> h1DiscriResults;
+	    for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++)  tmvaVarsF[ivar]=histoVars[h1][ivar];
+	    for(size_t imet=0; imet<methodList.size(); imet++) h1DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
+
+	    std::vector<double> h2DiscriResults;
+	    for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++) tmvaVarsF[ivar]=histoVars[h2][ivar];
+	    for(size_t imet=0; imet<methodList.size(); imet++) h2DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
+
+	    //check if decision was good
+	    for(size_t imet=0; imet<methodList.size(); imet++) 
+	      {
+		int mvaPrefComb=1;
+		if(h1DiscriResults[imet]<h2DiscriResults[imet]) mvaPrefComb=2;
+		bool isMVACombCorrect( mvaPrefComb==iCorrectComb );
+		controlHistos.fillHisto(methodList[imet]+"decision","all", isMVACombCorrect, weight);
+	      }
 	    
-	    //std::vector<float> histoMomenta = analyzeHistogram(resIt->first);
-	    int varCounter(0);
-	    for(std::vector<std::string>::iterator it = varsList.begin(); it != varsList.end(); it++)
-	      {
-		//if(*it=="myvar")        { tmvaVarsF[varCounter++]=histoMomenta[kMyVar]; }
-	      }
-	    tmvaVarsF[varCounter++] = ev.cat;
-	    for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++)  tmvaVarsD[ivar]=tmvaVarsF[ivar];
-	    
-	    if(trainMVA)
-	      {
-		if(resIt->second)
-		  {
-		    if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
-		    else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD, 1. ); nsigtest++; }
-		  }
-		else
-		  {
-		    if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
-		    else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
-		  }
-	      }
-	    else
-	      {
-		std::map<int,double> hDiscriResults;
-		for(size_t imet=0; imet<methodList.size(); imet++) 
-		  hDiscriResults[imet]=tmvaReader->EvaluateMVA( methodList[imet] );
-		discriResults[resIt->first] = hDiscriResults;
-	      }
+	    bool isStdCombCorrect( icomb==iCorrectComb );
+	    controlHistos.fillHisto("assignmentdecision","all", isStdCombCorrect, weight);
 	  }
       }
     
@@ -352,8 +363,6 @@ int main(int argc, char* argv[])
     double st(sumptlep+mets[0].first.Pt());
     double htlep(st+ht);
 
-    //fill histos
-    float weight = ev.weight;
 
     for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
       {
@@ -387,10 +396,9 @@ int main(int argc, char* argv[])
 	  }
       }
     neventsused++;
-
+   
     //save for further study
-    //if(mtop>0 && spyEvents && ev.normWeight==1)
-    if(mtop>0 && spyEvents && ev.weight>1.7)
+    if(mtop>0 && spyEvents && ev.normWeight==1)
       {
 	std::vector<float> measurements;
 	measurements.push_back(mtop);
@@ -404,7 +412,7 @@ int main(int argc, char* argv[])
       }
 
     //for data only
-    if (!isMC) 
+    if (!isMC && mtop>900) 
       *outf << "| " << irun << ":" << ilumi << ":" << ievent 
 	    << " | " << categs[1] 
 	    << " | " << mtop 
@@ -414,7 +422,7 @@ int main(int argc, char* argv[])
 	    << " | " << mets[0].first.Pt() << " | " << htlep << endl; 
   }
   kinHandler.end();
-
+  
   if(useMVA)
     {
       if(trainMVA)

@@ -48,10 +48,10 @@
              }
 	   ]
     	},
-	{
+        {
 	 "tag":"t#bar{t}",
          "isdata":false,
-         "color":"8",
+         "color":"809",
 	 "lcolor":1,
          "data":[
 		{
@@ -65,7 +65,7 @@
 	{
 	 "tag":"W+jets",
          "isdata":false,
-         "color":"809",
+         "color":"8",
 	 "lcolor":1,
          "data":[
 		{
@@ -76,7 +76,7 @@
                 }
 	 ]
 	},
-	{
+        {
 	 "tag":"Z/#gamma^{*}+jets#rightarrow ll",
          "isdata":false,
          "color":"831",
@@ -90,7 +90,7 @@
               }
           ]
 	},
-	{
+        {
            "tag":"data",
            "isdata":true,
            "color":1,
@@ -132,12 +132,31 @@
                   "dset":"DoubleElectron-PromptReco",
                   "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/DoubleElectron/DoubleElectronPromptReco"]
 		},
-                {
+                { 
                   "dtag":"MuEGPromptReco",
                   "dset":"MuEG-PromptReco",
                   "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/MuEG/MuEGPromptReco"]
+		},
+                {
+                  "dtag":"SingleMuMay10ReReco",
+                  "dset":"SingleMuMay10ReReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/SingleMuMay10ReReco"]
+		},
+                {
+                  "dtag":"SingleMuPromptReco",
+                  "dset":"SingleMuPromptReco",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleMu/SingleMuPromptReco"]
 		}
+
              ]
 	}
     ]	
 }
+
+
+
+
+
+
+
+

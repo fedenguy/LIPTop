@@ -76,8 +76,8 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
 	  TString cat(""); cat += icomb;
 	  TString title("Combination #"); title+=cat;
 	  
-	  kinHistos_[KinHistoKey("mt",icomb)] = new TH1F("mt_"+cat,title+";M_{t} [GeV/c^{2}];N_{solutions} / (2 GeV/c^{2})",200,100,500);
-	  kinHistos_[KinHistoKey("mttbar",icomb)]  = new TH1F("mttbar_"+cat,title+";M_{t#bar{t}} [GeV/c^{2}];N_{solutions} / (10 GeV/c^{2})", 200,0,2000);   
+	  kinHistos_[KinHistoKey("mt",icomb)] = new TH1F("mt_"+cat,title+";M_{t} [GeV/c^{2}];N_{solutions} / (2 GeV/c^{2})",200,0,1000);
+	  kinHistos_[KinHistoKey("mttbar",icomb)]  = new TH1F("mttbar_"+cat,title+";M_{t#bar{t}} [GeV/c^{2}];N_{solutions} / (10 GeV/c^{2})", 200,0,2500);   
 	  kinHistos_[KinHistoKey("mt2",icomb)] = new TH1F("mt2_"+cat,title+";M_{T2} [GeV/c^{2}];N_{solutions} / (2 GeV/c^{2})",200,0,400);	 
 	  kinHistos_[KinHistoKey("afb",icomb)] = new TH1F("afb_"+cat,title+";A_{fb};N_{solutions} / (0.05)",100,-4.95,5.05);
 	}
@@ -88,8 +88,8 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
 	  kinTree_->Branch(it->second->GetName(),"TH1F",&it->second,32000,0);
 	}
     }
-  
-  fitFunc_ =  new TF1("fitFunc","gaus",0,500);
+  //500
+  fitFunc_ =  new TF1("fitFunc","gaus",0,1000);
 }
 
 //
