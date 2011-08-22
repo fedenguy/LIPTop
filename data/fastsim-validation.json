@@ -8,11 +8,11 @@
          "normto":1,
          "data":[
 		{
- 	        "dtag":"FastSim",
+ 	        "dtag":"NeutralHadron_4_2_8",
 	 	"dset":"TTbar-PYTHIA6-FlatDist10_50ns-FastSim",
 	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
-                "aoddir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar-PYTHIA6-FlatDist10_50ns-FastSim/AODSIM"],
-	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TTbar-PYTHIA6-FlatDist10_50ns-FastSim/PAT"]
+                "aoddir":["/castor/cern.ch/user/f/federica/NeutralHadron_4_2_8/"],
+	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/NeutralHadron_4_2_8/"]
                 }
 	  ]
 	},
@@ -21,14 +21,15 @@
          "isdata":false,
          "color":"kOrange",
 	 "marker":20,
+	 "mctruthmode":1,
          "normto":1,
          "data":[
 		{
- 	        "dtag":"FullSim",
+ 	        "dtag":"TTbar_noPU",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
 	        "pset":"${CMSSW_BASE}/src/LIP/Top/test/createMCPatTuple_cfg.py",
-		"aoddir":["/castor/cern.ch/cms/store/cmst3/user/cbern/CMG/TT_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM/V2"],
-	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Dileptons-42x/TT_TuneZ2_7TeV-pythia6-tauola/PAT"]
+		"aoddir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Btag/TTbar_noPU/"],
+	        "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTbar_noPU/"]
                 }
 	  ]
 	}

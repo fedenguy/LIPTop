@@ -27,6 +27,8 @@
 
 using namespace std;
 
+bool sortByBtag(PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag1>b.btag2);  }
+
 //
 int main(int argc, char* argv[])
 {
@@ -53,13 +55,13 @@ int main(int argc, char* argv[])
   TString dirname             = runProcess.getParameter<std::string>("dirName");
   bool saveSummaryTree        = runProcess.getParameter<bool>("saveSummaryTree");
   bool useMVA                 = runProcess.getParameter<bool>("useMVA");
-  if(mcTruthMode!=2) useMVA=false;
+  if(mcTruthMode!=1)          useMVA=false;
   edm::ParameterSet tmvaInput = runProcess.getParameter<edm::ParameterSet>("tmvaInput");
-  TString studyTag            = runProcess.getParameter<std::string>("studyTag");
-  TString weightsDir          = runProcess.getParameter<std::string>("weightsDir");
-  std::vector<std::string> methodList = runProcess.getParameter<std::vector<std::string> >("methodList");
-  std::vector<std::string> varsList    = runProcess.getParameter<std::vector<std::string> >("varsList");
-  bool trainMVA                        = runProcess.getParameter<bool>("doTrain");
+  TString studyTag            = tmvaInput.getParameter<std::string>("studyTag");
+  TString weightsDir          = tmvaInput.getParameter<std::string>("weightsDir");
+  std::vector<std::string> methodList = tmvaInput.getParameter<std::vector<std::string> >("methodList");
+  std::vector<std::string> varsList    = tmvaInput.getParameter<std::vector<std::string> >("varsList");
+  bool trainMVA                        = tmvaInput.getParameter<bool>("doTrain");
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
@@ -93,6 +95,18 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mttbarvsafb", "; Mass(t,#bar{t}) [GeV/c^{2}];#Delta #eta(t,#bar{t}); Events", 100, 0.,2000.,100,-5.,5.) );
   controlHistos.addHistogram( new TH1F("assignmentdecision",";Good decisions",2,0.,2.) );
   
+  //MVA analysis
+  controlHistos.addHistogram( new TH1F("kIntegral",";Solutions; Lepton-jet assignments",100,0,5000) );
+  controlHistos.addHistogram( new TH1F("kMPV",";(mpv-median)/median; Lepton-jet assignments",100,-1.5,1.5) );
+  controlHistos.addHistogram( new TH1F("kMean",";(mean-median)/median; Lepton-jet assignments",100,-1.5,1.5) );
+  controlHistos.addHistogram( new TH1F("kRMS",";rms/median; Lepton-jet assignments",100,0,1.) );
+  controlHistos.addHistogram( new TH1F("kSkewness",";skewness/median; Lepton-jet assignments",100,-1.,1.) );
+  controlHistos.addHistogram( new TH1F("kKurtosis",";kurtosis/median; Lepton-jet assignments",100,-1.,1.) );
+  controlHistos.addHistogram( new TH1F("k10p",";(x_{10}-median)/median; Lepton-jet assignments",100,-0.5,0) );
+  controlHistos.addHistogram( new TH1F("k25p",";(x_{25}-median)/median; Lepton-jet assignments",100,-1.0,0) );
+  controlHistos.addHistogram( new TH1F("k75p",";(x_{75}-median)/median; Lepton-jet assignments",100,0,0.5) );
+  controlHistos.addHistogram( new TH1F("k90p",";(x_{90}-median)/median; Lepton-jet assignments",100,0,1.0) );
+
   TString cats[]={"all","ee","mumu","emu","etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags"};
@@ -215,213 +229,231 @@ int main(int argc, char* argv[])
   //loop over kin results
   int nresults(0),neventsused(0);
   int nsigtrain(0), nsigtest(0), nbkgtrain(0), nbkgtest(0);
-  for (int inum=0; inum < t->GetEntries(); ++inum){
-    t->GetEvent(inum);
- 
-    //get original event
-    Int_t irun,ievent,ilumi;
-    kinHandler.getEventInfo(irun,ievent,ilumi);
+  for (int inum=0; inum < t->GetEntries(); ++inum)
+    {
+      t->GetEvent(inum);
+      
+      //get original event
+      Int_t irun,ievent,ilumi;
+      kinHandler.getEventInfo(irun,ievent,ilumi);
+      
+      TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
+      
+      if(selEvents.find(key)==selEvents.end()) continue;
 
-    TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
+      nresults++;
+      evTree->GetEntry( selEvents[key] );
 
-    if(selEvents.find(key)==selEvents.end()) continue;
-    nresults++;
-    evTree->GetEntry( selEvents[key] );
+      //get event summary
+      EventSummary_t &ev = evSummaryHandler.getEvent();
+      
+      //fill histos
+      float weight = ev.weight;
 
-    //get event summary
-    EventSummary_t &ev = evSummaryHandler.getEvent();
-
-    //fill histos
-    float weight = ev.weight;
-
-    if(isMC)
-      {
-	if(mcTruthMode==1 && !ev.isSignal) continue;
-	if(mcTruthMode==2 && ev.isSignal) continue;
-      }
+      if(isMC)
+	{
+	  if(mcTruthMode==1 && !ev.isSignal) continue;
+	  if(mcTruthMode==2 && ev.isSignal) continue;
+	}
     
-    std::vector<TString> categs;
-    categs.push_back("all");
-    if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
-    if(ev.cat==dilepton::EE)  categs.push_back("ee");
-    if(ev.cat==dilepton::EMU) categs.push_back("emu");
-    if(ev.cat==dilepton::ETAU) categs.push_back("etau");
-    if(ev.cat==dilepton::MUTAU) categs.push_back("mutau");
+      std::vector<TString> categs;
+      categs.push_back("all");
+      if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
+      if(ev.cat==dilepton::EE)  categs.push_back("ee");
+      if(ev.cat==dilepton::EMU) categs.push_back("emu");
+      if(ev.cat==dilepton::ETAU) categs.push_back("etau");
+      if(ev.cat==dilepton::MUTAU) categs.push_back("mutau");
     
-    //get particles from the event
-    int njets(0),nbtags(0);
-    KinCandidateCollection_t leptons, jets, mets,vtx;
-    for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
-      {
-	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
-	if(isnan(p4.Pt()) || isinf(p4.Pt())) continue;
-	switch( ev.id[ipart] )
-	  {
-	  case 0:
-	    mets.push_back( KinCandidate_t(p4,p4.Pt()) );
-            break;
-          case 1:
-            jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
-	    njets++;
-	    if(ev.info1[ipart]>1.7) nbtags++;
-            break;
-	  case 500:
-	    vtx.push_back( KinCandidate_t(p4,p4.Pt()) );
-	    break;
-          default:
-            leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
-            break;
-	  }
-      }
-    sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
-    sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
-    sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
+      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+      sort(phys.jets.begin(),phys.jets.end(),sortByBtag);
+      int nRecoBs( (fabs(phys.jets[0].flavid)==5) + (fabs(phys.jets[1].flavid)==5) );
+      int iCorrectComb=0;
+      if(nRecoBs>1)
+	{
+	  //the charge of the generator level matched particles must be opposite
+	  int assignCode=(phys.leptons[0].genid*phys.jets[0].genid);
+	  if(assignCode<0) iCorrectComb=1;
+	  else             iCorrectComb=2;
+	}
+      
+      //btag counting
+      int nbtags(0);
+      for(size_t ijet=0; ijet<phys.jets.size(); ijet++) nbtags += (phys.jets[ijet].btag1>1.7);
+      TString subcat="eq0btags";
+      if(nbtags==1) subcat="eq1btags";
+      if(nbtags>=2) subcat="geq2btags";
 
-    int iCorrectComb=1; //fixme: 
-
-    TString subcat="eq0btags";
-    if(nbtags==1) subcat="eq1btags";
-    if(nbtags>=2) subcat="geq2btags";
-
-    //get the combination preferred by KIN
-    TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-    h1->Rebin(2); h2->Rebin(2);
+      //get the combination preferred by KIN
+      TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
+      h1->Rebin(2); h2->Rebin(2);
     
-    std::map<TH1*, std::vector<Double_t> > histoVars;
-    histoVars[h1]=histoAnalyzer.analyzeHistogram(h1);
-    histoVars[h2]=histoAnalyzer.analyzeHistogram(h2);
+      std::map<TH1*, std::vector<Double_t> > histoVars;
+      histoVars[h1]=histoAnalyzer.analyzeHistogram(h1);
+      histoVars[h2]=histoAnalyzer.analyzeHistogram(h2);
+      for(std::map<TH1 *,std::vector<Double_t> >::iterator hvit=histoVars.begin(); hvit !=histoVars.end(); hvit++)
+	{
+	  std::vector<Double_t> &res = hvit->second;
+	  controlHistos.fillHisto("kIntegral","all", res[HistogramAnalyzer::kIntegral], weight);
+	  if(res[HistogramAnalyzer::kIntegral]>0)
+	    {
+	      controlHistos.fillHisto("kMPV","all", res[HistogramAnalyzer::kMPV], weight);
+	      controlHistos.fillHisto("kMean","all", res[HistogramAnalyzer::kMean], weight);
+	      controlHistos.fillHisto("kRMS","all", res[HistogramAnalyzer::kRMS], weight);
+	      controlHistos.fillHisto("kSkewness","all", res[HistogramAnalyzer::kSkewness], weight);
+	      controlHistos.fillHisto("kKurtosis","all", res[HistogramAnalyzer::kKurtosis], weight);
+	      controlHistos.fillHisto("k10p","all", res[HistogramAnalyzer::k10p], weight);
+	      controlHistos.fillHisto("k25p","all", res[HistogramAnalyzer::k25p], weight);
+	      controlHistos.fillHisto("k75p","all", res[HistogramAnalyzer::k75p], weight);
+	      controlHistos.fillHisto("k90p","all", res[HistogramAnalyzer::k90p], weight);
+	    } 
+	}
+  
+      //
+      // standard solution counting
+      //
+      Int_t icomb=(h1->Integral()< h2->Integral())+1;
+      TH1F *mpref=kinHandler.getHisto("mt",icomb);
+      double mtop = kinHandler.getMPVEstimate(mpref) [1];
+      TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
+      double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
+      TH1F *afbpref=kinHandler.getHisto("afb",icomb);
+      double afb = kinHandler.getMPVEstimate(afbpref)[1];
 
-    Int_t icomb=(h1->Integral()< h2->Integral())+1;
-    TH1F *mpref=kinHandler.getHisto("mt",icomb);
-    double mtop = kinHandler.getMPVEstimate(mpref) [1];
-    TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
-    double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
-    TH1F *afbpref=kinHandler.getHisto("afb",icomb);
-    double afb = kinHandler.getMPVEstimate(afbpref)[1];
+      //
+      // analyze histos with MVA
+      //
+      if(useMVA)
+	{
+	  if(trainMVA)
+	    {
+	      if(nRecoBs>1)
+		{
+		  TH1 *correctH = (iCorrectComb==1 ? h1 : h2);
+		  TH1 *wrongH   = (iCorrectComb==1 ? h2 : h1);
+		  
+		  tmvaVarsD = histoVars[correctH];
+		  if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
+		  else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD,1. ); nsigtest++; }
+		  
+		  tmvaVarsD = histoVars[wrongH];
+		  if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
+		  else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
+		}
+	    }
+	  else
+	    {
+	      std::vector<double> h1DiscriResults;
+	      for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++)  tmvaVarsF[ivar]=histoVars[h1][ivar];
+	      for(size_t imet=0; imet<methodList.size(); imet++) h1DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
 
-    //
-    // analyze histos with MVA
-    //
-    if(useMVA)
-      {
-	if(trainMVA)
-	  {
-	    TH1 *correctH = (iCorrectComb==1 ? h1 : h2);
-	    TH1 *wrongH   = (iCorrectComb==1 ? h2 : h1);
+	      std::vector<double> h2DiscriResults;
+	      for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++) tmvaVarsF[ivar]=histoVars[h2][ivar];
+	      for(size_t imet=0; imet<methodList.size(); imet++) h2DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
 
-	    tmvaVarsD = histoVars[correctH];
-	    if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
-	    else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD,1. ); nsigtest++; }
-	  
-	    tmvaVarsD = histoVars[wrongH];
-	    if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
-	    else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
-	  }
-	else
-	  {
-	    std::vector<double> h1DiscriResults;
-	    for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++)  tmvaVarsF[ivar]=histoVars[h1][ivar];
-	    for(size_t imet=0; imet<methodList.size(); imet++) h1DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
-
-	    std::vector<double> h2DiscriResults;
-	    for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++) tmvaVarsF[ivar]=histoVars[h2][ivar];
-	    for(size_t imet=0; imet<methodList.size(); imet++) h2DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
-
-	    //check if decision was good
-	    for(size_t imet=0; imet<methodList.size(); imet++) 
-	      {
-		int mvaPrefComb=1;
-		if(h1DiscriResults[imet]<h2DiscriResults[imet]) mvaPrefComb=2;
-		bool isMVACombCorrect( mvaPrefComb==iCorrectComb );
-		controlHistos.fillHisto(methodList[imet]+"decision","all", isMVACombCorrect, weight);
-	      }
+	      //check if decision was good
+	      for(size_t imet=0; imet<methodList.size(); imet++) 
+		{
+		  int mvaPrefComb=1;
+		  if(h1DiscriResults[imet]<h2DiscriResults[imet]) mvaPrefComb=2;
+		  if(nRecoBs>1)
+		    {
+		      bool isMVACombCorrect( mvaPrefComb==iCorrectComb );
+		      controlHistos.fillHisto(methodList[imet]+"decision","all", isMVACombCorrect, weight);
+		    }
+		}
 	    
-	    bool isStdCombCorrect( icomb==iCorrectComb );
-	    controlHistos.fillHisto("assignmentdecision","all", isStdCombCorrect, weight);
-	  }
-      }
+	      if(nRecoBs>1)
+		{
+		  bool isStdCombCorrect( icomb==iCorrectComb );
+		  controlHistos.fillHisto("assignmentdecision","all", isStdCombCorrect, weight);
+		}
+	    }
+	}
     
-    //Compute dilepton/dijet invariant mass
-    TLorentzVector dil = leptons[0].first+leptons[1].first;
-    float dilmass = dil.M();
-    if(fabs(dilmass-91)<15 && (ev.cat==dilepton::EE || ev.cat==dilepton::MUMU))continue;
-    double ptlep1(max(leptons[0].first.Pt(),leptons[1].first.Pt())), ptlep2(min(leptons[0].first.Pt(),leptons[1].first.Pt()));    
-    TLorentzVector dij = jets[0].first+jets[1].first;
-    float mjj=dij.M();
-    double ptjet1(max(jets[0].first.Pt(),jets[1].first.Pt())), ptjet2(min(jets[0].first.Pt(),jets[1].first.Pt()));
-
-    TLorentzVector ptttbar=leptons[0].first+leptons[1].first+jets[0].first+jets[1].first+mets[0].first;
+      //Compute dilepton/dijet invariant mass
+      LorentzVector dil = phys.leptons[0]+phys.leptons[1];
+      float dilmass = dil.mass();
+      if(fabs(dilmass-91)<15 && (ev.cat==dilepton::EE || ev.cat==dilepton::MUMU))continue;
+      double ptlep1(max(phys.leptons[0].pt(),phys.leptons[1].pt())), ptlep2(min(phys.leptons[0].pt(),phys.leptons[1].pt()));    
+      LorentzVector dij = phys.jets[0]+phys.jets[1];
+      float mjj=dij.M();
+      double ptjet1(max(phys.jets[0].pt(),phys.jets[1].pt())), ptjet2(min(phys.jets[0].pt(),phys.jets[1].pt()));
+      
+      LorentzVector ptttbar=phys.leptons[0]+phys.leptons[1]+phys.jets[0]+phys.jets[1]+phys.met;
     
-    //get the lepton-jet pairs
-    TLorentzVector lj1=leptons[0].first+jets[icomb==1?0:1].first;
-    TLorentzVector lj2=leptons[1].first+jets[icomb==1?1:0].first;
+      //get the lepton-jet pairs
+      LorentzVector lj1=phys.leptons[0]+phys.jets[icomb==1?0:1];
+      LorentzVector lj2=phys.leptons[1]+phys.jets[icomb==1?1:0];
+      
+      //ht
+      double ht(0);
+      for(size_t ijet=0; ijet<phys.jets.size(); ijet++) ht += phys.jets[ijet].pt();
+      double sumptlep(phys.leptons[0].pt()+phys.leptons[1].pt());
+      double st(sumptlep+phys.met.pt());
+      double htlep(st+ht);
 
-    //ht
-    double ht(0);
-    for(size_t ijet=0; ijet<jets.size(); ijet++) ht += jets[ijet].first.Pt();
-    double sumptlep(leptons[0].first.Pt()+leptons[1].first.Pt()+mets[0].first.Pt());
-    double st(sumptlep+mets[0].first.Pt());
-    double htlep(st+ht);
+      for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
+	{
+	  if(mtop>0)
+	    {
+	      controlHistos.fillHisto("njets",*cIt,phys.jets.size(),weight);
+	      controlHistos.fillHisto("btags",*cIt,nbtags,weight);
+	      controlHistos.fillHisto("leadjet",*cIt,ptjet1,weight);
+	      controlHistos.fillHisto("subleadjet",*cIt,ptjet2,weight);
+	      controlHistos.fillHisto("leadlepton",*cIt,ptlep1,weight);
+	      controlHistos.fillHisto("subleadlepton",*cIt,ptlep2,weight);
+	      controlHistos.fillHisto("met",*cIt,phys.met.pt(),weight);
+	      controlHistos.fillHisto("ht",*cIt,ht,weight);
+	      controlHistos.fillHisto("st",*cIt,st,weight);
+	      controlHistos.fillHisto("sumpt",*cIt,sumptlep,weight);
+	      controlHistos.fillHisto("htlep",*cIt,htlep,weight);
+	      controlHistos.fillHisto("ptttbar",*cIt,ptttbar.Pt(),weight);
+	      
+	      controlHistos.fillHisto("mtop",*cIt+subcat,mtop,weight);
+	      controlHistos.fillHisto("mtop",*cIt,mtop,weight);
+	      controlHistos.fillHisto("dilmass",*cIt+subcat,dilmass,weight);
+	      controlHistos.fill2DHisto("mtopvsdilmass",*cIt,mtop,dilmass,weight);
+	      controlHistos.fill2DHisto("mtopvsmlj",*cIt,mtop,lj1.mass(),weight);
+	      controlHistos.fill2DHisto("mtopvsmlj",*cIt,mtop,lj2.mass(),weight);
+	      controlHistos.fill2DHisto("mtopvsmet",*cIt,mtop,phys.met.pt(),weight);
+	      controlHistos.fill2DHisto("mtopvsmttbar",*cIt,mtop,mttbar,weight);
+	      controlHistos.fill2DHisto("mtopvsafb",*cIt,mtop,afb,weight);
+	      controlHistos.fill2DHisto("mttbarvsafb",*cIt,mttbar,afb,weight);
+	      controlHistos.fillHisto("afb",*cIt,afb);
+	      controlHistos.fillHisto("mttbar",*cIt,mttbar);
+	    }
+	}
+      neventsused++;
+      
+      //save for further study
+      //     if(mtop>0 && spyEvents && ev.normWeight==1)
+      //       {
+      // 	std::vector<float> measurements;
+      // 	measurements.push_back(mtop);
+      // 	measurements.push_back(mttbar);
+      // 	measurements.push_back(afb);
+      // 	measurements.push_back(ptttbar.Pt());
+      // 	measurements.push_back(nbtags);
+      // 	measurements.push_back(njets);
+      // 	measurements.push_back(htlep);
+      // 	spyEvents->fillTreeWithEvent( ev, measurements );
+      //       }
 
+      //for data only
+      if (!isMC && mtop>900) 
+	*outf << "| " << irun << ":" << ilumi << ":" << ievent 
+	      << " | " << categs[1] 
+	      << " | " << mtop 
+	      << " | " << mttbar 
+	      << " | " << ptlep1 << ";" << ptlep2  << " | " << dilmass
+	      << " | " << ptjet1 << ";" << ptjet2  << " | " << mjj
+	      << " | " << phys.met.pt() << " | " << htlep << endl; 
 
-    for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
-      {
-	if(mtop>0)
-	  {
-// 	    results[*cIt+"_njets"]->Fill(njets,weight);
-// 	    results[*cIt+"_btags"]->Fill(nbtags,weight);
-// 	    results[*cIt+"_leadjet"]->Fill(ptjet1,weight);
-// 	    results[*cIt+"_subleadjet"]->Fill(ptjet2,weight);
-// 	    results[*cIt+"_leadlepton"]->Fill(ptlep1,weight);
-// 	    results[*cIt+"_subleadlepton"]->Fill(ptlep2,weight);
-// 	    results[*cIt+"_met"]->Fill(mets[0].first.Pt(),weight);
-// 	    results[*cIt+"_ht"]->Fill(ht,weight);
-// 	    results[*cIt+"_st"]->Fill(st,weight);
-// 	    results[*cIt+"_sumpt"]->Fill(sumptlep,weight);
-// 	    results[*cIt+"_htlep"]->Fill(htlep,weight);
-// 	    results[*cIt+"_ptttbar"]->Fill(ptttbar.Pt(),weight);
-	    
-// 	    results[*cIt+subcat+"_mtop"]->Fill(mtop,weight);
-// 	    results[*cIt+"_mtop"]->Fill(mtop,weight);
-// 	    results[*cIt+subcat+"_dilmass"]->Fill(dilmass,weight);
-// 	    ((TH2F *)results[*cIt+"_mtopvsdilmass"])->Fill(mtop,dilmass,weight);
-// 	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj1.M(),weight);
-// 	    ((TH2F *)results[*cIt+"_mtopvsmlj"])->Fill(mtop,lj2.M(),weight);
-// 	    ((TH2F *)results[*cIt+"_mtopvsmet"])->Fill(mtop,mets[0].first.Pt(),weight);
-// 	    ((TH2F *)results[*cIt+"_mtopvsmttbar"])->Fill(mtop,mttbar,weight);
-// 	    ((TH2F *)results[*cIt+"_mtopvsafb"])->Fill(mtop,afb,weight);
-// 	    ((TH2F *)results[*cIt+"_mttbarvsafb"])->Fill(mttbar,afb,weight);
-// 	    results[*cIt+"_afb"]->Fill(afb);
-// 	    results[*cIt+"_mttbar"]->Fill(mttbar);
-	  }
-      }
-    neventsused++;
-   
-    //save for further study
-    if(mtop>0 && spyEvents && ev.normWeight==1)
-      {
-	std::vector<float> measurements;
-	measurements.push_back(mtop);
-	measurements.push_back(mttbar);
-	measurements.push_back(afb);
-	measurements.push_back(ptttbar.Pt());
-	measurements.push_back(nbtags);
-	measurements.push_back(njets);
-	measurements.push_back(htlep);
-	spyEvents->fillTreeWithEvent( ev, measurements );
-      }
-
-    //for data only
-    if (!isMC && mtop>900) 
-      *outf << "| " << irun << ":" << ilumi << ":" << ievent 
-	    << " | " << categs[1] 
-	    << " | " << mtop 
-	    << " | " << mttbar 
-	    << " | " << ptlep1 << ";" << ptlep2  << " | " << dilmass
-	    << " | " << ptjet1 << ";" << ptjet2  << " | " << mjj
-	    << " | " << mets[0].first.Pt() << " | " << htlep << endl; 
-  }
+    }
   kinHandler.end();
+
+  //if MC: rescale to number of selected events and to units of pb
+  cout << "From " << selEvents.size() << "original events found " << nresults << " kin results - used " << neventsused << endl; 
   
   if(useMVA)
     {
@@ -455,10 +487,6 @@ int main(int argc, char* argv[])
       delete outf;
     }
 
-
-  //if MC: rescale to number of selected events and to units of pb
-  cout << "From " << selEvents.size() << "original events found " << nresults << " kin results - used " << neventsused << endl; 
-
   float cnorm=1;
   if(isMC && nresults)
     {
@@ -469,7 +497,6 @@ int main(int argc, char* argv[])
 	  cnorm=cutflowH->GetBinContent(1);
 	  if(cnorm>0) scaleFactor/=cnorm;
 	}
-      cout << selEvents.size() << " " << nresults << " " << scaleFactor << endl;
       //      for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
 

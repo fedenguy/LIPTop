@@ -1,28 +1,46 @@
 {
     "proc":[
 	{
-	"tag":"Di-bosons",
+	"tag":"ZZ",
         "isdata":false,
 	"color":"590",
         "lcolor":1,
 	"marker":1,
 	"data":[
-	     {	
-		"dtag":"ZZ",
-		"dset":"/ZZ_TuneZ2_7TeV_pythia6_tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-		"patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/VV/ZZ_TuneZ2_7TeV_pythia6_tauola"],
-		"xsec":5.9
-	     },
-	     {
-		"dtag":"WW",
-	        "dset":"WW_TuneZ2_7TeV_pythia6_tauola",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/VV/WW_TuneZ2_7TeV_pythia6_tauola"],
+	    {
+                "dtag":"ZZ",
+                "dset":"/ZZ_TuneZ2_7TeV_pythia6_tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/VV/ZZ_TuneZ2_7TeV_pythia6_tauola"],
+                "xsec":5.9
+             }
+	]
+	},
+	{
+        "tag":"WW",
+        "isdata":false,
+        "color":"592",
+        "lcolor":1,
+        "marker":1,
+        "data":[
+	    {
+                "dtag":"WW",
+                "dset":"WW_TuneZ2_7TeV_pythia6_tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/VV/WW_TuneZ2_7TeV_pythia6_tauola"],
                 "xsec":43
-             },
-	     {
-		"dtag":"WZ",
-	        "dset":"WZ_TuneZ2_7TeV_pythia6_tauola",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/VV/WZ_TuneZ2_7TeV_pythia6_tauola"],
+             }
+	]
+	},
+	{
+	"tag":"WZ",
+        "isdata":false,
+        "color":"596",
+        "lcolor":1,
+        "marker":1,
+        "data":[
+	    {
+                "dtag":"WZ",
+                "dset":"WZ_TuneZ2_7TeV_pythia6_tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/VV/WZ_TuneZ2_7TeV_pythia6_tauola"],
                 "xsec":18.2
              }
 	   ]
@@ -37,27 +55,51 @@
 	     {
 		"dtag":"SingleT_tW",
 	        "dset":"T_TuneZ2_tW-channel-DR_7TeV-powheg-tauola",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleTop/T_TuneZ2_tW-channel-DR_7TeV-powheg-tauola"],
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/T_TuneZ2_tW-channel-DR_7TeV-powheg-tauola"],
                 "xsec":7.87
              },
 	     {
 		"dtag":"SingleTbar_tW",
 	        "dset":"Tbar_TuneZ2_tW-channel-DR_7TeV-powheg-tauola",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleTop/Tbar_TuneZ2_tW-channel-DR_7TeV-powheg-tauola"],
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/Tbar_TuneZ2_tW-channel-DR_7TeV-powheg-tauola"],
                 "xsec":7.87
+             },
+	     {
+		"dtag":"SingleT_t",
+	        "dset":"T_TuneZ2_tW-channel_7TeV-powheg-tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/T_TuneZ2_t-channel_7TeV-powheg-tauola"],
+                "xsec":41.92
+             },
+	     {
+		"dtag":"SingleTbar_t",
+	        "dset":"Tbar_TuneZ2_tW-channel_7TeV-powheg-tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/Tbar_TuneZ2_t-channel_7TeV-powheg-tauola"],
+                "xsec":22.65
+             },
+	     {
+		"dtag":"SingleT_s",
+	        "dset":"T_TuneZ2_tW-channel_7TeV-powheg-tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/T_TuneZ2_s-channel_7TeV-powheg-tauola"],
+                "xsec":3.19
+             },
+	     {
+		"dtag":"SingleTbar_s",
+	        "dset":"Tbar_TuneZ2_s-channel_7TeV-powheg-tauola",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/Tbar_TuneZ2_s-channel_7TeV-powheg-tauola"],
+                "xsec":1.44
              }
 	   ]
     	},
-        {
+	{
 	 "tag":"t#bar{t}",
          "isdata":false,
-         "color":"809",
+         "color":"8",
 	 "lcolor":1,
          "data":[
 		{
  	        "dtag":"TTJets",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -65,18 +107,18 @@
 	{
 	 "tag":"W+jets",
          "isdata":false,
-         "color":"8",
+         "color":"809",
 	 "lcolor":1,
          "data":[
 		{
 		 "dtag":"WJetsToLNu",
                  "dset":"/WJetsToLNu_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/WJetsToLNu/WJetsToLNu_TuneZ2_7TeV-madgraph-tauola"],
+                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/WJetsToLNu/WJetsToLNu_TuneZ2_7TeV-madgraph-tauola"],
                  "xsec":31314
                 }
 	 ]
 	},
-        {
+	{
 	 "tag":"Z/#gamma^{*}+jets#rightarrow ll",
          "isdata":false,
          "color":"831",
@@ -85,12 +127,12 @@
 	      {
                "dtag":"DYJetsToLL",
 	       "dset":"/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-	       "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/DYToLL/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola"],
+	       "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/DYToLL/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola"],
                "xsec":3048
               }
           ]
 	},
-        {
+	{
            "tag":"data",
            "isdata":true,
            "color":1,
@@ -98,65 +140,46 @@
            "marker":20,
            "data":[
                 {
-                  "dtag":"SingleMuMay10ReReco",
-                  "dset":"SingleMu-May10ReReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/SingleMuMay10ReReco"]
+                  "dtag":"MuEG05AugReReco",
+                  "dset":"/MuEG/Run2011A-05Aug2011-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/MuEG/MuEG-05Aug2011"]
 		},
                 {
-                  "dtag":"MuEGMay10ReReco",
-                  "dset":"MuEG-May10ReReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/MuEGMay10ReReco"]
+                  "dtag":"DoubleMu05AugReReco",
+                  "dset":"/DoubleMu/Run2011A-05Aug2011-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/DoubleMuon/DoubleMu-05Aug2011"]
 		},
                 {
-                  "dtag":"DoubleMuMay10ReReco",
-                  "dset":"DoubleMu-May10ReReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/DoubleMuMay10ReReco"]
+                  "dtag":"DoubleElectron05AugReReco",
+                  "dset":"/DoubleElectron/Run2011A-05Aug2011-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/DoubleElectron/DoubleElectron-05Aug2011"]
 		},
                 {
-                  "dtag":"DoubleElectronMay10ReReco",
-                  "dset":"DoubleElectron-May10ReReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/DoubleElectronMay10ReReco"]
+                  "dtag":"SingleMu05AugReReco",
+                  "dset":"/SingleMu/Run2011A-05Aug2011-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/SingleMu/SingleMu-05Aug2011"]
 		},
                 {
-                  "dtag":"SingleMuPromptReco",
-                  "dset":"SingleMu-PromptReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleMu/SingleMuPromptReco"]
+                  "dtag":"DoubleMuPromptRecov6_172620_173244",
+                  "dset":"/DoubleMu/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch//cms/store/cmst3/user/psilva/Data/DoubleMuon/DoubleMu-PromptReco-v6-172620-173244"]
 		},
                 {
-                  "dtag":"DoubleMuPromptReco",
-                  "dset":"DoubleMu-PromptReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/DoubleMuon/DoubleMuPromptReco"]
+                  "dtag":"DoubleElectronPromptRecov6_172620_173244",
+                  "dset":"/DoubleElectron/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/DoubleElectron/DoubleElectron-PromptReco-v6-172620-173244"]
 		},
                 {
-                  "dtag":"DoubleElectronPromptReco",
-                  "dset":"DoubleElectron-PromptReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/DoubleElectron/DoubleElectronPromptReco"]
-		},
-                { 
-                  "dtag":"MuEGPromptReco",
-                  "dset":"MuEG-PromptReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/MuEG/MuEGPromptReco"]
+                  "dtag":"MuEGPromptRecov6_172620_173244",
+                  "dset":"/MuEG/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/MuEG/MuEG-PromptReco-v6-172620-173244"]
 		},
                 {
-                  "dtag":"SingleMuMay10ReReco",
-                  "dset":"SingleMuMay10ReReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v0/SingleMuMay10ReReco"]
-		},
-                {
-                  "dtag":"SingleMuPromptReco",
-                  "dset":"SingleMuPromptReco",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ/SingleMu/SingleMuPromptReco"]
+                  "dtag":"SingleMuPromptRecov6_172620_173244",
+                  "dset":"/SingleMu/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/SingleMu/SingleMu-PromptReco-v6-172620-173244"]
 		}
-
              ]
 	}
     ]	
 }
-
-
-
-
-
-
-
-

@@ -45,7 +45,7 @@ TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iCon
   produces<std::vector<pat::EventHypothesis> >("selectedEvent");
   produces<reco::VertexCollection>("selectedVertices");
   produces<std::vector<int> >("selectionInfo");
-  std::string objs[]={"Generator", "Vertices", "Electrons", "Muons", "Dileptons", "Jets", "MET" };
+  std::string objs[]={"Generator", "Vertices", "Electrons", "LooseElectrons", "Muons", "LooseMuons", "Dileptons", "Jets", "MET" };
   for(size_t iobj=0; iobj<sizeof(objs)/sizeof(string); iobj++)
     objConfig[ objs[iobj] ] = iConfig.getParameter<edm::ParameterSet>( objs[iobj] );
 
@@ -150,11 +150,13 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   Handle<View<Candidate> > hMu; 
   iEvent.getByLabel(objConfig["Muons"].getParameter<edm::InputTag>("source"), hMu);
   CandidateWithVertexCollection selMuons = muon::filter(hMu, selVertices, *beamSpot, objConfig["Muons"]);
+  CandidateWithVertexCollection selLooseMuons = muon::filter(hMu, selVertices, *beamSpot, objConfig["LooseMuons"]);
 
   //select electrons (id+conversion veto+very loose isolation)
   Handle<View<Candidate> > hEle; 
   iEvent.getByLabel(objConfig["Electrons"].getParameter<edm::InputTag>("source"), hEle);
   CandidateWithVertexCollection selElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["Electrons"]);
+  CandidateWithVertexCollection selLooseElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["LooseElectrons"]);
   for(View<Candidate>::const_iterator eIt=hEle->begin(); eIt != hEle->end(); eIt++)
     {
       const pat::Electron &electron=dynamic_cast<const pat::Electron &>(*eIt);
@@ -173,6 +175,8 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   //build inclusive collection
   CandidateWithVertexCollection selLeptons = selMuons;
   selLeptons.insert(selLeptons.end(), selElectrons.begin(), selElectrons.end());
+  CandidateWithVertexCollection selLooseLeptons = selLooseMuons;
+  selLooseLeptons.insert(selLooseLeptons.end(), selLooseElectrons.begin(), selLooseElectrons.end());
   if(selLeptons.size()>0) selStep=2;
 
   //if event is MC filter out the genparticle collection also
@@ -209,11 +213,11 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   if(selStep==2)
     {
       //control histos for leptons
-      for(size_t ilep=0; ilep<selLeptons.size(); ilep++)
+      for(size_t ilep=0; ilep<selLooseLeptons.size(); ilep++)
 	{
 	  using namespace lepton;
-	  int id = getLeptonId(selLeptons[ilep].first);
-	  std::vector<double> isol=getLeptonIso(selLeptons[ilep].first,objConfig["Dileptons"].getParameter<double>("minPt"));
+	  int id = getLeptonId(selLooseLeptons[ilep].first);
+	  std::vector<double> isol=getLeptonIso(selLeptons[ilep].first,objConfig["LooseMuons"].getParameter<double>("minPt"));
 	  TString ptype(fabs(id)==ELECTRON ? "electron" : "muon");
 	  controlHistos_.fillHisto("rho",ptype,*rho,weight);
 	  controlHistos_.fillHisto("ecaliso",ptype,isol[ECAL_ISO],weight);
@@ -224,10 +228,7 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	}
       
       //search for dileptons
-      CandidateWithVertexCollection isolLeptons;
       std::pair<CandidateWithVertex,CandidateWithVertex> dileptonWithVertex = dilepton::filter(selLeptons,
-											       isolLeptons,
-											       *rho,
 											       objConfig["Dileptons"],
 											       iSetup);
       selPath = dilepton::classify(dileptonWithVertex);
@@ -247,24 +248,17 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 	  primaryVertexHyps.push_back(dileptonWithVertex.second.second);
 
 	  //add the remaining isolated leptons now
-	  for(CandidateWithVertexCollection::iterator lIt = isolLeptons.begin(); lIt != isolLeptons.end(); lIt++)
+	  for(CandidateWithVertexCollection::iterator lIt = selLooseLeptons.begin(); lIt != selLooseLeptons.end(); lIt++)
 	    {
 	      if(lIt->first.get()== dileptonWithVertex.first.first.get()) continue;
 	      if(lIt->first.get()== dileptonWithVertex.second.first.get()) continue;
-
-	      //check if lepton is associated to the same vertex as the dilepton
-	      if(lIt->second.get()== dileptonWithVertex.first.second.get() 
-		 || lIt->second.get() == dileptonWithVertex.second.second.get())
-		hyp.add( lIt->first , fabs(lepton::getLeptonId(lIt->first))==lepton::MUON ? "muon" : "electron" );
-	      else
-		hyp.add( lIt->first , fabs(lepton::getLeptonId(lIt->first))==lepton::MUON ? "pumuon" : "puelectron" );
-	      
+	      hyp.add( lIt->first , fabs(lepton::getLeptonId(lIt->first))==lepton::MUON ? "muon" : "electron" );
 	    }
 	  
 	  //add also the jets
 	  Handle<View<Candidate> > hJet; 
 	  iEvent.getByLabel(objConfig["Jets"].getParameter<edm::InputTag>("source"), hJet);
-	  CandidateWithVertexCollection selJets = jet::filter(hJet, isolLeptons, selVertices, objConfig["Jets"]);
+	  CandidateWithVertexCollection selJets = jet::filter(hJet, selLeptons, selVertices, objConfig["Jets"]);
 	  for(size_t icat=0; icat<dilCats.size(); icat++)
 	    {
 	      controlHistos_.fillHisto("jetmult",dilCats[icat],selJets.size(),weight);
@@ -297,14 +291,7 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
 		    controlHistos_.fillHisto("jetbeta",dilCats[icat],jet::fAssoc(j,dileptonWithVertex.first.second.get()),weight);
 		}
 	    }
-	  CandidateWithVertexCollection assocJets, puJets;
-	  jet::classifyJetsForDileptonEvent(selJets,dileptonWithVertex,assocJets,puJets,objConfig["Dileptons"].getParameter<double>("maxDz"));
-	  for(CandidateWithVertexCollection::iterator jIt = assocJets.begin(); jIt != assocJets.end(); jIt++) hyp.add(jIt->first,"jet");
-	  for(CandidateWithVertexCollection::iterator jIt = puJets.begin(); jIt != puJets.end(); jIt++) 
-	    {
-	      hyp.add(jIt->first,"pujet");
-	      hyp.add(jIt->first,"jet");
-	    }
+	  for(CandidateWithVertexCollection::iterator jIt = selJets.begin(); jIt != selJets.end(); jIt++) hyp.add(jIt->first,"jet");
 	  
 	  //add the met
 	  Handle<View<Candidate> > hMET; 

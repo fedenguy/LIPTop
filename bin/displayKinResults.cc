@@ -10,6 +10,8 @@
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "LIP/Top/interface/HistogramAnalyzer.h"
+
 #include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
@@ -23,6 +25,8 @@ int main(int argc, char* argv[])
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
+
+  HistogramAnalyzer histoAnalyzer;
 
   //check arguments
   if ( argc < 3 ) {
@@ -58,14 +62,18 @@ int main(int argc, char* argv[])
       h->SetMarkerStyle(20);
       h->SetFillStyle(0);
       h->DrawClone("hist");
+      std::vector<Double_t> res=histoAnalyzer.analyzeHistogram(h);
       cout << "Combination #1: " << h->Integral() << " has solutions" << endl;
+      for(std::vector<Double_t>::iterator it = res.begin(); it != res.end(); it++) cout << "\t" << *it << endl;
 
       h =kinHandler.getHisto("mt",2);
       h->SetFillStyle(3472);
       h->SetFillColor(1);
       h->SetMarkerStyle(21);
       h->DrawClone("histsame");
+      res=histoAnalyzer.analyzeHistogram(h);
       cout << "Combination #2: " << h->Integral() << " has solutions" << endl;
+      for(std::vector<Double_t>::iterator it = res.begin(); it != res.end(); it++) cout << "\t" << *it << endl;
 
       TLegend *leg=c->BuildLegend();
       formatForCmsPublic(c,leg,title,2);

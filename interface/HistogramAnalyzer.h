@@ -10,7 +10,7 @@ class HistogramAnalyzer
 
  public:
 
-  enum Measurements{kIntegral, kMPV, kMean, kRMS, kSkewness, kKurtosis, k25p, k50p, k75p };
+  enum Measurements{kIntegral, kMPV, kMean, kRMS, kSkewness, kKurtosis, k10p, k25p, k75p, k90p };
 
   /**
      @short CTOR
