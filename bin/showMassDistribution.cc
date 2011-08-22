@@ -267,11 +267,12 @@ int main(int argc, char* argv[])
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       sort(phys.jets.begin(),phys.jets.end(),sortByBtag);
       int nRecoBs( (fabs(phys.jets[0].flavid)==5) + (fabs(phys.jets[1].flavid)==5) );
+      if(!ev.isSignal) nRecoBs=0;
       int iCorrectComb=0;
       if(nRecoBs>1)
 	{
 	  //the charge of the generator level matched particles must be opposite
-	  int assignCode=(phys.leptons[0].genid*phys.jets[0].genid);
+	  int assignCode=(phys.leptons[0].genid*phys.jets[0].flavid);
 	  if(assignCode<0) iCorrectComb=1;
 	  else             iCorrectComb=2;
 	}
@@ -331,13 +332,15 @@ int main(int argc, char* argv[])
 		  TH1 *correctH = (iCorrectComb==1 ? h1 : h2);
 		  TH1 *wrongH   = (iCorrectComb==1 ? h2 : h1);
 		  
-		  tmvaVarsD = histoVars[correctH];
-		  if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
-		  else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD,1. ); nsigtest++; }
-		  
-		  tmvaVarsD = histoVars[wrongH];
-		  if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
-		  else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
+		  if(histoVars[correctH][HistogramAnalyzer::kIntegral]>0 && histoVars[wrongH][HistogramAnalyzer::kIntegral]>0)
+		    {
+		      tmvaVarsD = histoVars[correctH];
+		      if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
+		      else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD,1. ); nsigtest++; }
+		      tmvaVarsD = histoVars[wrongH];
+		      if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
+		      else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
+		    }
 		}
 	    }
 	  else
