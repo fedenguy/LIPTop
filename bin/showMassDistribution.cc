@@ -288,24 +288,16 @@ int main(int argc, char* argv[])
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
       h1->Rebin(2); h2->Rebin(2);
     
-      std::map<TH1*, std::vector<Double_t> > histoVars;
+      std::map<TH1*, std::map<TString,Double_t> > histoVars;
       histoVars[h1]=histoAnalyzer.analyzeHistogram(h1);
       histoVars[h2]=histoAnalyzer.analyzeHistogram(h2);
-      for(std::map<TH1 *,std::vector<Double_t> >::iterator hvit=histoVars.begin(); hvit !=histoVars.end(); hvit++)
+      for(std::map<TH1 *,std::map<TString,Double_t> >::iterator hvit=histoVars.begin(); hvit !=histoVars.end(); hvit++)
 	{
-	  std::vector<Double_t> &res = hvit->second;
-	  controlHistos.fillHisto("kIntegral","all", res[HistogramAnalyzer::kIntegral], weight);
-	  if(res[HistogramAnalyzer::kIntegral]>0)
+	  std::map<TString,Double_t> &res = hvit->second;
+	  if(res["kIntegral"]>0)
 	    {
-	      controlHistos.fillHisto("kMPV","all", res[HistogramAnalyzer::kMPV], weight);
-	      controlHistos.fillHisto("kMean","all", res[HistogramAnalyzer::kMean], weight);
-	      controlHistos.fillHisto("kRMS","all", res[HistogramAnalyzer::kRMS], weight);
-	      controlHistos.fillHisto("kSkewness","all", res[HistogramAnalyzer::kSkewness], weight);
-	      controlHistos.fillHisto("kKurtosis","all", res[HistogramAnalyzer::kKurtosis], weight);
-	      controlHistos.fillHisto("k10p","all", res[HistogramAnalyzer::k10p], weight);
-	      controlHistos.fillHisto("k25p","all", res[HistogramAnalyzer::k25p], weight);
-	      controlHistos.fillHisto("k75p","all", res[HistogramAnalyzer::k75p], weight);
-	      controlHistos.fillHisto("k90p","all", res[HistogramAnalyzer::k90p], weight);
+	      for(std::map<TString,Double_t>::iterator resIt = res.begin(); resIt != res.end(); resIt++)
+		controlHistos.fillHisto(resIt->first,"all",resIt->second,weight);
 	    } 
 	}
   
@@ -332,13 +324,15 @@ int main(int argc, char* argv[])
 		  TH1 *correctH = (iCorrectComb==1 ? h1 : h2);
 		  TH1 *wrongH   = (iCorrectComb==1 ? h2 : h1);
 		  
-		  if(histoVars[correctH][HistogramAnalyzer::kIntegral]>0 && histoVars[wrongH][HistogramAnalyzer::kIntegral]>0)
+		  if(histoVars[correctH]["kIntegral"]>0 && histoVars[wrongH]["kIntegral"]>0)
 		    {
-		      tmvaVarsD = histoVars[correctH];
+		      
+		      for(size_t ivar=0; ivar< varsList.size(); ivar++) tmvaVarsD[ivar] = histoVars[wrongH][ varsList[ivar] ] /histoVars[correctH][ varsList[ivar] ];
 		      if ( inum%2 == 0 ){ tmvaFactory->AddSignalTrainingEvent( tmvaVarsD,1. ); nsigtrain++; }
 		      else              { tmvaFactory->AddSignalTestEvent    ( tmvaVarsD,1. ); nsigtest++; }
-		      tmvaVarsD = histoVars[wrongH];
-		      if ( inum%2 == 0 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
+
+		      for(size_t ivar=0; ivar< varsList.size(); ivar++) tmvaVarsD[ivar] = histoVars[correctH][ varsList[ivar] ] / histoVars[wrongH][ varsList[ivar] ];
+		      if ( inum%2 == 1 ){ tmvaFactory->AddBackgroundTrainingEvent( tmvaVarsD, 1. ); nbkgtrain++; }
 		      else              { tmvaFactory->AddBackgroundTestEvent    ( tmvaVarsD, 1. ); nbkgtest++; }
 		    }
 		}
@@ -346,11 +340,11 @@ int main(int argc, char* argv[])
 	  else
 	    {
 	      std::vector<double> h1DiscriResults;
-	      for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++)  tmvaVarsF[ivar]=histoVars[h1][ivar];
+	      for(size_t ivar=0; ivar< varsList.size(); ivar++) tmvaVarsF[ivar]=histoVars[h1][varsList[ivar]];
 	      for(size_t imet=0; imet<methodList.size(); imet++) h1DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
 
 	      std::vector<double> h2DiscriResults;
-	      for(size_t ivar=0; ivar<tmvaVarsF.size(); ivar++) tmvaVarsF[ivar]=histoVars[h2][ivar];
+	      for(size_t ivar=0; ivar< varsList.size(); ivar++) tmvaVarsF[ivar]=histoVars[h2][varsList[ivar]];
 	      for(size_t imet=0; imet<methodList.size(); imet++) h2DiscriResults.push_back( tmvaReader->EvaluateMVA( methodList[imet] ) );
 
 	      //check if decision was good

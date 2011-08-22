@@ -2,15 +2,16 @@
 #define histogramanalyzer_h
 
 #include <vector>
+#include <map>
+
 #include "TH1D.h" 
 #include "TF1.h" 
+#include "TString.h"
 
 class HistogramAnalyzer
 {
 
  public:
-
-  enum Measurements{kIntegral, kMPV, kMean, kRMS, kSkewness, kKurtosis, k10p, k25p, k75p, k90p };
 
   /**
      @short CTOR
@@ -20,7 +21,9 @@ class HistogramAnalyzer
     /**
        @short returns the variables of interest (normalized to the MPV fit from gaussian)
      */
-    std::vector<Double_t> analyzeHistogram(TH1F *h);
+    std::map<TString,Double_t> analyzeHistogram(TH1F *h);
+    
+    std::map<TString,Double_t> getMeasurements() { return histoMeasurements; }
 
     /**
        @short DTOR
@@ -31,7 +34,7 @@ class HistogramAnalyzer
 
   TF1 *fitFunc_;
 
-  std::vector<Double_t> histoMeasurements;
+  std::map<TString,Double_t> histoMeasurements;
 };
 
 
