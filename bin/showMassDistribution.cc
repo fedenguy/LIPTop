@@ -1,6 +1,7 @@
 #include <iostream>
 #include <boost/shared_ptr.hpp>
 #include <fstream>
+#include <algorithm>
 
 #include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
@@ -27,7 +28,13 @@
 
 using namespace std;
 
-bool sortByBtag(PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag1>b.btag2);  }
+struct bTagSorter{
+  bool operator() (PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag1>b.btag1);  }
+} sortByBtag;
+
+struct ptSorter{
+  bool operator() (PhysicsObject_Lepton a, PhysicsObject_Lepton b)   {   return (a.pt()>b.pt());  }
+} sortByPt;
 
 //
 int main(int argc, char* argv[])
@@ -162,12 +169,14 @@ int main(int argc, char* argv[])
 	  //read the methods already trained
 	  for(size_t imet=0; imet<methodList.size(); imet++)
 	    {
-	      //open the file with the method description                                                                                                                                                                                                 
-	      TString weightFile = weightsDir + "/" + studyTag + ".weights.xml";
+	      //open the file with the method description         
+	      TString weightFile = weightsDir + "/" + studyTag + "_" + methodList[imet] + ".weights.xml";
 	      gSystem->ExpandPathName(weightFile);
 	      tmvaReader->BookMVA(methodList[imet], weightFile);
 	      TH1 *h=tmva::getHistogramForDiscriminator( methodList[imet] );
 	      controlHistos.addHistogram( h );
+	      controlHistos.addHistogram( (TH1 *)h->Clone(h->GetName()+TString("correct")) );
+	      controlHistos.addHistogram( (TH1 *)h->Clone(h->GetName()+TString("wrong")) );
 	      controlHistos.addHistogram( new TH1F(methodList[imet]+TString("decision"),";Good decisions",2,0.,2.) );
 	    }
 	}
@@ -266,6 +275,8 @@ int main(int argc, char* argv[])
     
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       sort(phys.jets.begin(),phys.jets.end(),sortByBtag);
+      sort(phys.leptons.begin(),phys.leptons.end(),sortByPt);
+
       int nRecoBs( (fabs(phys.jets[0].flavid)==5) + (fabs(phys.jets[1].flavid)==5) );
       if(!ev.isSignal) nRecoBs=0;
       int iCorrectComb=0;
@@ -275,7 +286,13 @@ int main(int argc, char* argv[])
 	  int assignCode=(phys.leptons[0].genid*phys.jets[0].flavid);
 	  if(assignCode<0) iCorrectComb=1;
 	  else             iCorrectComb=2;
-	}
+	 //  cout << iCorrectComb << " | " 
+	  // 	       << phys.leptons[0].genid << " (" << phys.leptons[0].pt() << ") "
+	  // 	       << phys.leptons[1].genid << " (" << phys.leptons[1].pt() << ") |"
+	  // 	       << phys.jets[0].flavid << " (" << phys.jets[0].btag1 << ") "
+	  // 	       << phys.jets[1].flavid << " (" << phys.jets[1].btag1 << ") |"
+	  // 	       << endl;
+ 	}
       
       //btag counting
       int nbtags(0);
@@ -351,14 +368,20 @@ int main(int argc, char* argv[])
 	      for(size_t imet=0; imet<methodList.size(); imet++) 
 		{
 		  int mvaPrefComb=1;
-		  if(h1DiscriResults[imet]<h2DiscriResults[imet]) mvaPrefComb=2;
+		  float correctDiscri(iCorrectComb==1?h1DiscriResults[imet]:h2DiscriResults[imet]);
+		  float wrongDiscri(iCorrectComb==2?h1DiscriResults[imet]:h2DiscriResults[imet]);
+		  float discri=h1DiscriResults[imet];
+		  if(h1DiscriResults[imet]<h2DiscriResults[imet]) { mvaPrefComb=2; discri=h2DiscriResults[imet]; }
 		  if(nRecoBs>1)
 		    {
+		      controlHistos.fillHisto(methodList[imet],"all",discri,weight);
+		      controlHistos.fillHisto(methodList[imet]+"correct","all",correctDiscri,weight);
+		      controlHistos.fillHisto(methodList[imet]+"wrong","all",wrongDiscri,weight);
 		      bool isMVACombCorrect( mvaPrefComb==iCorrectComb );
 		      controlHistos.fillHisto(methodList[imet]+"decision","all", isMVACombCorrect, weight);
 		    }
 		}
-	    
+	      
 	      if(nRecoBs>1)
 		{
 		  bool isStdCombCorrect( icomb==iCorrectComb );
