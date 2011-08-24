@@ -151,13 +151,26 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   iEvent.getByLabel(objConfig["Muons"].getParameter<edm::InputTag>("source"), hMu);
   CandidateWithVertexCollection selMuons = muon::filter(hMu, selVertices, *beamSpot, objConfig["Muons"]);
   CandidateWithVertexCollection selLooseMuons = muon::filter(hMu, selVertices, *beamSpot, objConfig["LooseMuons"]);
+  for(size_t iMuon=0; iMuon< hMu.product()->size(); ++iMuon)
+    {
+      using namespace lepton;
+      reco::CandidatePtr muonPtr = hMu->ptrAt(iMuon);
+      std::vector<double> isol=getLeptonIso(muonPtr,objConfig["LooseMuons"].getParameter<double>("minPt"));
+      controlHistos_.fillHisto("rho","muon",*rho,weight);
+      controlHistos_.fillHisto("ecaliso","muon",isol[ECAL_ISO],weight);
+      controlHistos_.fillHisto("hcaliso","muon",isol[HCAL_ISO],weight);
+      controlHistos_.fillHisto("trackiso","muon",isol[TRACKER_ISO],weight);
+      controlHistos_.fillHisto("caloiso","muon",isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
+      controlHistos_.fillHisto("reliso","muon",isol[REL_ISO],weight);
+    }
 
   //select electrons (id+conversion veto+very loose isolation)
   Handle<View<Candidate> > hEle; 
   iEvent.getByLabel(objConfig["Electrons"].getParameter<edm::InputTag>("source"), hEle);
   CandidateWithVertexCollection selElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["Electrons"]);
   CandidateWithVertexCollection selLooseElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["LooseElectrons"]);
-  for(View<Candidate>::const_iterator eIt=hEle->begin(); eIt != hEle->end(); eIt++)
+  size_t iEle(0);
+  for(View<Candidate>::const_iterator eIt=hEle->begin(); eIt != hEle->end(); eIt++, iEle++)
     {
       const pat::Electron &electron=dynamic_cast<const pat::Electron &>(*eIt);
       TString cat(electron.isEB() ? "eb":"ee");
@@ -168,6 +181,17 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
       controlHistos_.fillHisto(cat+"sigmaietaieta","electron",electron.sigmaIetaIeta(),weight); 
       controlHistos_.fillHisto(cat+"dphiin","electron",electron.deltaPhiSuperClusterTrackAtVtx(),weight);
       controlHistos_.fillHisto(cat+"detain","electron",electron.deltaEtaSuperClusterTrackAtVtx(),weight);
+
+      using namespace lepton;
+      reco::CandidatePtr elePtr = hEle->ptrAt(iEle);
+      std::vector<double> isol=getLeptonIso(elePtr,objConfig["LooseMuons"].getParameter<double>("minPt"));
+      controlHistos_.fillHisto("rho","electron",*rho,weight);
+      controlHistos_.fillHisto("ecaliso","electron",isol[ECAL_ISO],weight);
+      controlHistos_.fillHisto("hcaliso","electron",isol[HCAL_ISO],weight);
+      controlHistos_.fillHisto("trackiso","electron",isol[TRACKER_ISO],weight);
+      controlHistos_.fillHisto("caloiso","electron",isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
+      controlHistos_.fillHisto("reliso","electron",isol[REL_ISO],weight);
+      
       if(electron.gsfTrack().isNull()) continue;
       controlHistos_.fillHisto("electron_"+cat+"misshits","electron",electron.gsfTrack()->trackerExpectedHitsInner().numberOfHits(),weight);
     }
@@ -212,21 +236,6 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   //build the dilepton (all tightly isolated leptons will be returned)
   if(selStep==2)
     {
-      //control histos for leptons
-      for(size_t ilep=0; ilep<selLooseLeptons.size(); ilep++)
-	{
-	  using namespace lepton;
-	  int id = getLeptonId(selLooseLeptons[ilep].first);
-	  std::vector<double> isol=getLeptonIso(selLeptons[ilep].first,objConfig["LooseMuons"].getParameter<double>("minPt"));
-	  TString ptype(fabs(id)==ELECTRON ? "electron" : "muon");
-	  controlHistos_.fillHisto("rho",ptype,*rho,weight);
-	  controlHistos_.fillHisto("ecaliso",ptype,isol[ECAL_ISO],weight);
-	  controlHistos_.fillHisto("hcaliso",ptype,isol[HCAL_ISO],weight);
-	  controlHistos_.fillHisto("trackiso",ptype,isol[TRACKER_ISO],weight);
-	  controlHistos_.fillHisto("caloiso",ptype,isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
-	  controlHistos_.fillHisto("reliso",ptype,isol[REL_ISO],weight);
-	}
-      
       //search for dileptons
       std::pair<CandidateWithVertex,CandidateWithVertex> dileptonWithVertex = dilepton::filter(selLeptons,
 											       objConfig["Dileptons"],
