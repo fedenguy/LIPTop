@@ -134,7 +134,7 @@
 	{
 	 "tag":"Z'(500)#rightarrow t#bar{t}",
          "isdata":false,
-         "color":"kPink-9",
+         "color":"kOrange",
          "spimpose":true,
    	 "lwidth":4,
          "fill":0,
@@ -151,7 +151,7 @@
 	{
 	 "tag":"Z'(1000)#rightarrow t#bar{t}",
          "isdata":false,
-         "color":"kPink-7",
+         "color":"kOrange+3",
          "spimpose":true,
    	 "lwidth":4,
          "fill":0,
@@ -168,7 +168,7 @@
 	{
 	 "tag":"Z'(1500)#rightarrow t#bar{t}",
          "isdata":false,
-         "color":"kPink-5",
+         "color":"kOrange+5",
          "spimpose":true,
    	 "lwidth":4,
          "fill":0,
@@ -202,7 +202,7 @@
 	{
 	 "tag":"Z'(3000)#rightarrow t#bar{t}",
          "isdata":false,
-         "color":"kPink-3",
+         "color":"kOrange-3",
          "spimpose":true,
    	 "lwidth":4,
          "fill":0,
