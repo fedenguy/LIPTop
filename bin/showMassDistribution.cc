@@ -529,7 +529,7 @@ int main(int argc, char* argv[])
 	{
 	  cnorm=cutflowH->GetBinContent(1);
 	  cout << "Will re-scale MC by: " << scaleFactor << "/" << cnorm << endl;
-	  if(cnorm>0) scaleFactor/=cnorm;
+	  if(cnorm>0) cnorm=scaleFactor/cnorm;
 	}
       //      for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
@@ -543,16 +543,20 @@ int main(int argc, char* argv[])
   outDirs["ee"]=baseOutDir->mkdir("ee");
   outDirs["emu"]=baseOutDir->mkdir("emu");
   outDirs["mumu"]=baseOutDir->mkdir("mumu");
+  //   outDirs["etau"]=baseOutDir->mkdir("etau");
+  //   outDirs["mutau"]=baseOutDir->mkdir("mutau");
   for(SelectionMonitor::StepMonitor_t::iterator it =mons.begin(); it!= mons.end(); it++)
     {
       TString icat("all");
       if(it->first.BeginsWith("ee")) icat="ee";
       if(it->first.BeginsWith("emu")) icat="emu";
       if(it->first.BeginsWith("mumu")) icat="mumu";
+      //       if(it->first.BeginsWith("etau")) icat="etau";
+      //       if(it->first.BeginsWith("mutau")) icat="mutau";
       outDirs[icat]->cd();
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
         {
-	  if(isMC && cnorm>0) hit->second->Scale(1./cnorm);
+	  if(isMC && cnorm>0) hit->second->Scale(cnorm);
 	  if( !((TClass*)hit->second->IsA())->InheritsFrom("TH2")
 	      && !((TClass*)hit->second->IsA())->InheritsFrom("TGraph") )
 	    fixExtremities(hit->second,true,true);
