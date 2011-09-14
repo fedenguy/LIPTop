@@ -23,14 +23,15 @@ def usage() :
     print '  -j : json file containing the samples'
     print '  -i : event summary file'
     print '  -n : number of ensembles to test'
-    print '  -b : jet bin (2=2 jets exclusive, 3=3 jets inclusive, otherwise all inclusive)' 
+    print '  -b : jet bin (2=2 jets exclusive, 3=3 jets inclusive, otherwise all inclusive)'
+    print '  -f : fit type'
     print '  -p : plot only'
     exit(-1)
 
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "b:l:j:i:n:p:h?"
+    shortopts  = "b:l:j:i:n:p:f:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -45,6 +46,7 @@ ifile=''
 nensemble=1
 plotOnly=False
 jetbin=0
+fitType=-1
 for o,a in opts:
     if o in("-?", "-h"):
         usage()
@@ -53,8 +55,10 @@ for o,a in opts:
     elif o in('-j'): samplesDB = a
     elif o in('-i'): ifile=a
     elif o in('-n'): nensemble=int(a)
+    elif o in('-f'): fitType=int(a)
     elif o in('-p'): plotOnly = (a=='True')
     elif o in('-b'): jetbin=int(a)
+
     
 # load macros
 import ROOT
@@ -70,6 +74,14 @@ if(not plotOnly) :
     #run over sample
     evHandler       = EventSummaryHandler()
     misMeasurement  = MisassignmentMeasurement()
+    misMeasurement.setBiasCorrections("all",-0.02416)
+    misMeasurement.setBiasCorrections("emu",-0.02331)
+    misMeasurement.setBiasCorrections("ll",-0.027586)
+
+    hfcFitter=None
+    if(fitType>=0):
+        hfcFitter = HFCMeasurement(3,fitType)
+    
     ensembleInfo = '<big><b>Summary of ensemble tests (data/MC) for events with'
     if(jetbin==2):   ensembleInfo += '= 2 jets'
     elif(jetbin==3): ensembleInfo += '&gt;= 3 jets'
@@ -158,6 +170,31 @@ if(not plotOnly) :
                 fcorrect      = fcorrectEst[0]
                 fcorrectErr   = fcorrectEst[1]
                 kNorm         = misMeasurement.getNorm(cat)
+
+                if(hfcFitter is not None and cat != 'all') :
+
+                    #configure fit from file
+                    fitParamsFile = open('hfcFitter_cfg.json','r')
+                    fitParams=json.load(fitParamsFile,encoding='utf-8')
+
+                    btagWP='TCHEL'
+
+                    btagAlgos=fitParams['btagalgos']
+                    hfcFitter.configureBtagAlgo   (btagWP,btagAlgos[btagWP]['cut'])
+                    hfcFitter.setBtagEfficiency   (btagAlgos[btagWP]['effb'][0], btagAlgos[btagWP]['sfb'][0], btagAlgos[btagWP]['sfb'][1] )
+                    hfcFitter.setMistagEfficiency (btagAlgos[btagWP]['effq'][0], btagAlgos[btagWP]['sfq'][0], btagAlgos[btagWP]['sfq'][1] )
+
+                    catParams=fitParams[cat]
+                    hfcFitter.setAlpha (catParams['inclusive']['alpha_2'][0],catParams['inclusive']['alpha_2'][1],
+                                        catParams['inclusive']['alpha_0'][0],catParams['inclusive']['alpha_0'][1])
+
+                    fitParamsFile.close()
+
+                    #if(cat=='ll'): hfcFitter.fitHFCtoEnsemble( ensembleHandler, cat )
+                    if(cat=='emu'): hfcFitter.fitHFCtoEnsemble( ensembleHandler, cat )
+
+                    raw_input('any key to continue')
+                #save ensemble info
                 ensembleInfo += '<tr><td><i>' + cat + ' events</i></td></tr>'
                 ensembleInfo += '<tr><td>k-factor=' + str(kNorm) + '</td></tr>'
                 ensembleInfo += '<tr><td>f<sub>correct</sub>=' + str(fcorrect) + "+/-" + str(fcorrectErr)
@@ -186,6 +223,10 @@ cnv.Divide(3,1)
 cnv2 =getNewCanvas('misresc','misresc',False)
 cnv2.SetWindowSize(1500,500)
 cnv2.Divide(3,1)
+cnv3 =getNewCanvas('fractfitc','fracfitc',False)
+cnv3.SetWindowSize(1500,500)
+cnv3.Divide(3,1)
+fracFitter=[]
 icnv=0
 for c in cats:
     prefix=''
@@ -229,7 +270,6 @@ for c in cats:
     if(icnv==1) : formatForCmsPublic(pad.cd(1),leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
     else        : leg.Delete()
 
-
     #subtracted distributions
     cnv2.cd(icnv)
 
@@ -259,6 +299,38 @@ for c in cats:
     if(icnv==1) : formatForCmsPublic(pad2.cd(1),leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
     else        : leg.Delete()
 
+    #fraction fit
+    pad3=cnv3.cd(icnv)
+    
+    mcArray = ROOT.TObjArray(3);
+    mcArray.Add(mcCorrectH)
+    mcArray.Add(mcWrongH)
+    fracFitter.append( ROOT.TFractionFitter(dataH, mcArray) );
+    fracFitter[icnv-1].Constrain(1,0.0,1.0);      
+    #fracFitter.SetRangeX(1,15);  #bins to use
+    fracFitterStatus = fracFitter[icnv-1].Fit()
+    sigval=ROOT.Double(0.0)
+    sigvalerr=ROOT.Double(0.0)
+    bkgval=ROOT.Double(0.0)
+    bkgvalerr=ROOT.Double(0.0)
+    if (fracFitterStatus == 0) :
+        resultH = fracFitter[icnv-1].GetPlot()
+        resultH.SetDirectory(0)
+        fracFitter[icnv-1].GetResult(0, sigval, sigvalerr);
+        fracFitter[icnv-1].GetResult(1, bkgval, bkgvalerr)
+        resultH.SetLineColor(mcCorrectH.GetLineColor())
+        resultH.SetMarkerColor(mcCorrectH.GetMarkerColor())
+        resultH.SetFillColor(mcCorrectH.GetFillColor())
+        resultH.SetLineStyle(mcCorrectH.GetLineStyle())
+        resultH.SetMarkerStyle(mcCorrectH.GetMarkerStyle())
+        resultH.SetFillStyle(mcCorrectH.GetFillStyle())
+        resultH.Draw("hist")
+        mcWrongH.DrawNormalized("histsame",resultH.Integral()*bkgval);
+        dataH.Draw("e1psame")
+
+        pad3.SetLogx()
+        formatForCmsPublic(pad3,None,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
+                     
 
     fcorrH=plotF.Get('localAnalysis/'+c+'/'+prefix+'fcorr')
     truefCorrH=plotF.Get('localAnalysis/'+c+'/'+prefix+'truefcorr')
@@ -266,9 +338,18 @@ for c in cats:
     fCorrErr=fcorrH.GetRMS()
     avgFcorrTrue=truefCorrH.GetMean()
     fCorrTrueErr=truefCorrH.GetRMS()
-    fCorrBias=avgFcorr-avgFcorrTrue
-    fCorrBiasErr=sqrt(pow(fCorrErr,2)+pow(fCorrTrueErr,2))
-    print c + ' f_{correct}=' + str(avgFcorr) + ' +/- ' + str(fCorrErr) + ' <f_{correct}^{MC}>=' + str(avgFcorrTrue) + ' +/- ' + str(fCorrTrueErr) + ' bias=' + str(fCorrBias) + ' +/- ' + str(fCorrBiasErr)
+    biasH=plotF.Get('localAnalysis/'+c+'/'+prefix+'bias')
+    biasFit=biasH.GetFunction('gaus')
+    fCorrBias=biasFit.GetParameter(1)
+    fCorrBiasErr=biasFit.GetParError(1)
+
+    #debug
+    print c,
+    print ' f_{correct}=' + str(avgFcorr) + ' +/- ' + str(fCorrErr),
+    print ' <f_{correct}^{MC}>=' + str(avgFcorrTrue) + ' +/- ' + str(fCorrTrueErr),
+    print ' bias=' + str(fCorrBias) + ' +/- ' + str(fCorrBiasErr),
+    print ' f_{correct}^{fraction fitter}= ' + str(sigval) + ' +/- ' + str(sigvalerr)
+
     
 cnv.cd()
 cnv.Draw()

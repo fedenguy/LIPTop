@@ -98,7 +98,6 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
       
 	//dilepton control
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.),false ); 
-	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_dilepton_pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.),false ); 
         controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_reliso", "; Isolation; Events", 100, 0.,10.),false );
@@ -115,18 +114,15 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_pujetpt",";p_{T} [GeV/c]; Jets",100,0,200),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_jeteta",";#eta; Jets",100,-2.5,2.5),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_jetfassoc",";f_{assoc}; Jets",100,0,1),false ); 
-	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_pujetfassoc",";f_{assoc}; Jets",100,0,1),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_njets",";Jet multiplicity; Events",4,0,4),false ); 
-	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_npujets",";Jet multiplicity; Events",4,0,4),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_bmult",";b tag multiplicity (TCHEL); Events",4,0,4),false ); 
 	for(int ibin=1; ibin<=controlHistos_.getHisto(cat+"_njets","all")->GetXaxis()->GetNbins(); ibin++)
 	  {
 	    TString ilabel(""); ilabel+=(ibin-1);
-	    if(ibin==controlHistos_.getHisto(cat+"_npujets","all")->GetXaxis()->GetNbins()) ilabel="#geq"+ilabel;
-	    controlHistos_.getHisto(cat+"_npujets","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
+	    if(ibin==controlHistos_.getHisto(cat+"_njets","all")->GetXaxis()->GetNbins()) ilabel="#geq"+ilabel;
+	    controlHistos_.getHisto(cat+"_njets","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
 	    controlHistos_.getHisto(cat+"_bmult","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
 	  }
-	
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_btags",";b tags (TCHE); Jets",100,-1,50),false ); 
 	controlHistos_.addHistogram( newDir.make<TH1F>(cat+"_met", ";#slash{E}_{T} [GeV]; Events", 30,  0.,300.),false ); 
 
@@ -278,9 +274,10 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     LorentzVector dileptonP=lepton1P+lepton2P;
     controlHistos_.fillHisto(istream+"_dilepton_sumpt","all",lepton1P.pt()+lepton2P.pt(),weight);
     controlHistos_.fillHisto(istream+"_dilepton_pt","all",dileptonP.pt(),weight);
+    controlHistos_.fillHisto(istream+"_reliso","all",lepton::getLeptonIso(lepton1)[lepton::REL_ISO] );
+    controlHistos_.fillHisto(istream+"_reliso","all",lepton::getLeptonIso(lepton2)[lepton::REL_ISO] );
     controlHistos_.fillHisto(istream+"_dilepton_mass","all",dileptonP.mass(),weight);
-    
-
+        
     //Z+quarkonia veto
     bool isZCand(false);
     if(dileptonP.mass()<20) return;
@@ -335,24 +332,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 	controlHistos_.fillHisto(istream+"_njets","all",njets,weight);
 	controlHistos_.fillHisto(istream+"_bmult","all",nbjets,weight);
       }
-
-    //count the pu jets
-    std::vector<reco::CandidatePtr> pujets= evhyp.all("pujet");
-    int npujets(0);
-    std::vector<const pat::Jet *> puJets;
-    for (pat::eventhypothesis::Looper<pat::Jet> jet = evhyp.loopAs<pat::Jet>("pujet"); jet; ++jet) 
-      {
-	npujets++;
-	puJets.push_back(jet.get());
-	if(!isZCand)
-	  {
-	    controlHistos_.fillHisto(istream+"_pujetpt","all",jet->pt(),weight);
-	    controlHistos_.fillHisto(istream+"_pujetfassoc","all",jet::fAssoc(jet.get(),&primVertex),weight);
-	  }
-      }
-    if(!isZCand) controlHistos_.fillHisto(istream+"_npujets","all",npujets,weight);
-
-
+ 
     //require two jets
     if(njets<2) return;
     if(!isZCand)
@@ -425,6 +405,17 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);
     leptons.push_back(lepton2);
+
+    //add other loose leptons
+    std::string looseLeptonTypes[]={"muon","electron"};
+    for(size_t il=0; il<2; il++)
+      {
+	std::vector<reco::CandidatePtr> looseleptons=evhyp.all(looseLeptonTypes[il]);
+	for(std::vector<reco::CandidatePtr>::iterator it = looseleptons.begin(); it != looseleptons.end(); it++)
+	  leptons.push_back(*it);
+	cout << looseLeptonTypes[il] << " with " << looseleptons.size() << endl;
+      }
+
 
 
     //if event is MC filter out the genparticle collection also
@@ -509,31 +500,38 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
       summaryHandler_.evSummary_.pz[ilepton]=leptons[ilepton].get()->pz();
       summaryHandler_.evSummary_.en[ilepton]=leptons[ilepton].get()->energy();
 
-      int id(11);
-      const reco::GenParticle *gen=0;
-      const pat::Electron *ele = dynamic_cast<const pat::Electron *>(leptons[ilepton].get());
-      if(ele)
-	{
-	  id *= ele->charge();
-	  gen=ele->genLepton();
-	}
-      else
-	{
-	  const pat::Muon *mu = dynamic_cast<const pat::Muon *>(leptons[ilepton].get());
-	  if(mu)
-	    {
-	      id=13;
-	      id *= mu->charge();
-	      gen=mu->genLepton();	 
-	    }
-	}
-      int genid( gen? gen->pdgId() : -9999);  
+      std::vector<double> liso=lepton::getLeptonIso(leptons[ilepton],0.);
+      summaryHandler_.evSummary_.info1[ilepton]=lepton::getPtErrorFor(leptons[ilepton]);
+      summaryHandler_.evSummary_.info2[ilepton]=liso[lepton::TRACKER_ISO];
+      summaryHandler_.evSummary_.info3[ilepton]=liso[lepton::ECAL_ISO];
+      summaryHandler_.evSummary_.info4[ilepton]=liso[lepton::HCAL_ISO];
 
+      int id = lepton::getLeptonId(leptons[ilepton]);
+      const reco::GenParticle *gen=lepton::getLeptonGenMatch(leptons[ilepton]);
+      int genid( gen ? gen->pdgId() : -9999);  
       summaryHandler_.evSummary_.id[ilepton] = id;
       summaryHandler_.evSummary_.genid[ilepton] = genid;
       summaryHandler_.evSummary_.genflav[ilepton] = genid;
+      
+      if(fabs(id)==11)
+	{
+	  const pat::Electron *ele = dynamic_cast<const pat::Electron *>( leptons[ilepton].get() );
+	  summaryHandler_.evSummary_.info5[ilepton]= ( (int(ele->electronID("eidVBTF70")) & 0x1) )
+            | ( (int(ele->electronID("eidVBTF80")) & 0x1) << 1)
+            | ( (int(ele->electronID("eidVBTF85")) & 0x1) << 2)	    
+            | ( (int(ele->electronID("eidVBTF90")) & 0x1) << 3)
+            | ( (int(ele->electronID("eidVBTF95")) & 0x1) << 4);
+	}
+      else
+	{
+	  const pat::Muon *mu = dynamic_cast<const pat::Muon *>( leptons[ilepton].get() );
+	  summaryHandler_.evSummary_.info5[ilepton]=  ( (int(mu->muonID("GlobalMuonPromptTight")) & 0x1) )
+            | ( (int(mu->muonID("TMLastStationLoose")) & 0x1) << 1)
+            | ( (int(mu->muonID("TMLastStationTight")) & 0x1) << 2)
+            | ( (int(mu->muonID("TMLastStationAngTight")) & 0x1) << 3);
+	}
     }
-  
+
   //save the jets
   for(size_t ijet=0; ijet<jets.size(); ijet++)
     {

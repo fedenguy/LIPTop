@@ -26,9 +26,9 @@ void MisassignmentMeasurement::bookMonitoringHistograms()
     }
  
   //pull plots
-  controlHistos.addHistogram( new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",100,-0.436,0.404) );
-  controlHistos.addHistogram( new TH1D("pull",";pull=#Delta f_{correct assignments} / #sigma_{stat};Pseudo-experiments",100,-2.97,3.03) );
-  controlHistos.addHistogram( new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",100,0,1) );
+  controlHistos.addHistogram( new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",25,-0.52,0.48) );
+  controlHistos.addHistogram( new TH1D("pull",";pull=#Delta f_{correct assignments} / #sigma_{stat};Pseudo-experiments",25,-5.2,4.8) );
+  controlHistos.addHistogram( new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",50,0,1) );
   controlHistos.addHistogram( new TH1D("fcorr",";f_{correct};Pseudo-experiments",200,0,0.5) );
   controlHistos.addHistogram( new TH1D("truefcorr",";f_{correct} (MC truth);Pseudo-experiments",200,0,0.5) );
   controlHistos.addHistogram( new TH1D("knorm",";Model k-factor;Pseudo-experiments",200,0,1.5) );
@@ -374,7 +374,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       
       alphaEst[ctf]            = nCorrectPairsEst/(2*b);
       alphaEstErr[ctf]         = nCorrectPairsEstErr/(2*b);
-      fCorrectPairsEst[ctf]    = nCorrectPairsEst/nPairsTotal;
+      fCorrectPairsEst[ctf]    = nCorrectPairsEst/nPairsTotal;//-bias[ctf]; //debug me
       fCorrectPairsEstErr[ctf] = nCorrectPairsEstErr/nPairsTotal;
       fTrueCorrectPairs[ctf]   = double(nCorrectAssignments[ctf])/double(nPairsTotal);
 

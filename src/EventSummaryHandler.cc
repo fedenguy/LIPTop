@@ -186,7 +186,7 @@ PhysicsEvent_t getPhysicsEventFrom(EventSummary_t &ev)
 	case 1:
 	  if(p4.pt()>30 && fabs(p4.eta())<2.5)
 	    {
-	      newev.jets.push_back( PhysicsObject_Jet(p4,ev.genid[ipart],ev.genflav[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info5[ipart]) );
+	      newev.jets.push_back( PhysicsObject_Jet(p4,ev.genid[ipart],ev.genflav[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info4[ipart]) );
 	      newev.nbjets +=(fabs(ev.genflav[ipart])==5);
 	      newev.nljets +=(fabs(ev.genflav[ipart])!=5);
 	    }

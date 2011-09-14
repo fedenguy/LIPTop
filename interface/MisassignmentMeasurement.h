@@ -66,6 +66,7 @@ class MisassignmentMeasurement
       res[1]=alphaEstErr[cat];
       return res;
     }
+  void setBiasCorrections(TString cat,double val) {bias[cat]=val; }
   double getNorm(TString cat="all") { return kNorm[cat]; }
   double getTrueCorrectPairsFraction(TString cat="all") { return fTrueCorrectPairs[cat]; }
 
@@ -78,6 +79,9 @@ class MisassignmentMeasurement
   std::map<TString,double> kNorm;
   std::map<TString,double> fTrueCorrectPairs, fCorrectPairsEst, fCorrectPairsEstErr;
   std::map<TString,double> alphaEst,alphaEstErr;
+
+  std::map<TString,double> bias;
+
 };
 
 

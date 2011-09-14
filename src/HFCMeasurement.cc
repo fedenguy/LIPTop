@@ -1,6 +1,9 @@
 #include "LIP/Top/interface/HFCMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
+#include "RooNumIntConfig.h"
+#include "RooNLLVar.h"
+
 using namespace RooFit;
 using namespace std;
 
@@ -16,19 +19,26 @@ void HFCMeasurement::bookMonitoringHistograms()
       bmh->GetXaxis()->SetBinLabel(ibin,label);
     }
   controlHistos_.addHistogram( bmh );      
-  controlHistos_.addHistogram( (TH1D *)bmh->Clone(TString("avg")+bmh->GetName() ) );
+  controlHistos_.addHistogram( (TH1D *)bmh->Clone("avgbtags") );
    
   //replicate for exclusive jet categories
   for(int ijets=2; ijets<=maxJets_; ijets++)
     {
       TString tag(""); tag += ijets; tag+= "jets";
-      controlHistos_.initMonitorForStep(tag);
+      controlHistos_.addHistogram( (TH1D *)bmh->Clone( "btags_" + tag ) );
+      controlHistos_.addHistogram( (TH1D *)bmh->Clone( "avgbtags_" + tag ) );
     }
 
   //control pseudo experiments
   controlHistos_.addHistogram( new TH1D("bias",";bias=#varepsilon_{b}-#bar{#varepsilon_{b}};Pseudo-experiments",100,-0.99,1.01) );
   controlHistos_.addHistogram( new TH1D("pull",";pull=(#varepsilon_{b}-#bar{#varepsilon_{b}}) / #sigma_{#varepsilon_{b}};Pseudo-experiments",100,-2.97,3.03) );
   controlHistos_.addHistogram( new TH1D("stat",";#sigma_{#varepsilon_{b}};Pseudo-experiments",100,0.0,1.0) );
+
+  //instantiate for different categories
+  controlHistos_.initMonitorForStep("ee");
+  controlHistos_.initMonitorForStep("emu");
+  controlHistos_.initMonitorForStep("mumu");
+  controlHistos_.initMonitorForStep("ll");
 }
 
 //
@@ -79,44 +89,56 @@ void HFCMeasurement::saveMonitoringHistograms(TString tag)
 //
 void HFCMeasurement::initHFCModel()
 {
+  if(isInit_) 
+    {
+      //cout << "[HFCMeasurement::initHFCModel] model has already been initiated - nothing done" << endl;
+      return;
+    }
+
   //the observable
   model.bmult = new RooRealVar("bmult","N_{btags}",0.,float(maxJets_));
-  model.bmult->setBins(maxJets_);  //if this is not set roofit will scan in very small steps
-  
+  //model.bmult->setBins(maxJets_+1);
+  RooAbsReal::defaultIntegratorConfig()->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",30);
+
   //top decay modelling
-  if(fitType_==FIT_R || fitType_==FIT_R_AND_EB || fitType_==FIT_R_AND_XSEC) model.r = new RooRealVar("r","R",smR_);
-  else                                                                      model.r = new RooRealVar("r","R",1.0,0.0,2.0);
+  if(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC) model.r = new RooRealVar("r","R",1.0,0.5,1.5);
+  else if(fitType_==FIT_R_AND_EB)                 model.r = new RooRealVar("r","R",1.0,0.95,1.05);
+  else                                            model.r = new RooRealVar("r","R",smR_);
   model.lfacceptance = new RooRealVar("lfacceptance","A(R=0)",1.0);
 
+  //
+  //FIX-ME do this per jet multiplicity bin
+  //
   //b-tagging effiency modelling
-  model.abseb = new RooRealVar("abseb","abs#varepsilon_{b}",effb[btagAlgo_]);
-  if(fitType_==FIT_EB || fitType_==FIT_EB_AND_XSEC || fitType_==FIT_EB_AND_EQ) model.sfeb = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb[btagAlgo_]);
-  else                                                                        model.sfeb = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb[btagAlgo_],0.0,2.0);
-  model.sfeb_mean_constrain = new RooRealVar("meansfeb","#bar{SF #varepsilon_{b}}",sfb[btagAlgo_]);
-  model.sfeb_sigma_constrain = new RooRealVar("uncsfeb","#sigma_{SF #varepsilon_{b}}",sfbUnc[btagAlgo_]);
+  model.abseb = new RooRealVar("abseb","abs#varepsilon_{b}",effb_[0]);
+  if(fitType_==FIT_EB || fitType_==FIT_R_AND_EB || fitType_==FIT_EB_AND_XSEC || fitType_==FIT_EB_AND_EQ) 
+    model.sfeb = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_[0],0.0,min(1./effb_[0],2.));
+  else
+    model.sfeb = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_[0]);
+  model.sfeb_mean_constrain = new RooRealVar("meansfeb","#bar{SF #varepsilon_{b}}",sfb_[0]);
+  model.sfeb_sigma_constrain = new RooRealVar("uncsfeb","#sigma_{SF #varepsilon_{b}}",sfbUnc_[0]);
   model.sfeb_constrain = new RooGaussian("sfeb_constrain","#varepsilon_{b} constrain",*model.sfeb,*model.sfeb_mean_constrain,*model.sfeb_sigma_constrain);
   model.eb = new RooFormulaVar("eb","@0*@1",RooArgSet(*model.abseb,*model.sfeb));
 
   //mistag efficiency modelling
-  model.abseq = new RooRealVar("abseq","abs#varepsilon_{q}",effq[btagAlgo_]);
-  if(fitType_==FIT_EB_AND_EQ) model.sfeq = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq[btagAlgo_]);
-  else                        model.sfeq = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq[btagAlgo_],0.0,2.0);
-  model.sfeq = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq[btagAlgo_],0.0,2.0);
-  model.sfeq_mean_constrain = new RooRealVar("meansfeq","#bar{SF #varepsilon_{q}}",sfq[btagAlgo_]);
-  model.sfeq_sigma_constrain = new RooRealVar("uncsfeq","#sigma_{SF #varepsilon_{q}}",sfqUnc[btagAlgo_]);
+  model.abseq = new RooRealVar("abseq","abs#varepsilon_{q}",effq_[0]);
+  if(fitType_==FIT_EB_AND_EQ) model.sfeq = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_[0],0.0,min(1./effq_[0],2.));
+  else                        model.sfeq = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_[0]);
+  model.sfeq_mean_constrain = new RooRealVar("meansfeq","#bar{SF #varepsilon_{q}}",sfq_[0]);
+  model.sfeq_sigma_constrain = new RooRealVar("uncsfeq","#sigma_{SF #varepsilon_{q}}",sfqUnc_[0]);
   model.sfeq_constrain = new RooGaussian("sfeq_constrain","#varepsilon_{q} constrain",*model.sfeq,*model.sfeq_mean_constrain,*model.sfeq_sigma_constrain);
   model.eq = new RooFormulaVar("eq","@0*@1",RooArgSet(*model.abseq,*model.sfeq));
 
   //event type composition (alpha_i)
   model.alpha2=new RooRealVar("alpha2","#alpha_{2}",0.5,0.7);
-  model.alpha2_mean_constrain = new RooRealVar("meanalpha2","#bar{#alpha}_{2}",alpha2[2]);
-  model.alpha2_sigma_constrain = new RooRealVar("uncalpha2","#sigma_{#alpha_{2}}",alpha2Unc[0]);
+  model.alpha2_mean_constrain = new RooRealVar("meanalpha2","#bar{#alpha}_{2}",alpha2_[0]);
+  model.alpha2_sigma_constrain = new RooRealVar("uncalpha2","#sigma_{#alpha_{2}}",alpha2Unc_[0]);
   model.alpha2_constrain = new RooGaussian("ctr_alpha2","#alpha_{2} constrain",*model.alpha2,*model.alpha2_mean_constrain,*model.alpha2_sigma_constrain);
   
   model.alpha0 = new RooRealVar("alpha0","#alpha_{0}",0,0.2);
-  model.alpha0_mean_constrain = new RooRealVar("meanalpha0","#bar{#alpha}_{0}",alpha0[2]);
-  model.alpha0_sigma_constrain = new RooRealVar("uncalpha0","#sigma_{#alpha_{0}}",alpha0Unc[0]);
-  model.alpha0_constrain = new RooGaussian("ctralpha0","#alpha_{0} constrain",*model.alpha0,*model.alpha0_mean_constrain,*model.alpha0_sigma_constrain);
+  model.alpha0_mean_constrain = new RooRealVar("meanalpha0","#bar{#alpha}_{0}",alpha0_[0]);
+  model.alpha0_sigma_constrain = new RooRealVar("uncalpha0","#sigma_{#alpha_{0}}",alpha0Unc_[0]);
+  model.alpha0_constrain = new RooGaussian("ctr_alpha0","#alpha_{0} constrain",*model.alpha0,*model.alpha0_mean_constrain,*model.alpha0_sigma_constrain);
 
   model.alpha1 = new RooFormulaVar("alpha1","1-@0-@1",RooArgSet(*model.alpha2,*model.alpha0));
 
@@ -132,90 +154,122 @@ void HFCMeasurement::initHFCModel()
       
       //add the constrains
       RooProdPdf *modelconstr=0;
-      if(fitType_==FIT_EB) 
-	modelconstr=new RooProdPdf("modelconstr"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.alpha2_constrain,*model.alpha0_constrain));
-      else if(fitType_==FIT_R) 
-	modelconstr=new RooProdPdf("modelconstr"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.alpha2_constrain,*model.alpha0_constrain,*model.sfeq_constrain,*model.sfeb_constrain));
-
+      if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
+      	modelconstr=new RooProdPdf("modelconstr"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.alpha2_constrain,*model.alpha0_constrain));
+      else if(fitType_==FIT_EB_AND_EQ /*|| fitType_==FIT_R_AND_EQ*/)
+     	modelconstr=new RooProdPdf("modelconstr"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.alpha2_constrain,*model.alpha0_constrain,*model.sfeq_constrain,*model.sfeb_constrain));
+      
       model.constrPDFSet.add( *modelconstr );
     }
+
+  isInit_=true;
 }
 
+
 //
-void HFCMeasurement::fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString btagAlgo)
+void HFCMeasurement::resetModelValues()
+{
+  if(!isInit_) return;
+  model.r->setVal(smR_);
+  model.abseb->setVal(effb_[0]);
+  model.sfeb->setVal(sfb_[0]);
+  model.abseq->setVal(effq_[0]);
+  model.sfeq->setVal(sfq_[0]);
+  model.alpha2->setVal(alpha2_[0]);
+  model.alpha0->setVal(alpha0_[0]);
+}
+
+
+//
+void HFCMeasurement::fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString dilCategory)
 {
   if(evHandler.getEntries()==0) return;
-  nMeasurements_++;
+
+  //restart all over again
+  initHFCModel();
+  resetModelValues();
   resetHistograms();
 
+  nMeasurements_++;
   for(int i=0; i<evHandler.getEntries(); i++)
     {
+      evHandler.getEntry(i);
       EventSummary_t &ev = evHandler.getEvent();
-      if(eventCategory_!=0)
-	{
-	  if(eventCategory_==SFDileptons && ev.cat == dilepton::EMU) continue;
-	  else if(eventCategory_==OFDileptons && ev.cat != dilepton::EMU) continue;
-	  else if (eventCategory_ != ev.cat ) continue;
-	}
+      
+      //filter the even type
+      if(dilCategory=="ll" && ev.cat == dilepton::EMU)         continue;
+      else if(dilCategory=="emu" && ev.cat != dilepton::EMU)   continue;
+      else if(dilCategory=="ee" && ev.cat != dilepton::EE)     continue;
+      else if(dilCategory=="mumu" && ev.cat != dilepton::MUMU) continue;
 
       //count the number of b-tags
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-      if(int(phys.jets.size())>maxJets_) continue;
-
-      std::map<TString,int> nbtags;
-      for(std::map<TString,float>::iterator it = algoCut.begin(); it!= algoCut.end(); it++) nbtags[it->first]=0;
+      
+      int njets=0;
+      int nbtags=0;
       for(unsigned int ijet=0; ijet<phys.jets.size(); ijet++)
 	{
-	  nbtags["TCHEL"]  += (phys.jets[ijet].btag1>algoCut["TCHEL"]);
-	  nbtags["TCHEM"]  += (phys.jets[ijet].btag1>algoCut["TCHEM"]);
-	  nbtags["TCHPT"]  += (phys.jets[ijet].btag2>algoCut["TCHPT"]);
-	  nbtags["SSVHEM"] += (phys.jets[ijet].btag3>algoCut["SSVHEM"]);
-	  nbtags["JBPL"]   += (phys.jets[ijet].btag4>algoCut["JBPL"]);
-	  nbtags["JBPM"]   += (phys.jets[ijet].btag4>algoCut["JBPM"]);
-	  nbtags["JBPT"]   += (phys.jets[ijet].btag4>algoCut["JBPT"]);
+	  //	  if(phys.jets[ijet].pt()<120 || phys.jets[ijet].pt()>10000) continue;
+	  njets++;
+	  double btag(-9999.);
+	  if(btagAlgo_.Contains("TCHE") )  btag = phys.jets[ijet].btag1;
+	  else if(btagAlgo_.Contains("TCHP") )  btag = phys.jets[ijet].btag2;
+	  else if(btagAlgo_.Contains("SSVHE") ) btag = phys.jets[ijet].btag3;
+	  else if(btagAlgo_.Contains("JBP") )   btag = phys.jets[ijet].btag4;
+	  nbtags += (btag>algoCut_);
 	}
+      if(njets>maxJets_) continue;
 
-      std::vector<TString> catsToFill;
-      catsToFill.push_back("all");
-      TString tag(""); tag += phys.jets.size(); tag+= "jets";
-      catsToFill.push_back(tag);
-      for(std::vector<TString>::iterator it = catsToFill.begin(); it!= catsToFill.end(); it++)
-	controlHistos_.fillHisto("btags",*it,nbtags[btagAlgo]);
+      TString tag("btags_"); tag += njets; tag+= "jets";
+      controlHistos_.fillHisto("btags",dilCategory,nbtags);
+      controlHistos_.fillHisto(tag,dilCategory,nbtags);
     }
- 
-
+  
   //run the fit
-  runHFCFit();
+  runHFCFit(dilCategory);
 }
 
 
 //
-void HFCMeasurement::runHFCFit()
+void HFCMeasurement::runHFCFit(TString dilCategory)
 {
 
-  RooArgSet allLL,jetOccupancies;  
+  //all data
   RooDataHist* alldata = new RooDataHist("data","data", RooArgList(*model.bmult));
+
+  //build the likelihoods per category
+  RooArgSet allLL, jetOccupancies;  
   TIterator *pdfIt     = model.constrPDFSet.createIterator();
+  std::vector<RooNLLVar *> theLLsPerCategory;
   for(int jmult=2; jmult<=maxJets_; jmult++)
     {
       TString tag(""); tag += jmult; tag+= "jets";
-      TH1 *h = controlHistos_.getHisto("btags",tag);
+      TH1 *h = controlHistos_.getHisto("btags_"+tag,dilCategory);
 
+      //convert to a data hist
       RooDataHist* ds = new RooDataHist("data"+tag,"data"+tag, RooArgList(*model.bmult), h);
       alldata->add(*ds);
 
+      //build the model for this category
       RooRealVar *jetocc = new RooRealVar("jetocc"+tag,"occ"+tag,h->Integral());
       jetOccupancies.add(*jetocc);
 
       RooProdPdf *modelconstr = (RooProdPdf *) pdfIt->Next();
-      RooAbsReal *nll=0;
-      if(fitType_==FIT_EB)      nll = modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.alpha2,*model.alpha0,*model.sfeq_constrain)));
-      else if (fitType_==FIT_R) nll = modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.alpha2,*model.alpha0,*model.sfeq_constrain,*model.sfeb_constrain)));
-      allLL.add(*nll);      
+
+      RooNLLVar *nll=0;
+      if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.alpha2,*model.alpha0)));
+      else if(fitType_==FIT_EB_AND_EQ /*|| fitType_==FIT_R_AND_EQ*/)    nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.alpha2,*model.alpha0,*model.sfeq)));
+      TString itit("=");    itit+=jmult; itit += " jets";
+      nll->SetTitle(itit);
+      
+      allLL.add(*nll); 
+      theLLsPerCategory.push_back(nll);
     }
   
-  //maximize combined likelihood 
+  //add up all the likelihoods
   RooAddition *combll = new RooAddition("combll","combll",allLL);      
+
+  //maximize the likelihood (reinforce the error should be taken from +/- 0.5 contour
   RooMinuit minuit(*combll); 
   minuit.migrad();
   minuit.setErrorLevel(0.5);
@@ -223,8 +277,10 @@ void HFCMeasurement::runHFCFit()
   RooFitResult *r=minuit.save();
 
   //draw the result
-  if(false)
+  if(true)
     {
+      setStyle();
+
       TCanvas *c=getNewCanvas("combination","combination",false);
       c->cd();
       c->SetWindowSize(600,600);
@@ -233,37 +289,42 @@ void HFCMeasurement::runHFCFit()
 
       //likelihood (main frame)
       RooPlot *frame = 0;
-      if(fitType_==0) 
+      char buf[100];
+      if(fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) 
 	{
-	  frame = model.sfeb->frame(Title("Likelihood"),Range(0.,1.));
+	  frame = model.sfeb->frame(Title("Likelihood"),Range(0.7,1.2));
 	  frame->GetXaxis()->SetTitle("SF #varepsilon_{b}");
+	  sprintf(buf,"SF #varepsilon_{b}=%3.3f #pm %3.2f",model.sfeb->getVal(),model.sfeb->getError());
 	}
-      else
+      else if (fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
 	{
 	  frame = model.r->frame(Title("Likelihood"),Range(0,1.3)) ;    
 	  frame->GetXaxis()->SetTitle("R");
+	  sprintf(buf,"R=%3.2f #pm %3.2f",model.r->getVal(),model.r->getError());
 	}
       combll->plotOn(frame,ShiftToZero(),Name("ll"));
-
+      /*
+      for(int jmult=2; jmult<=maxJets_; jmult++)
+	{
+	  TString itit("=");    itit+=jmult; itit += " jets";
+	  TString iname("ll_"); iname +=jmult;
+	  theLLsPerCategory[jmult-2]->plotOn(frame,ShiftToZero(),
+					     LineColor(kGreen+4-2*(jmult-2)),
+					     LineStyle(kDashed),
+					     LineWidth(1),
+					     Name(iname),
+					     MoveToBack());
+	}
+      */
       frame->GetXaxis()->SetTitleOffset(0.8);
-      frame->GetYaxis()->SetTitle("-log(L/L_{max})");
+      frame->GetYaxis()->SetTitle("-Log(L/L_{Max})");
       frame->GetYaxis()->SetTitleOffset(1);
       frame->Draw();
       
       //fit result
-
-      TPaveText *pt = new TPaveText(0.15,0.75,0.45,0.95,"brNDC");
-      pt->SetBorderSize(0);
-      pt->SetFillColor(0);
-      pt->SetFillStyle(0);
-      pt->SetTextAlign(10);
-      pt->AddText("CMS preliminary");
-      //      pt->AddText("36.1 pb^{-1} at #sqrt{s}=7 TeV");
-      char buf[100];
-      if(fitType_==FIT_EB)  sprintf(buf,"SF #varepsilon_{b}=%3.3f #pm %3.2f",model.sfeb->getVal(),model.sfeb->getError());
-      else                  sprintf(buf,"R=%3.2f #pm %3.2f",model.r->getVal(),model.r->getError());
-      pt->AddText(buf);
-      pt->Draw();
+      TString label("CMS preliminary, #sqrt{s}=7 TeV \\");
+      label += buf;
+      formatForCmsPublic(c,0,label,1);
 
       //the model fit
       TPad *npad = new TPad("llpad","ll", 0.6, 0.6, 0.9, 0.9);
@@ -272,34 +333,43 @@ void HFCMeasurement::runHFCFit()
       frame = model.bmult->frame();
 
       RooAddPdf incmodel("incmodel","Inclusive Model",model.pdfSet,jetOccupancies);
-      alldata->plotOn(frame,Binning(4),DrawOption("pz"));
+      alldata->plotOn(frame,Binning(maxJets_),DrawOption("pz"));
       incmodel.plotOn(frame,Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
       frame->Draw();
-      /*
-      c = new TCanvas("contour","contour");
-      c->cd();
-      c->SetWindowSize(600,600);
-      c->SetGridx();
-      c->SetGridy();     
-      RooPlot *plot = minuit.contour(*model.eb,*model.eq,1,2,3) ;
-      plot->SetTitle("Contour for 1s,2s,3s between eb and eq") ;
-      plot->Draw();
-      */
+
+      if(fitType_ == FIT_EB_AND_EQ || fitType_==FIT_R_AND_EB)
+	{
+	  c = new TCanvas("contour","contour");
+	  c->cd();
+	  c->SetWindowSize(600,600);
+	  c->SetGridx();
+	  c->SetGridy();     
+	  RooPlot *plot=0;
+	  if(fitType_==FIT_R_AND_EB)
+	    {
+	      plot = minuit.contour(*model.r,*model.sfeb,1,2,3) ;
+              plot->SetTitle("Contour for 1s,2s,3s between r and eb") ;
+	    }
+	  else
+	    {
+	      plot = minuit.contour(*model.sfeb,*model.sfeq,1,2,3) ;
+	      plot->SetTitle("Contour for 1s,2s,3s between eb and eq") ;
+	    }	 
+	  plot->Draw();
+	  formatForCmsPublic(c,0,label,3);
+	}
     }
-  cout << "Here2 ?" << endl;
-  float bias=(fitType_==0 ? model.sfeb->getVal()-1.0 : model.r->getVal()-smR_);
-  float unc =(fitType_==0 ? model.sfeb->getError()   :  model.r->getError());
-  if(unc>0.01)
-    {
-      controlHistos_.fillHisto("bias","all",bias);
-      controlHistos_.fillHisto("stat","all",unc);
-      controlHistos_.fillHisto("pull","all",bias/unc);
- 
-      // Access basic information
-      cout << "EDM = " << r->edm() << endl
-	   << "-log(L) at minimum = " << r->minNll() << endl   
-	   << "final value of floating parameters" << endl ;
-      r->floatParsFinal().Print("s") ;
-    }
-  cout << "Somewhere" << endl;
+  //  float bias=(fitType_==0 ? model.sfeb->getVal()-1.0 : model.r->getVal()-smR_);
+  //  float unc =(fitType_==0 ? model.sfeb->getError()   :  model.r->getError());
+  //  if(unc>0.01)
+  //    {
+  //      controlHistos_.fillHisto("bias","all",bias);
+  //      controlHistos_.fillHisto("stat","all",unc);
+  //      controlHistos_.fillHisto("pull","all",bias/unc);
+  
+  // Access basic information
+  cout << "EDM = " << r->edm() << endl
+       << "-log(L) at minimum = " << r->minNll() << endl   
+       << "final value of floating parameters" << endl ;
+  r->floatParsFinal().Print("s") ;
 }

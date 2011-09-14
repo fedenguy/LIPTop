@@ -5,6 +5,7 @@ import json
 import ROOT
 import getopt
 import os.path
+import commands
 
 #print usage
 def usage(msg='') :
@@ -15,6 +16,7 @@ def usage(msg='') :
     print '  -j : json file containing the samples'
     print '  -e : number of events per job'
     print '  -d : directory containing the event summaries'
+    print '  -t : select tag to submit'
     print '  -p : extra parameters to pass to KIN'
     print ' '
     exit(-1)
@@ -22,7 +24,7 @@ def usage(msg='') :
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "s:j:e:p:d:h?"
+    shortopts  = "s:j:e:p:d:t:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -35,12 +37,14 @@ samplesDB = ''
 evPerJob=-1
 extraParams=''
 summaryDir=''
+tagSel=''
 for o,a in opts:
     if o in("-?", "-h"):
         usage()
         sys.exit(0)
     elif o in('-s'): subToBatch=True
     elif o in('-j'): samplesDB = a
+    elif o in('-t'): tagSel=a
     elif o in('-e'): evPerJob=int(a)
     elif o in('-p'): extraParams = a
     elif o in('-d'): summaryDir = a
@@ -63,8 +67,15 @@ for proc in procList :
         data = desc['data']
         for d in data :
             dtag = d['dtag']
+            if(len(tagSel)>0):
+                if(dtag.find(tagSel)<0) : continue
+                
             fileName=summaryDir + '/' + dtag + '.root'
-            if(not os.path.isfile(fileName) ): continue
+            if(fileName.find('castor/cern.ch') ) :
+                listFileResult = commands.getstatusoutput('rfdir ' + fileName)[0]
+                if(listFileResult!=0) : continue
+                fileName = 'rfio://' + fileName
+            elif(not os.path.isfile(fileName) ): continue
 
             print "*****"
 

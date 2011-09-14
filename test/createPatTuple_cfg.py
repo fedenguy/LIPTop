@@ -15,6 +15,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 5000
 
 # event source  
 process.source.fileNames=inputList
+#process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck'),
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 # preselection filters
@@ -32,8 +33,8 @@ from CMGTools.HtoZZ2l2nu.PatSequences_cff import addPatSequence
 addPatSequence(process,runOnMC)
 
 #to process modified fastsim
-#from PhysicsTools.PatAlgos.tools.helpers import massSearchReplaceAnyInputTag
-#massSearchReplaceAnyInputTag(process.patDefaultSequence,"particleFlow","FSparticleFlow",True)
+from PhysicsTools.PatAlgos.tools.helpers import massSearchReplaceAnyInputTag
+massSearchReplaceAnyInputTag(process.patDefaultSequence,"particleFlow","FSparticleFlow",True)
 
 # dilepton filters
 from CMGTools.HtoZZ2l2nu.DileptonFilterSequences_cff import addDileptonFilters

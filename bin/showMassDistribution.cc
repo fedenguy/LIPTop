@@ -114,9 +114,9 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F("k75p",";(x_{75}-median)/median; Lepton-jet assignments",100,0,0.5) );
   controlHistos.addHistogram( new TH1F("k90p",";(x_{90}-median)/median; Lepton-jet assignments",100,0,1.0) );
 
-  TString cats[]={"all","ee","mumu","emu","etau","mutau"};
+  TString cats[]={"ee","mumu","emu"};//,"etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
-  TString subcats[]={"","eq0btags","eq1btags","geq2btags"};
+  TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};
   size_t nsubcats=sizeof(subcats)/sizeof(TString);
   for(size_t icat=0; icat<ncats; icat++)
     for(size_t jcat=0; jcat<nsubcats; jcat++)
@@ -297,10 +297,7 @@ int main(int argc, char* argv[])
       //btag counting
       int nbtags(0);
       for(size_t ijet=0; ijet<phys.jets.size(); ijet++) nbtags += (phys.jets[ijet].btag1>1.7);
-      TString subcat="eq0btags";
-      if(nbtags==1) subcat="eq1btags";
-      if(nbtags>=2) subcat="geq2btags";
-
+     
       //get the combination preferred by KIN
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
       h1->Rebin(2); h2->Rebin(2);
@@ -393,7 +390,8 @@ int main(int argc, char* argv[])
       //Compute dilepton/dijet invariant mass
       LorentzVector dil = phys.leptons[0]+phys.leptons[1];
       float dilmass = dil.mass();
-      if(fabs(dilmass-91)<15 && (ev.cat==dilepton::EE || ev.cat==dilepton::MUMU))continue;
+      bool isZcand(fabs(dilmass-91)<15 && (ev.cat==dilepton::EE || ev.cat==dilepton::MUMU));
+      bool isSS( phys.leptons[0].id*phys.leptons[1].id >0 );
       double ptlep1(max(phys.leptons[0].pt(),phys.leptons[1].pt())), ptlep2(min(phys.leptons[0].pt(),phys.leptons[1].pt()));    
       LorentzVector dij = phys.jets[0]+phys.jets[1];
       float mjj=dij.M();
@@ -412,35 +410,50 @@ int main(int argc, char* argv[])
       double st(sumptlep+phys.met.pt());
       double htlep(st+ht);
 
+      std::vector<TString> subcats;
+      if(!isZcand && !isSS)
+	{
+	  subcats.push_back("");
+	  if(nbtags==0) subcats.push_back("eq0btags");
+	  else if(nbtags==1) subcats.push_back("eq1btags");
+	  else if(nbtags>=2) subcats.push_back("geq2btags");
+	}
+      else if(isZcand && !isSS) subcats.push_back("zcands");
+      else                      subcats.push_back("ss");
+
       for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
 	{
-	  if(mtop>0)
+	  for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
 	    {
-	      controlHistos.fillHisto("njets",*cIt,phys.jets.size(),weight);
-	      controlHistos.fillHisto("btags",*cIt,nbtags,weight);
-	      controlHistos.fillHisto("leadjet",*cIt,ptjet1,weight);
-	      controlHistos.fillHisto("subleadjet",*cIt,ptjet2,weight);
-	      controlHistos.fillHisto("leadlepton",*cIt,ptlep1,weight);
-	      controlHistos.fillHisto("subleadlepton",*cIt,ptlep2,weight);
-	      controlHistos.fillHisto("met",*cIt,phys.met.pt(),weight);
-	      controlHistos.fillHisto("ht",*cIt,ht,weight);
-	      controlHistos.fillHisto("st",*cIt,st,weight);
-	      controlHistos.fillHisto("sumpt",*cIt,sumptlep,weight);
-	      controlHistos.fillHisto("htlep",*cIt,htlep,weight);
-	      controlHistos.fillHisto("ptttbar",*cIt,ptttbar.Pt(),weight);
-	      
-	      controlHistos.fillHisto("mtop",*cIt+subcat,mtop,weight);
-	      controlHistos.fillHisto("mtop",*cIt,mtop,weight);
-	      controlHistos.fillHisto("dilmass",*cIt+subcat,dilmass,weight);
-	      controlHistos.fill2DHisto("mtopvsdilmass",*cIt,mtop,dilmass,weight);
-	      controlHistos.fill2DHisto("mtopvsmlj",*cIt,mtop,lj1.mass(),weight);
-	      controlHistos.fill2DHisto("mtopvsmlj",*cIt,mtop,lj2.mass(),weight);
-	      controlHistos.fill2DHisto("mtopvsmet",*cIt,mtop,phys.met.pt(),weight);
-	      controlHistos.fill2DHisto("mtopvsmttbar",*cIt,mtop,mttbar,weight);
-	      controlHistos.fill2DHisto("mtopvsafb",*cIt,mtop,afb,weight);
-	      controlHistos.fill2DHisto("mttbarvsafb",*cIt,mttbar,afb,weight);
-	      controlHistos.fillHisto("afb",*cIt,afb);
-	      controlHistos.fillHisto("mttbar",*cIt,mttbar);
+	      TString ctf=*cIt + *scIt;
+	      if(mtop>0)
+		{
+		  controlHistos.fillHisto("njets",ctf,phys.jets.size(),weight);
+		  controlHistos.fillHisto("btags",ctf,nbtags,weight);
+		  controlHistos.fillHisto("leadjet",ctf,ptjet1,weight);
+		  controlHistos.fillHisto("subleadjet",ctf,ptjet2,weight);
+		  controlHistos.fillHisto("leadlepton",ctf,ptlep1,weight);
+		  controlHistos.fillHisto("subleadlepton",ctf,ptlep2,weight);
+		  controlHistos.fillHisto("met",ctf,phys.met.pt(),weight);
+		  controlHistos.fillHisto("ht",ctf,ht,weight);
+		  controlHistos.fillHisto("st",ctf,st,weight);
+		  controlHistos.fillHisto("sumpt",ctf,sumptlep,weight);
+		  controlHistos.fillHisto("htlep",ctf,htlep,weight);
+		  controlHistos.fillHisto("ptttbar",ctf,ptttbar.Pt(),weight);
+		  
+		  controlHistos.fillHisto("mtop",ctf,mtop,weight);
+		  controlHistos.fillHisto("mtop",ctf,mtop,weight);
+		  controlHistos.fillHisto("dilmass",ctf,dilmass,weight);
+		  controlHistos.fill2DHisto("mtopvsdilmass",ctf,mtop,dilmass,weight);
+		  controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj1.mass(),weight);
+		  controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj2.mass(),weight);
+		  controlHistos.fill2DHisto("mtopvsmet",ctf,mtop,phys.met.pt(),weight);
+		  controlHistos.fill2DHisto("mtopvsmttbar",ctf,mtop,mttbar,weight);
+		  controlHistos.fill2DHisto("mtopvsafb",ctf,mtop,afb,weight);
+		  controlHistos.fill2DHisto("mttbarvsafb",ctf,mttbar,afb,weight);
+		  controlHistos.fillHisto("afb",ctf,afb);
+		  controlHistos.fillHisto("mttbar",ctf,mttbar);
+		}
 	    }
 	}
       neventsused++;
@@ -460,7 +473,7 @@ int main(int argc, char* argv[])
       //       }
 
       //for data only
-      if (!isMC && mtop>900) 
+      if (!isMC && mtop>900 && outf!=0) 
 	*outf << "| " << irun << ":" << ilumi << ":" << ievent 
 	      << " | " << categs[1] 
 	      << " | " << mtop 
@@ -501,7 +514,7 @@ int main(int argc, char* argv[])
 	}
     }
 
-  if(!isMC) 
+  if(!isMC && outf!=0) 
     {
       outf->close(); 
       delete outf;
@@ -515,6 +528,7 @@ int main(int argc, char* argv[])
       if(cutflowH)
 	{
 	  cnorm=cutflowH->GetBinContent(1);
+	  cout << "Will re-scale MC by: " << scaleFactor << "/" << cnorm << endl;
 	  if(cnorm>0) scaleFactor/=cnorm;
 	}
       //      for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);

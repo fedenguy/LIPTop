@@ -49,51 +49,15 @@ class HFCMeasurement
 {
  public:
 
-  enum EventCategoriesForMeasurement { ALLDileptons=500, SFDileptons, OFDileptons };
   enum FitTypes { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ };
   
   /**
      @short CTOR
    */
-  HFCMeasurement(int maxJets=4,TString btagAlgo="TCHEL", int eventCategory=OFDileptons, int fitType=0) : maxJets_(maxJets), btagAlgo_(btagAlgo), eventCategory_(eventCategory), fitType_(fitType), smR_(1.0), nMeasurements_(0)  
+  HFCMeasurement(int maxJets=4, int fitType=0) : 
+    isInit_(false), fitType_(fitType), maxJets_(maxJets),  smR_(1.0), nMeasurements_(0)  
     {
       bookMonitoringHistograms();
-      
-      algoCut["TCHEL"]=1.7; 
-      effb["TCHEL"]=0.78;  sfb["TCHEL"]=0.95;  sfbUnc["TCHEL"]=sqrt(pow(0.01,2)+pow(0.1,2)); 
-      effq["TCHEL"]=0.1;   sfq["TCHEL"]=1.11;  sfqUnc["TCHEL"]=sqrt(pow(0.01,2)+pow(0.12,2));
-
-      algoCut["TCHEM"]=3.3;   
-      effb["TCHEM"]=0.78;  sfb["TCHEM"]=0.94;  sfbUnc["TCHEM"]=sqrt(pow(0.01,2)+pow(0.09,2)); 
-      effq["TCHEM"]=0.1;   sfq["TCHEM"]=1.21;  sfqUnc["TCHEM"]=sqrt(pow(0.02,2)+pow(0.17,2));
-
-      algoCut["TCHPT"]=3.41; 
-      effb["TCHPT"]=0.78;  sfb["TCHPT"]=0.88;  sfbUnc["TCHPT"]=sqrt(pow(0.02,2)+pow(0.09,2)); 
-      effq["TCHPT"]=0.1;   sfq["TCHPT"]=1.21;  sfqUnc["TCHPT"]=sqrt(pow(0.10,2)+pow(0.18,2));
-
-      algoCut["JBPL"]=1.33; 
-      effb["JBPL"]=0.78;  sfb["JBPL"]=sfb["TCHEL"]; sfbUnc["JBPL"]=sfbUnc["TCHEL"];
-      effq["JBPL"]=0.1;   sfq["JBPL"]=sfq["TCHEL"]; sfqUnc["JBPL"]=sfqUnc["TCHEL"];
-
-      algoCut["JBPM"]=2.55; 
-      effb["JBPM"]=0.78;  sfb["JBPM"]=sfb["TCHEM"]; sfbUnc["JBPM"]=sfbUnc["TCHEM"];
-      effq["JBPM"]=0.1;   sfq["JBPM"]=sfq["TCHEM"]; sfqUnc["JBPM"]=sfqUnc["TCHEM"];
-
-      algoCut["JBPT"]=3.74; 
-      effb["JBPT"]=0.78;  sfb["JBPT"]=sfb["TCHET"]; sfbUnc["JBPT"]=sfbUnc["TCHET"];
-      effq["JBPT"]=0.1;   sfq["JBPT"]=sfq["TCHET"]; sfqUnc["JBPT"]=sfqUnc["TCHET"];
-
-      algoCut["SSVHEM"]=1.74;
-      effb["SSVHEM"]=0.78;  sfb["SSVHEM"]=0.95;  sfbUnc["SSVHEM"]=sqrt(pow(0.01,2)+pow(0.1,2)); 
-      effq["SSVHEM"]=0.1;   sfq["SSVHEM"]=0.91;  sfqUnc["SSVHEM"]=sqrt(pow(0.02,2)+pow(0.10,2));
-
-      alpha2[0] = 0.63;      alpha2Unc[0]=sqrt(pow(0.01,2)+pow((0.03+0.01)*0.5,2));
-      alpha2[2] =alpha0[0];  alpha2Unc[2]=alpha2Unc[0];
-      alpha2[3] =alpha0[2];  alpha2Unc[3]=alpha2Unc[2];
-
-      alpha0[0]=0.135;       alpha0[0]=sqrt(pow(0.007,2)+pow((0.006+0.003)/2,2));
-      alpha0[2] =alpha0[0];  alpha0Unc[2]=alpha0Unc[0];
-      alpha0[3] =alpha0[2];  alpha0Unc[3]=alpha0Unc[2];
     }
 
     /**
@@ -101,43 +65,79 @@ class HFCMeasurement
     */
     ~HFCMeasurement() { }
     
+    
     /**
        @short steer the fit
     */
-    void fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString btagAlgo);
+    void fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString dilCat);
     
     /**
        @short setters for parameters
     */
     void setStandardModelR(float r=1.0) { smR_=r; }
+
+    void configureBtagAlgo(TString btagAlgo,double cut)
+    {
+      btagAlgo_ = btagAlgo;
+      algoCut_  = cut;
+    }
     
+    void setBtagEfficiency(double eff, double sfactor, double sfactorUnc,int jetBin=0)
+    {
+      effb_[jetBin]=eff;
+      sfb_[jetBin]=sfactor;
+      sfbUnc_[jetBin]=sfactorUnc;
+    } 
+
+    void setMistagEfficiency(double eff, double sfactor, double sfactorUnc,int jetBin=0)
+    {
+      effq_[jetBin]=eff;
+      sfq_[jetBin]=sfactor;
+      sfqUnc_[jetBin]=sfactorUnc;
+    } 
+
+    void setAlpha(double a2, double a2unc, double a0, double a0unc, int jetBin=0)
+    {
+      alpha2_[jetBin]=a2;
+      alpha2Unc_[jetBin]=a2unc;
+      alpha0_[jetBin]=a0;
+      alpha0Unc_[jetBin]=a0unc;
+    }
+
+  
     /**
        @short save results
     */
     void saveMonitoringHistograms(TString tag);
-
+    
     CombinedHFCModel_t model;
 
  private:
 
     void initHFCModel();
+    void runHFCFit(TString dilCat);
+
     void bookMonitoringHistograms();
-    void runHFCFit();
     void resetHistograms();
+    void resetModelValues();
+
+    bool isInit_;
+    int fitType_;
 
     int maxJets_;
-    TString btagAlgo_;
-    int eventCategory_;
-    int fitType_;
-    
-    SelectionMonitor controlHistos_;
-    
-    //ugly containers for values
-    std::map<TString,Float_t> algoCut, effb, sfb, sfbUnc, effq, sfq, sfqUnc;
-    std::map<Int_t, Float_t> alpha2,alpha2Unc, alpha0, alpha0Unc;
-    
+
+    //R
     double smR_;
     
+    //btag algorithm 
+    TString btagAlgo_;    
+    double algoCut_;
+    std::map<Int_t,Float_t>  effb_, sfb_, sfbUnc_, effq_, sfq_, sfqUnc_;
+
+    //event types
+    std::map<Int_t, Float_t> alpha2_,  alpha2Unc_, alpha0_, alpha0Unc_;
+    
+    SelectionMonitor controlHistos_;    
     int nMeasurements_;
 };
 
