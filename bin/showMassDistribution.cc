@@ -417,6 +417,20 @@ int main(int argc, char* argv[])
 	  if(nbtags==0) subcats.push_back("eq0btags");
 	  else if(nbtags==1) subcats.push_back("eq1btags");
 	  else if(nbtags>=2) subcats.push_back("geq2btags");
+
+	  //save for further study
+	  if(mtop>0 && spyEvents && ev.normWeight==1)
+	    {
+	      std::vector<float> measurements;
+	      measurements.push_back(mtop);
+	      measurements.push_back(mttbar);
+	      measurements.push_back(afb);
+	      measurements.push_back(ptttbar.Pt());
+	      measurements.push_back(nbtags);
+	      measurements.push_back(phys.jets.size());
+	      measurements.push_back(htlep);
+	      spyEvents->fillTreeWithEvent( ev, measurements );
+	    }
 	}
       else if(isZcand && !isSS) subcats.push_back("zcands");
       else                      subcats.push_back("ss");
@@ -457,20 +471,6 @@ int main(int argc, char* argv[])
 	    }
 	}
       neventsused++;
-      
-      //save for further study
-      //     if(mtop>0 && spyEvents && ev.normWeight==1)
-      //       {
-      // 	std::vector<float> measurements;
-      // 	measurements.push_back(mtop);
-      // 	measurements.push_back(mttbar);
-      // 	measurements.push_back(afb);
-      // 	measurements.push_back(ptttbar.Pt());
-      // 	measurements.push_back(nbtags);
-      // 	measurements.push_back(njets);
-      // 	measurements.push_back(htlep);
-      // 	spyEvents->fillTreeWithEvent( ev, measurements );
-      //       }
 
       //for data only
       if (!isMC && mtop>900 && outf!=0) 

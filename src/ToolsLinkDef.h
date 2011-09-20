@@ -7,6 +7,7 @@
 #include "LIP/Top/interface/KinAnalysis.h"
 #include "LIP/Top/interface/HFCMeasurement.h"
 #include "LIP/Top/interface/MisassignmentMeasurement.h"
+#include "LIP/Top/interface/MassMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/plotter.h"
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
@@ -56,6 +57,9 @@
 #pragma link C++ struct CombinedHFCModel_t;
 #pragma link C++ class HFCMeasurement;
 #pragma link C++ class MisassignmentMeasurement;
+#pragma link C++ struct EnsembleMeasurement_t;
+#pragma link C++ struct MassFitResults_t;
+#pragma link C++ class MassMeasurement;
 
 #endif
 
