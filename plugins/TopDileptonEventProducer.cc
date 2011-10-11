@@ -149,8 +149,8 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   //select muons (id+very loose isolation)
   Handle<View<Candidate> > hMu; 
   iEvent.getByLabel(objConfig["Muons"].getParameter<edm::InputTag>("source"), hMu);
-  CandidateWithVertexCollection selMuons = muon::filter(hMu, selVertices, *beamSpot, objConfig["Muons"]);
-  CandidateWithVertexCollection selLooseMuons = muon::filter(hMu, selVertices, *beamSpot, objConfig["LooseMuons"]);
+  CandidateWithVertexCollection selMuons = muon::filter(hMu, selVertices, *beamSpot, *rho, objConfig["Muons"]);
+  CandidateWithVertexCollection selLooseMuons = muon::filter(hMu, selVertices, *beamSpot, *rho, objConfig["LooseMuons"]);
   for(size_t iMuon=0; iMuon< hMu.product()->size(); ++iMuon)
     {
       using namespace lepton;
@@ -167,8 +167,8 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
   //select electrons (id+conversion veto+very loose isolation)
   Handle<View<Candidate> > hEle; 
   iEvent.getByLabel(objConfig["Electrons"].getParameter<edm::InputTag>("source"), hEle);
-  CandidateWithVertexCollection selElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["Electrons"]);
-  CandidateWithVertexCollection selLooseElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, objConfig["LooseElectrons"]);
+  CandidateWithVertexCollection selElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, *rho, objConfig["Electrons"]);
+  CandidateWithVertexCollection selLooseElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, *rho, objConfig["LooseElectrons"]);
   size_t iEle(0);
   for(View<Candidate>::const_iterator eIt=hEle->begin(); eIt != hEle->end(); eIt++, iEle++)
     {
