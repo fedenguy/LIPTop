@@ -77,12 +77,21 @@ int main(int argc, char* argv[])
   std::map<TString,float> btagCuts;
   btagCuts["TCHEL"]=1.7;
   btagCuts["TCHEM"]=3.3;
+  btagCuts["TCHET"]=10.2;
+  btagCuts["TCHPM"]=1.93;
   btagCuts["TCHPT"]=3.41;
   btagCuts["JBPL"]=1.33;
   btagCuts["JBPM"]=2.55;
   btagCuts["JBPT"]=3.74;
+  btagCuts["JPL"]=0.275;
+  btagCuts["JPM"]=0.545;
+  btagCuts["JPT"]=0.790;
   btagCuts["SSVHEM"]=1.74;
   btagCuts["SSVHET"]=3.05;
+  btagCuts["SSVHPT"]=2.00;
+  btagCuts["CSVL"]=0.244;
+  btagCuts["CSVM"]=0.679;
+  btagCuts["CSVT"]=0.898;
    
   //
   // start auxiliary computers
@@ -139,12 +148,12 @@ int main(int argc, char* argv[])
   h->GetXaxis()->SetBinLabel(4,"#geq 5 jets");
   controlHistos.addHistogram( h );
 
-  TString btagalgos[]={"TCHE","TCHP","SSVHE","JBP"};
+  TString btagalgos[]={"TCHE","TCHP","SSVHE","SSVHP","JBP","JP","CSV"};
+  float minba[]      ={-5    ,-5    ,0      ,0      ,0    ,0   ,0    };
+  float maxba[]      ={25    ,25    ,6      ,6      ,8    ,3   ,1.2  };
   int nbtagalgos=sizeof(btagalgos)/sizeof(TString);
   TString btagwps[]={"L","M","T"};
   int nbtagwps=sizeof(btagwps)/sizeof(TString);
-  float minba[]={-5,-5,0,0};
-  float maxba[]={25,25,6,8};
   TString ptbins[]={"p_{T}>30","30<p_{T}<50","50<p_{T}<80","80<p_{T}<120","p_{T}>120"};
   const size_t nptbins=sizeof(ptbins)/sizeof(TString);
   for(int iba=0; iba<nbtagalgos; iba++)
@@ -182,7 +191,7 @@ int main(int argc, char* argv[])
 	}
     }
  
-  TString labels[]={"E_{T}^{miss}>40,0","#geq 2 jets","op. sign", "=0 b-tags", "=1 b-tags","=2 b-tags"};
+  TString labels[]={"E_{T}^{miss}>40,0","#geq 2 jets","op. sign", "=2 jets", "#geq 3 jets"};
   int nsteps=sizeof(labels)/sizeof(TString);
   TH1D *cutflowH=new TH1D("evtflow",";Cutflow;Events",nsteps,0,nsteps);
   for(int ibin=0; ibin<nsteps; ibin++) cutflowH->GetXaxis()->SetBinLabel(ibin+1,labels[ibin]);
@@ -362,12 +371,21 @@ int main(int argc, char* argv[])
 	    {
 	      nbtags["TCHEL"]  += (phys.jets[ijet].btag1>btagCuts["TCHEL"]);
 	      nbtags["TCHEM"]  += (phys.jets[ijet].btag1>btagCuts["TCHEM"]);
+	      nbtags["TCHET"]  += (phys.jets[ijet].btag1>btagCuts["TCHET"]);
+	      nbtags["TCHPM"]  += (phys.jets[ijet].btag2>btagCuts["TCHPM"]);
 	      nbtags["TCHPT"]  += (phys.jets[ijet].btag2>btagCuts["TCHPT"]);
 	      nbtags["SSVHEM"] += (phys.jets[ijet].btag3>btagCuts["SSVHEM"]);		
 	      nbtags["SSVHET"] += (phys.jets[ijet].btag3>btagCuts["SSVHET"]);		
+	      nbtags["SSVHPT"] += (phys.jets[ijet].btag6>btagCuts["SSVHPT"]);		
 	      nbtags["JBPL"]   += (phys.jets[ijet].btag4>btagCuts["JBPL"]);
 	      nbtags["JBPM"]   += (phys.jets[ijet].btag4>btagCuts["JBPM"]);
 	      nbtags["JBPT"]   += (phys.jets[ijet].btag4>btagCuts["JBPT"]);
+	      nbtags["JPL"]   += (phys.jets[ijet].btag5>btagCuts["JPL"]);
+	      nbtags["JPM"]   += (phys.jets[ijet].btag5>btagCuts["JPM"]);
+	      nbtags["JPT"]   += (phys.jets[ijet].btag5>btagCuts["JPT"]);
+	      nbtags["CSVL"]   += (phys.jets[ijet].btag7>btagCuts["CSVL"]);
+	      nbtags["CSVM"]   += (phys.jets[ijet].btag7>btagCuts["CSVM"]);
+	      nbtags["CSVT"]   += (phys.jets[ijet].btag7>btagCuts["CSVT"]);
 	      
 	      if(isMC)
 		{
@@ -376,12 +394,21 @@ int main(int argc, char* argv[])
 		    {
 		      nFlavBtags[ptbins[iptbin]]["TCHEL"+flavCat]  += (phys.jets[ijet].btag1>btagCuts["TCHEL"]);
 		      nFlavBtags[ptbins[iptbin]]["TCHEM"+flavCat]  += (phys.jets[ijet].btag1>btagCuts["TCHEM"]);
+		      nFlavBtags[ptbins[iptbin]]["TCHET"+flavCat]  += (phys.jets[ijet].btag1>btagCuts["TCHET"]);
+		      nFlavBtags[ptbins[iptbin]]["TCHPM"+flavCat]  += (phys.jets[ijet].btag2>btagCuts["TCHPM"]);
 		      nFlavBtags[ptbins[iptbin]]["TCHPT"+flavCat]  += (phys.jets[ijet].btag2>btagCuts["TCHPT"]);
 		      nFlavBtags[ptbins[iptbin]]["SSVHEM"+flavCat] += (phys.jets[ijet].btag3>btagCuts["SSVHEM"]);		
 		      nFlavBtags[ptbins[iptbin]]["SSVHET"+flavCat] += (phys.jets[ijet].btag3>btagCuts["SSVHET"]);		
+		      nFlavBtags[ptbins[iptbin]]["SSVHPT"+flavCat] += (phys.jets[ijet].btag6>btagCuts["SSVHPT"]);		
 		      nFlavBtags[ptbins[iptbin]]["JBPL"+flavCat]   += (phys.jets[ijet].btag4>btagCuts["JBPL"]);
 		      nFlavBtags[ptbins[iptbin]]["JBPM"+flavCat]   += (phys.jets[ijet].btag4>btagCuts["JBPM"]);
 		      nFlavBtags[ptbins[iptbin]]["JBPT"+flavCat]   += (phys.jets[ijet].btag4>btagCuts["JBPT"]);
+		      nFlavBtags[ptbins[iptbin]]["JPL"+flavCat]   += (phys.jets[ijet].btag5>btagCuts["JPL"]);
+		      nFlavBtags[ptbins[iptbin]]["JPM"+flavCat]   += (phys.jets[ijet].btag5>btagCuts["JPM"]);
+		      nFlavBtags[ptbins[iptbin]]["JPT"+flavCat]   += (phys.jets[ijet].btag5>btagCuts["JPT"]);
+		      nFlavBtags[ptbins[iptbin]]["CSVL"+flavCat]   += (phys.jets[ijet].btag7>btagCuts["CSVL"]);
+		      nFlavBtags[ptbins[iptbin]]["CSVM"+flavCat]   += (phys.jets[ijet].btag7>btagCuts["CSVM"]);
+		      nFlavBtags[ptbins[iptbin]]["CSVT"+flavCat]   += (phys.jets[ijet].btag7>btagCuts["CSVT"]);
 		    }
 		}
 
@@ -392,6 +419,9 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("TCHP",catsToFill[ictf],phys.jets[ijet].btag2,weight);
 		  controlHistos.fillHisto("SSVHE",catsToFill[ictf],phys.jets[ijet].btag3,weight);
 		  controlHistos.fillHisto("JBP",catsToFill[ictf],phys.jets[ijet].btag4,weight);
+		  controlHistos.fillHisto("JP",catsToFill[ictf],phys.jets[ijet].btag5,weight);
+		  controlHistos.fillHisto("SSVHP",catsToFill[ictf],phys.jets[ijet].btag6,weight);
+		  controlHistos.fillHisto("CSV",catsToFill[ictf],phys.jets[ijet].btag7,weight);
 		  
 		  if(!isMC) continue;
 		  //per jet flavor
@@ -399,6 +429,9 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("TCHP"+flavCat,catsToFill[ictf],phys.jets[ijet].btag2,weight);
 		  controlHistos.fillHisto("SSVHE"+flavCat,catsToFill[ictf],phys.jets[ijet].btag3,weight);
 		  controlHistos.fillHisto("JBP"+flavCat,catsToFill[ictf],phys.jets[ijet].btag4,weight);
+		  controlHistos.fillHisto("JP"+flavCat,catsToFill[ictf],phys.jets[ijet].btag5,weight);
+		  controlHistos.fillHisto("SSVHP"+flavCat,catsToFill[ictf],phys.jets[ijet].btag6,weight);
+		  controlHistos.fillHisto("CSV"+flavCat,catsToFill[ictf],phys.jets[ijet].btag7,weight);
 		}
 	    }
 	}
@@ -462,9 +495,9 @@ int main(int argc, char* argv[])
 	      //standard b-tag
 	      else
 		{
-		  int btagbin(nbtags["TCHEL"]);
-		  if(btagbin>2) btagbin=2;
-		  if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],3+btagbin,weight);
+		  int jetbin(nseljets-2);
+		  if(jetbin>1) jetbin=1;
+		  if(!isZcand) controlHistos.fillHisto("evtflow"+cats[ivar],catsToFill[ictf],3+jetbin,weight);
 		}
 	      
 	      double mtsum=mtComp.compute(phys.leptons[0],theMET) + mtComp.compute(phys.leptons[1],theMET);
@@ -531,24 +564,17 @@ int main(int argc, char* argv[])
 			  LorentzVector lj2=phys.leptons[1]+jetColl[ijet];
 			  float mlj2=lj2.mass();
 			  float drlj2=deltaR(phys.leptons[1],jetColl[ijet]);
-			  if(!isOS && (mlj1>200 || mlj2>200) )
-			    {
-			      if(ictf==0) cout << ev.run << ":" << ev.lumi << ":" << ev.event <<  " " << ev.cat << " " << nseljets<< endl;   
-			    }
-			  for(size_t ictf=0; ictf<nCatsToFill; ictf++)
-			    {
-			      controlHistos.fillHisto("mlj",catsToFill[ictf],mlj1,weight,true);
-			      controlHistos.fillHisto("mlj",catsToFill[ictf],mlj2,weight,true);
-			      controlHistos.fillHisto("drlj",catsToFill[ictf],drlj1,weight,true);
-			      controlHistos.fillHisto("drlj",catsToFill[ictf],drlj2,weight,true);
-			    }
+			  controlHistos.fillHisto("mlj",catsToFill[ictf],mlj1,weight,true);
+			  controlHistos.fillHisto("mlj",catsToFill[ictf],mlj2,weight,true);
+			  controlHistos.fillHisto("drlj",catsToFill[ictf],drlj1,weight,true);
+			  controlHistos.fillHisto("drlj",catsToFill[ictf],drlj2,weight,true);
 			}
 		      
 		      controlHistos.fillHisto("njets",catsToFill[ictf],nseljets-2,weight,true);
 		      controlHistos.fillHisto("nvertices",catsToFill[ictf],ev.nvtx,weight,true);
-
+		      
 		      //save summary if required
-		      if(spyEvents && normWeight==1)
+		      if(ictf==0 && ivar==0 && spyEvents && normWeight==1 && !isZcand && isOS)
 			{
 			  std::vector<float> measurements;
 			  ev.weight=summaryWeight;

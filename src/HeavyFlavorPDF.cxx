@@ -11,37 +11,42 @@
  ClassImp(HeavyFlavorPDF) 
 
  HeavyFlavorPDF::HeavyFlavorPDF(const char *name, const char *title, 
-                        RooAbsReal& _bmult,
-                        RooAbsReal& _r,
-                        RooAbsReal& _eb,
-                        RooAbsReal& _eq,
-                        RooAbsReal& _alpha2,
-                        RooAbsReal& _alpha1,
-                        RooAbsReal& _alpha0) :
+				RooAbsReal& _bmult,
+				RooAbsReal& _r,
+				RooAbsReal& _eb,
+				RooAbsReal& _eq,
+				RooAbsReal& _fcorrect,
+				RooAbsReal& _fttbar,
+				RooAbsReal& _fsingletop,
+				RooAbsReal& _jetocc):
    RooAbsPdf(name,title), 
    bmult("bmult","bmult",this,_bmult),
    r("r","r",this,_r),
    eb("eb","eb",this,_eb),
    eq("eq","eq",this,_eq),
-   alpha2("alpha2","alpha2",this,_alpha2),
-   alpha1("alpha1","alpha1",this,_alpha1),
-   alpha0("alpha0","alpha0",this,_alpha0)
+   fcorrect("fcorrect","fcorrect",this,_fcorrect),
+   fttbar("fttbar","fttbar",this,_fttbar),
+   fsingletop("fsingletop","fsingletop",this,_fsingletop),
+   jetocc("jetocc","jetocc",this,_jetocc)
  { 
+   //default value
    setJetMultiplicity(2);
- } 
+ }
 
 
- HeavyFlavorPDF::HeavyFlavorPDF(const HeavyFlavorPDF& other, const char* name) :  
+HeavyFlavorPDF::HeavyFlavorPDF(const HeavyFlavorPDF& other, const char* name) :  
    RooAbsPdf(other,name), 
    bmult("bmult",this,other.bmult),
    r("r",this,other.r),
    eb("eb",this,other.eb),
    eq("eq",this,other.eq),
-   alpha2("alpha2",this,other.alpha2),
-   alpha1("alpha1",this,other.alpha1),
-   alpha0("alpha0",this,other.alpha0),
+   fcorrect("fcorrect",this,other.fcorrect),
+   fttbar("fttbar",this,other.fttbar),
+   fsingletop("fsingletop",this,other.fsingletop),
+   jetocc("jetocc",this,other.jetocc),
    jmult(other.jmult)
  { 
+
  } 
 
 
@@ -51,6 +56,8 @@
    Int_t nBtags=int(bmult);
    if(nBtags<0) return 0;
    if(nBtags>jmult) return 0;
+
+   //evaluate the probability functions
    double prob=_evaluate(jmult,nBtags);
    return prob;
  } 
@@ -65,6 +72,18 @@ Double_t HeavyFlavorPDF::_evaluate(int jetMult,int nBtags) const
       //2 jets: use the kernel functions
     case 2:
       {
+
+	//update the values for the alphas
+	int nevents = jetocc;
+	int npairs=2*jmult*nevents;
+	
+	if((2*fttbar+fsingletop)*nevents==0) return 0;
+	double alpha=(fcorrect*npairs)/((2*fttbar+fsingletop)*nevents);
+	if(alpha<0 || alpha>1) { cout<< "[HeavyFlavorPDF::_evaluate] unphysical value for alpha: " << alpha << endl; return 0; }
+	double alpha2=pow(alpha,2)*fttbar;
+	double alpha1=2*alpha*(1-alpha)*fttbar+alpha*fsingletop;
+	double alpha0=1-alpha2-alpha1;
+	//	cout << jmult << " "  << alpha2 << " " << alpha1 << " " << alpha0 << endl;
 	//compute probability
 	prob =  alpha2*_evaluateKernel(0,nBtags);
 	prob += alpha1*_evaluateKernel(1,nBtags);

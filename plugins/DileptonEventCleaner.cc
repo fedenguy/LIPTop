@@ -274,8 +274,8 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     LorentzVector dileptonP=lepton1P+lepton2P;
     controlHistos_.fillHisto(istream+"_dilepton_sumpt","all",lepton1P.pt()+lepton2P.pt(),weight);
     controlHistos_.fillHisto(istream+"_dilepton_pt","all",dileptonP.pt(),weight);
-    controlHistos_.fillHisto(istream+"_reliso","all",lepton::getLeptonIso(lepton1)[lepton::REL_ISO] );
-    controlHistos_.fillHisto(istream+"_reliso","all",lepton::getLeptonIso(lepton2)[lepton::REL_ISO] );
+    controlHistos_.fillHisto(istream+"_reliso","all",lepton::getLeptonIso(lepton1)[lepton::PFREL_ISO] );
+    controlHistos_.fillHisto(istream+"_reliso","all",lepton::getLeptonIso(lepton2)[lepton::PFREL_ISO] );
     controlHistos_.fillHisto(istream+"_dilepton_mass","all",dileptonP.mass(),weight);
         
     //Z+quarkonia veto
@@ -413,7 +413,6 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 	std::vector<reco::CandidatePtr> looseleptons=evhyp.all(looseLeptonTypes[il]);
 	for(std::vector<reco::CandidatePtr>::iterator it = looseleptons.begin(); it != looseleptons.end(); it++)
 	  leptons.push_back(*it);
-	cout << looseLeptonTypes[il] << " with " << looseleptons.size() << endl;
       }
 
 
@@ -502,9 +501,9 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
 
       std::vector<double> liso=lepton::getLeptonIso(leptons[ilepton],0.);
       summaryHandler_.evSummary_.info1[ilepton]=lepton::getPtErrorFor(leptons[ilepton]);
-      summaryHandler_.evSummary_.info2[ilepton]=liso[lepton::TRACKER_ISO];
-      summaryHandler_.evSummary_.info3[ilepton]=liso[lepton::ECAL_ISO];
-      summaryHandler_.evSummary_.info4[ilepton]=liso[lepton::HCAL_ISO];
+      summaryHandler_.evSummary_.info2[ilepton]=liso[lepton::C_ISO];
+      summaryHandler_.evSummary_.info3[ilepton]=liso[lepton::G_ISO];
+      summaryHandler_.evSummary_.info4[ilepton]=liso[lepton::N_ISO];
 
       int id = lepton::getLeptonId(leptons[ilepton]);
       const reco::GenParticle *gen=lepton::getLeptonGenMatch(leptons[ilepton]);
@@ -549,6 +548,10 @@ void DileptonEventCleaner::saveEvent(const edm::Event& event, int evCat, std::ve
       summaryHandler_.evSummary_.info3[pidx]=jets[ijet]->bDiscriminator("simpleSecondaryVertexHighEffBJetTags");	  
       summaryHandler_.evSummary_.info4[pidx]=jets[ijet]->bDiscriminator("jetBProbabilityBJetTags");
       summaryHandler_.evSummary_.info5[pidx]=jets[ijet]->bDiscriminator("jetProbabilityBJetTags");
+      summaryHandler_.evSummary_.info6[pidx]=jets[ijet]->bDiscriminator("simpleSecondaryVertexHighPurBJetTags");
+      summaryHandler_.evSummary_.info7[pidx]=jets[ijet]->bDiscriminator("combinedSecondaryVertexBJetTags");
+      summaryHandler_.evSummary_.info8[pidx]=jets[ijet]->neutralHadronEnergyFraction();
+      summaryHandler_.evSummary_.info9[pidx]=jets[ijet]->chargedEmEnergyFraction()+jets[ijet]->neutralEmEnergyFraction();
     }
   
   //save met

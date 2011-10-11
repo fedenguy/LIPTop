@@ -97,7 +97,7 @@
 	       "dset":"/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
 	       "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/ZZ/DYToLL/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola"],
                "xsec":3048,
-	       "br":[1.26]
+	       "br":[1.00]
               }
           ]
 	},
@@ -128,91 +128,6 @@
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_06_22_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
                 "xsec":165
-                }
-	  ]
-	},
-	{
-	 "tag":"Z'(500)#rightarrow t#bar{t}",
-         "isdata":false,
-         "color":"kOrange",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"ZPrime_M500",
-		"dset":"/Zprime_M500GeV_W5GeV-madgraph/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/Zprime_M500GeV_W5GeV-madgraph"],
-                "xsec":10
-                }
-	  ]
-	},
-	{
-	 "tag":"Z'(1000)#rightarrow t#bar{t}",
-         "isdata":false,
-         "color":"kOrange+3",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"ZPrime_M1000",
-		"dset":"/Zprime_M1000GeV_W10GeV-madgraph/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/Zprime_M1000GeV_W10GeV-madgraph"],
-                "xsec":10
-                }
-	  ]
-	},
-	{
-	 "tag":"Z'(1500)#rightarrow t#bar{t}",
-         "isdata":false,
-         "color":"kOrange+5",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"ZPrime_M1500",
-		"dset":"/Zprime_M1500GeV_W15GeV-madgraph/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/Zprime_M1500GeV_W15GeV-madgraph"],
-                "xsec":10
-                }
-	  ]
-	},
-	{
-	 "tag":"Z'(2000)#rightarrow t#bar{t}",
-         "isdata":false,
-         "color":"kPink-3",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"ZPrime_M2000",
-		"dset":"/Zprime_M2000GeV_W20GeV-madgraph/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/Zprime_M2000GeV_W20GeV-madgraph"],
-                "xsec":10
-                }
-	  ]
-	},
-	{
-	 "tag":"Z'(3000)#rightarrow t#bar{t}",
-         "isdata":false,
-         "color":"kOrange-3",
-         "spimpose":true,
-   	 "lwidth":4,
-         "fill":0,
-         "marker":1,
-         "data":[
-		{
- 	        "dtag":"ZPrime_M3000",
-		"dset":"/Zprime_M3000GeV_W30GeV-madgraph/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/Zprime_M3000GeV_W300GeV-madgraph"],
-                "xsec":10
                 }
 	  ]
 	},
@@ -302,7 +217,27 @@
                   "dtag":"SingleMuPromptRecov6_172620_173244",
                   "dset":"/SingleMu/Run2011A-PromptReco-v6/AOD",
                   "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/SingleMu/SingleMu-PromptReco-v6-172620-173244"]
-		}
+		},
+		{
+                  "dtag":"DoubleMuPromptRecov6_173380-173692",
+                  "dset":"/DoubleMu/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch//cms/store/cmst3/user/psilva/Data/DoubleMuon/DoubleMu-PromptReco-v6-173380_173692"]
+                },
+                {
+                  "dtag":"DoubleElectronPromptRecov6_173380-173692",
+                  "dset":"/DoubleElectron/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/DoubleElectron/DoubleElectron-PromptReco-173380-173692"]
+                },
+	        {
+                  "dtag":"MuEGPromptRecov6_173380-173692",
+                  "dset":"/MuEG/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/MuEG/MuEG-PromptReco-v6-173380_173692"]
+                },
+                {
+                  "dtag":"SingleMuPromptRecov6_173380-173692",
+                  "dset":"/SingleMu/Run2011A-PromptReco-v6/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/SingleMu/SingleMu-PromptReco-v6-173380_173692"]
+                }
              ]
 	}
     ]	

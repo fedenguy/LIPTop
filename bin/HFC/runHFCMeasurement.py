@@ -1,5 +1,5 @@
-#!/usr/bin/env python
 
+#!/usr/bin/env python
 import os,sys
 import json
 import getopt
@@ -23,10 +23,11 @@ def usage() :
     print '  -j : json file containing the samples'
     print '  -i : event summary file'
     print '  -n : number of ensembles to test'
-    print '  -b : jet bin (2=2 jets exclusive, 3=3 jets inclusive, otherwise all inclusive)'
+    print '  -b : jet bin (2=2 jets exclusive, 3=3 jets inclusive,4=4 jets inclusive, otherwise all inclusive)'
     print '  -f : fit type'
     print '  -p : plot only'
     exit(-1)
+
 
 #parse the options
 try:
@@ -40,7 +41,7 @@ except getopt.GetoptError:
     sys.exit(1)
 
 #configure
-lumi=215.3
+lumi=100
 samplesDB=''
 ifile=''
 nensemble=1
@@ -59,7 +60,6 @@ for o,a in opts:
     elif o in('-p'): plotOnly = (a=='True')
     elif o in('-b'): jetbin=int(a)
 
-    
 # load macros
 import ROOT
 ROOT.gSystem.Load('${CMSSW_BASE}/lib/${SCRAM_ARCH}/libLIPTop.so')
@@ -74,17 +74,35 @@ if(not plotOnly) :
     #run over sample
     evHandler       = EventSummaryHandler()
     misMeasurement  = MisassignmentMeasurement()
-    misMeasurement.setBiasCorrections("all",-0.02416)
-    misMeasurement.setBiasCorrections("emu",-0.02331)
-    misMeasurement.setBiasCorrections("ll",-0.027586)
 
+    misMeasurement.setBiasCorrections("all",-0.0188118558)
+    misMeasurement.setBiasCorrections("emu",0.0088410018)
+    misMeasurement.setBiasCorrections("ll",-0.0334519059)
+    if(jetbin==2) :
+        misMeasurement.setBiasCorrections("all",0.0208030449)
+        misMeasurement.setBiasCorrections("emu",-0.0345264636)
+        misMeasurement.setBiasCorrections("ll",-0.018515963)
+    elif(jetbin==3) :
+        misMeasurement.setBiasCorrections("all",-0.032760782)
+        misMeasurement.setBiasCorrections("emu",-0.0129281559)
+        misMeasurement.setBiasCorrections("ll",-0.0758820633)
+    elif(jetbin==4):
+        misMeasurement.setBiasCorrections("all",-0.0606490967)
+        misMeasurement.setBiasCorrections("emu",-0.0220872477)
+        misMeasurement.setBiasCorrections("ll",0.0904430383)
+        #    else :
+    misMeasurement.setBiasCorrections("all",0)
+    misMeasurement.setBiasCorrections("emu",0)
+    misMeasurement.setBiasCorrections("ll",0)
+        
     hfcFitter=None
     if(fitType>=0):
         hfcFitter = HFCMeasurement(3,fitType)
     
     ensembleInfo = '<big><b>Summary of ensemble tests (data/MC) for events with'
     if(jetbin==2):   ensembleInfo += '= 2 jets'
-    elif(jetbin==3): ensembleInfo += '&gt;= 3 jets'
+    elif(jetbin==3): ensembleInfo += '= 3 jets'
+    elif(jetbin==4): ensembleInfo += '= 4 jets'
     else :           ensembleInfo += '&gt;= 2 jets'
     ensembleInfo += '</b></big>'
     print '[HFCmeasurement]',
@@ -102,12 +120,12 @@ if(not plotOnly) :
         ensembleInfo += '</b></th></tr>'
         
         for proc in procList :
-
+            
             #run over processes
             id=0
             for desc in proc[1] :
                 isdata = getByLabel(desc,'isdata',False)
-                
+               
                 if(ipe>0 and isdata) : continue
                 if(ipe==0 and not isdata) : continue
             
@@ -153,10 +171,10 @@ if(not plotOnly) :
                         ensembleHandler.fillTree()
                         genEvts.append(rndEvt)
 
-            ensembleInfo += '<tr><td><b>' + tag + '<b></td></tr>'
-            if(ipe>0) : ensembleInfo += '<tr><td>&lt;N<sub>expected</sub>&gt;=' + str(nevtsExpected) + '</td></tr>'
-            ensembleInfo += '<tr><td>&lt;N<sub>generated</sub>&gt;=' + str(nevts) + '</td></tr>'
-            #if(ipe>0) : ensembleInfo += '<tr><td><small>' + str(genEvts) + '</small></td></tr>'
+                    ensembleInfo += '<tr><td><b>' + tag + '<b></td></tr>'
+                    if(ipe>0) : ensembleInfo += '<tr><td>&lt;N<sub>expected</sub>&gt;=' + str(nevtsExpected) + '</td></tr>'
+                    ensembleInfo += '<tr><td>&lt;N<sub>generated</sub>&gt;=' + str(nevts) + '</td></tr>'
+                    #if(ipe>0) : ensembleInfo += '<tr><td><small>' + str(genEvts) + '</small></td></tr>'
                 
             #take control of the filled tree now
             ensembleHandler.attachToTree( ensembleHandler.getTree() )
@@ -171,7 +189,7 @@ if(not plotOnly) :
                 fcorrectErr   = fcorrectEst[1]
                 kNorm         = misMeasurement.getNorm(cat)
 
-                if(hfcFitter is not None and cat != 'all') :
+                if(hfcFitter is not None and cat =='all'):
 
                     #configure fit from file
                     fitParamsFile = open('hfcFitter_cfg.json','r')
@@ -185,13 +203,20 @@ if(not plotOnly) :
                     hfcFitter.setMistagEfficiency (btagAlgos[btagWP]['effq'][0], btagAlgos[btagWP]['sfq'][0], btagAlgos[btagWP]['sfq'][1] )
 
                     catParams=fitParams[cat]
-                    hfcFitter.setAlpha (catParams['inclusive']['alpha_2'][0],catParams['inclusive']['alpha_2'][1],
-                                        catParams['inclusive']['alpha_0'][0],catParams['inclusive']['alpha_0'][1])
-
+                    hfcFitter.setSelectionFractions (catParams['inclusive']['fcorrect'][0],catParams['inclusive']['fcorrect'][1],
+                                                     catParams['inclusive']['fttbar'][0],catParams['inclusive']['fttbar'][1],
+                                                     catParams['inclusive']['fsingletop'][0],catParams['inclusive']['fsingletop'][1],0)
+                    hfcFitter.setSelectionFractions (catParams['2jets']['fcorrect'][0],catParams['2jets']['fcorrect'][1],
+                                                     catParams['2jets']['fttbar'][0],catParams['2jets']['fttbar'][1],
+                                                     catParams['2jets']['fsingletop'][0],catParams['2jets']['fsingletop'][1],2)
+                    hfcFitter.setSelectionFractions (catParams['3jets']['fcorrect'][0],catParams['3jets']['fcorrect'][1],
+                                                     catParams['3jets']['fttbar'][0],catParams['3jets']['fttbar'][1],
+                                                     catParams['3jets']['fsingletop'][0],catParams['3jets']['fsingletop'][1],3)
                     fitParamsFile.close()
 
-                    #if(cat=='ll'): hfcFitter.fitHFCtoEnsemble( ensembleHandler, cat )
-                    if(cat=='emu'): hfcFitter.fitHFCtoEnsemble( ensembleHandler, cat )
+                    #run the fitter
+                    hfcFitter.fitHFCtoEnsemble( ensembleHandler, cat )
+                    
 
                     raw_input('any key to continue')
                 #save ensemble info
@@ -203,7 +228,6 @@ if(not plotOnly) :
                 ensembleInfo += '<tr><td></td></tr>'
             
             ensembleHandler.getTree().Delete("all")
-        
     misMeasurement.saveMonitoringHistograms()
     inF.Close()
 
@@ -301,23 +325,24 @@ for c in cats:
 
     #fraction fit
     pad3=cnv3.cd(icnv)
-    
+
     mcArray = ROOT.TObjArray(3);
     mcArray.Add(mcCorrectH)
     mcArray.Add(mcWrongH)
-    fracFitter.append( ROOT.TFractionFitter(dataH, mcArray) );
-    fracFitter[icnv-1].Constrain(1,0.0,1.0);      
+    mfracFitter=ROOT.TFractionFitter(dataH, mcArray)
+    fracFitter.append( mfracFitter );
+    mfracFitter.Constrain(1,0.0,1.0);      
     #fracFitter.SetRangeX(1,15);  #bins to use
-    fracFitterStatus = fracFitter[icnv-1].Fit()
+    fracFitterStatus = mfracFitter.Fit()
     sigval=ROOT.Double(0.0)
     sigvalerr=ROOT.Double(0.0)
     bkgval=ROOT.Double(0.0)
     bkgvalerr=ROOT.Double(0.0)
     if (fracFitterStatus == 0) :
-        resultH = fracFitter[icnv-1].GetPlot()
+        resultH = mfracFitter.GetPlot()
         resultH.SetDirectory(0)
-        fracFitter[icnv-1].GetResult(0, sigval, sigvalerr);
-        fracFitter[icnv-1].GetResult(1, bkgval, bkgvalerr)
+        mfracFitter.GetResult(0, sigval, sigvalerr);
+        mfracFitter.GetResult(1, bkgval, bkgvalerr)
         resultH.SetLineColor(mcCorrectH.GetLineColor())
         resultH.SetMarkerColor(mcCorrectH.GetMarkerColor())
         resultH.SetFillColor(mcCorrectH.GetFillColor())
@@ -328,10 +353,10 @@ for c in cats:
         mcWrongH.DrawNormalized("histsame",resultH.Integral()*bkgval);
         dataH.Draw("e1psame")
 
-        pad3.SetLogx()
-        formatForCmsPublic(pad3,None,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
-                     
+    if(icnv==1) : formatForCmsPublic(pad3,leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
+    #else        : leg.Delete()
 
+    fcorrsfH=plotF.Get('localAnalysis/'+c+'/'+prefix+'fcorrsf')
     fcorrH=plotF.Get('localAnalysis/'+c+'/'+prefix+'fcorr')
     truefCorrH=plotF.Get('localAnalysis/'+c+'/'+prefix+'truefcorr')
     avgFcorr=fcorrH.GetMean()
@@ -345,11 +370,11 @@ for c in cats:
 
     #debug
     print c,
-    print ' f_{correct}=' + str(avgFcorr) + ' +/- ' + str(fCorrErr),
+    #print ' f_{correct}=' + str(avgFcorr) + ' +/- ' + str(fCorrErr),
     print ' <f_{correct}^{MC}>=' + str(avgFcorrTrue) + ' +/- ' + str(fCorrTrueErr),
     print ' bias=' + str(fCorrBias) + ' +/- ' + str(fCorrBiasErr),
     print ' f_{correct}^{fraction fitter}= ' + str(sigval) + ' +/- ' + str(sigvalerr)
-
+    # print ' SF= ' + str(fcorrsfH.GetMean()) + ' +/- ' + str(fcorrsfH.GetRMS())
     
 cnv.cd()
 cnv.Draw()

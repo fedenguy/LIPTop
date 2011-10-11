@@ -26,22 +26,25 @@
 
 //
 #define MAXJETMULT 8
+#define MAXCATEGORIES 5
 enum JetMultBins{BIN_2=0,BIN_3,BIN_4,BIN_5, BIN_6, BIN_7, BIN_8};
 struct CombinedHFCModel_t
 {
   RooArgSet pdfSet,constrPDFSet;
   RooRealVar *bmult, *r, *lfacceptance;
-  RooRealVar *abseb,*sfeb,*sfeb_mean_constrain,*sfeb_sigma_constrain;
-  RooFormulaVar *eb;
+  RooRealVar *abseb,*sfeb,*sfeb_mean_constrain,*sfeb_sigma_constrain,*diff_sfeb[MAXCATEGORIES];
+  RooFormulaVar *eb,*diff_eb[MAXCATEGORIES];
   RooGaussian *sfeb_constrain;
   RooRealVar *abseq,*sfeq,*sfeq_mean_constrain,*sfeq_sigma_constrain;
   RooFormulaVar *eq;
   RooGaussian *sfeq_constrain;
-  RooRealVar *alpha2,*alpha2_mean_constrain,*alpha2_sigma_constrain;
-  RooGaussian *alpha2_constrain;
-  RooFormulaVar *alpha1;
-  RooRealVar *alpha0,*alpha0_mean_constrain,*alpha0_sigma_constrain;
-  RooGaussian *alpha0_constrain;
+  RooRealVar *jetocc[MAXJETMULT];
+  RooRealVar *fcorrect[MAXJETMULT],*fcorrect_mean_constrain[MAXJETMULT],*fcorrect_sigma_constrain[MAXJETMULT];
+  RooGaussian *fcorrect_constrain[MAXJETMULT];
+  RooRealVar *fttbar[MAXJETMULT],*fttbar_mean_constrain[MAXJETMULT],*fttbar_sigma_constrain[MAXJETMULT];
+  RooGaussian *fttbar_constrain[MAXJETMULT];
+  RooRealVar *fsingletop[MAXJETMULT],*fsingletop_mean_constrain[MAXJETMULT],*fsingletop_sigma_constrain[MAXJETMULT];
+  RooGaussian *fsingletop_constrain[MAXJETMULT];
 };
 
 //
@@ -96,12 +99,17 @@ class HFCMeasurement
       sfqUnc_[jetBin]=sfactorUnc;
     } 
 
-    void setAlpha(double a2, double a2unc, double a0, double a0unc, int jetBin=0)
+    void setSelectionFractions(double fcorrect,   double fcorrectunc, 
+			       double fttbar,     double fttbarunc,
+			       double fsingletop, double fsingletopunc,
+			       int jetBin=0)
     {
-      alpha2_[jetBin]=a2;
-      alpha2Unc_[jetBin]=a2unc;
-      alpha0_[jetBin]=a0;
-      alpha0Unc_[jetBin]=a0unc;
+      fcorrect_[jetBin]=fcorrect;
+      fcorrectUnc_[jetBin]=fcorrectunc;
+      fttbar_[jetBin]=fttbar;
+      fttbarUnc_[jetBin]=fttbarunc;
+      fsingletop_[jetBin]=fsingletop;
+      fsingletopUnc_[jetBin]=fsingletopunc;
     }
 
   
@@ -116,6 +124,7 @@ class HFCMeasurement
 
     void initHFCModel();
     void runHFCFit(TString dilCat);
+    void runHFCDiffFit(TString dilCat);
 
     void bookMonitoringHistograms();
     void resetHistograms();
@@ -135,7 +144,9 @@ class HFCMeasurement
     std::map<Int_t,Float_t>  effb_, sfb_, sfbUnc_, effq_, sfq_, sfqUnc_;
 
     //event types
-    std::map<Int_t, Float_t> alpha2_,  alpha2Unc_, alpha0_, alpha0Unc_;
+    std::map<Int_t, Float_t> fcorrect_,  fcorrectUnc_, 
+      fttbar_, fttbarUnc_,
+      fsingletop_, fsingletopUnc_;
     
     SelectionMonitor controlHistos_;    
     int nMeasurements_;

@@ -39,6 +39,10 @@ bool EventSummaryHandler::initTree(TTree *t, bool needsToRecreate)
   t_->Branch("info3",      evSummary_.info3,       "info3[nparticles]/F");
   t_->Branch("info4",      evSummary_.info4,       "info4[nparticles]/F");
   t_->Branch("info5",      evSummary_.info5,       "info5[nparticles]/F");
+  t_->Branch("info6",      evSummary_.info6,       "info6[nparticles]/F");
+  t_->Branch("info7",      evSummary_.info7,       "info7[nparticles]/F");
+  t_->Branch("info8",      evSummary_.info8,       "info8[nparticles]/F");
+  t_->Branch("info9",      evSummary_.info9,       "info9[nparticles]/F");
 
   t_->Branch("nmcparticles", &evSummary_.nmcparticles, "nmcparticles/I");
   t_->Branch("mcpx",         evSummary_.mcpx,          "mcpx[nmcparticles]/F");
@@ -83,6 +87,10 @@ bool EventSummaryHandler::attachToTree(TTree *t)
   t_->GetBranch("info3")->SetAddress(evSummary_.info3);
   t_->GetBranch("info4")->SetAddress(evSummary_.info4);
   t_->GetBranch("info5")->SetAddress(evSummary_.info5);
+  t_->GetBranch("info6")->SetAddress(evSummary_.info6);
+  t_->GetBranch("info7")->SetAddress(evSummary_.info7);
+  t_->GetBranch("info8")->SetAddress(evSummary_.info8);
+  t_->GetBranch("info9")->SetAddress(evSummary_.info9);
 
   if(t_->GetBranch("nmcparticles"))
     {
@@ -138,6 +146,10 @@ void EventSummaryHandler::fillTreeWithEvent(const EventSummary_t &ev, std::vecto
       evSummary_.info1[ipart]=ev.info1[ipart]; evSummary_.info2[ipart]=ev.info2[ipart];
       evSummary_.info3[ipart]=ev.info3[ipart]; evSummary_.info4[ipart]=ev.info4[ipart];
       evSummary_.info5[ipart]=ev.info5[ipart];
+      evSummary_.info6[ipart]=ev.info6[ipart];
+      evSummary_.info7[ipart]=ev.info7[ipart];
+      evSummary_.info8[ipart]=ev.info8[ipart];     
+      evSummary_.info9[ipart]=ev.info9[ipart];
       evSummary_.nparticles++;
     }
 
@@ -186,7 +198,7 @@ PhysicsEvent_t getPhysicsEventFrom(EventSummary_t &ev)
 	case 1:
 	  if(p4.pt()>30 && fabs(p4.eta())<2.5)
 	    {
-	      newev.jets.push_back( PhysicsObject_Jet(p4,ev.genid[ipart],ev.genflav[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info4[ipart]) );
+	      newev.jets.push_back( PhysicsObject_Jet(p4,ev.genid[ipart],ev.genflav[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info4[ipart], ev.info5[ipart], ev.info6[ipart], ev.info7[ipart], ev.info8[ipart],ev.info9[ipart]) );
 	      newev.nbjets +=(fabs(ev.genflav[ipart])==5);
 	      newev.nljets +=(fabs(ev.genflav[ipart])!=5);
 	    }

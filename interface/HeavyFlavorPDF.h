@@ -26,13 +26,15 @@ class HeavyFlavorPDF : public RooAbsPdf {
 public:
   HeavyFlavorPDF() { setJetMultiplicity(2); } ; 
   HeavyFlavorPDF(const char *name, const char *title,
-	      RooAbsReal& _bmult,
-	      RooAbsReal& _r,
-	      RooAbsReal& _eb,
-	      RooAbsReal& _eq,
-	      RooAbsReal& _alpha2,
-	      RooAbsReal& _alpha1,
-	      RooAbsReal& _alpha0);
+		 RooAbsReal& _bmult,
+		 RooAbsReal& _r,
+		 RooAbsReal& _eb,
+		 RooAbsReal& _eq,
+		 RooAbsReal& _fcorrect,
+		 RooAbsReal& _fttbar,
+		 RooAbsReal& _fsingletop,
+		 RooAbsReal& _jetocc);
+  
   HeavyFlavorPDF(const HeavyFlavorPDF& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new HeavyFlavorPDF(*this,newname); }
   inline virtual ~HeavyFlavorPDF() { }
@@ -45,10 +47,11 @@ protected:
   RooRealProxy r ;
   RooRealProxy eb ;
   RooRealProxy eq ;
-  RooRealProxy alpha2 ;
-  RooRealProxy alpha1 ;
-  RooRealProxy alpha0 ;
-  int jmult;
+  RooRealProxy fcorrect;
+  RooRealProxy fttbar;
+  RooRealProxy fsingletop;
+  RooRealProxy jetocc;
+  Int_t jmult;
 
   Double_t evaluate() const ;
   Double_t _evaluate(int jetMult, int nBtags) const;

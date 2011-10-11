@@ -27,7 +27,8 @@ struct EventSummary_t
   Int_t nparticles,nmcparticles;
   Float_t px[MAXPARTICLES], py[MAXPARTICLES], pz[MAXPARTICLES], en[MAXPARTICLES];
   Int_t id[MAXPARTICLES], genid[MAXPARTICLES], genflav[MAXPARTICLES];
-  Float_t info1[MAXPARTICLES],info2[MAXPARTICLES],info3[MAXPARTICLES],info4[MAXPARTICLES],info5[MAXPARTICLES];
+  Float_t info1[MAXPARTICLES],info2[MAXPARTICLES],info3[MAXPARTICLES],info4[MAXPARTICLES],info5[MAXPARTICLES],
+    info6[MAXPARTICLES],info7[MAXPARTICLES],info8[MAXPARTICLES],info9[MAXPARTICLES];
   Float_t mcpx[MAXPARTICLES], mcpy[MAXPARTICLES], mcpz[MAXPARTICLES], mcen[MAXPARTICLES];
   Int_t mcid[MAXPARTICLES];
   Int_t nmeasurements;
@@ -95,10 +96,15 @@ public :
 class PhysicsObject_Jet : public LorentzVector
 {
 public :
-  PhysicsObject_Jet(LorentzVector vec, Int_t genid_=0, Int_t flavid_=0, Float_t btag1_=0, Float_t btag2_=0, Float_t btag3_=0, Float_t btag4_=0, Bool_t vtxAssoc_=false):
-    LorentzVector(vec), genid(genid_), flavid(flavid_), btag1(btag1_), btag2(btag2_), btag3(btag3_), btag4(btag4_), vtxAssoc(vtxAssoc_) { }
+  PhysicsObject_Jet(LorentzVector vec, Int_t genid_=0, Int_t flavid_=0,
+		    Float_t btag1_=0, Float_t btag2_=0, Float_t btag3_=0, Float_t btag4_=0, Float_t btag5_=0, Float_t btag6_=0, Float_t btag7_=0,
+		    Float_t neutHadEnFrac_=0, Float_t emEnFrac_=0,
+		    Bool_t vtxAssoc_=true):
+    LorentzVector(vec), genid(genid_), flavid(flavid_), btag1(btag1_), btag2(btag2_), btag3(btag3_), btag4(btag4_), 
+    btag5(btag5_), btag6(btag6_), btag7(btag7_), neutHadEnFrac(neutHadEnFrac_), emEnFrac(emEnFrac_), vtxAssoc(vtxAssoc_) { }
     Int_t genid,flavid;
-    Float_t btag1, btag2, btag3, btag4; 
+    Float_t btag1, btag2, btag3, btag4,btag5,btag6,btag7; 
+    Float_t neutHadEnFrac, emEnFrac;
     Bool_t vtxAssoc;
 };
 

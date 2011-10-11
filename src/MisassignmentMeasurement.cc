@@ -31,6 +31,7 @@ void MisassignmentMeasurement::bookMonitoringHistograms()
   controlHistos.addHistogram( new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",50,0,1) );
   controlHistos.addHistogram( new TH1D("fcorr",";f_{correct};Pseudo-experiments",200,0,0.5) );
   controlHistos.addHistogram( new TH1D("truefcorr",";f_{correct} (MC truth);Pseudo-experiments",200,0,0.5) );
+  controlHistos.addHistogram( new TH1D("fcorrsf",";SF=f_{correct}/f_{correct}^{M>y} (MC truth);Pseudo-experiments",200,0,1.2) );
   controlHistos.addHistogram( new TH1D("knorm",";Model k-factor;Pseudo-experiments",200,0,1.5) );
 
   //instantiate for different categories
@@ -98,10 +99,16 @@ PhysicsObjectLeptonCollection MisassignmentMeasurement::randomlyRotate( PhysicsO
   PhysicsObjectLeptonCollection rotLeptons;
 
   //create a rotated copy of all leptons
-  for(PhysicsObjectLeptonCollection::iterator lit = leptons.begin(); lit != leptons.end(); lit++)
+  int ileptons(0);
+  for(PhysicsObjectLeptonCollection::iterator lit = leptons.begin(); lit != leptons.end(); lit++, ileptons++)
     {
+      if(ileptons>=2) break;
+      int itry=0;
       do
 	{
+	  itry++;
+	  if(itry>1000) { cout << "Failed to rotate lepton:" << itry << endl;  rotLeptons.push_back( *lit ); break;  }
+
 	  //rotate lepton
 	  double en    = lit->E();
 	  double pabs  = lit->P();
@@ -123,11 +130,13 @@ PhysicsObjectLeptonCollection MisassignmentMeasurement::randomlyRotate( PhysicsO
 	      if(dR>minDR) continue;
 	      minDR=dR;
 	    }
-	  if(minDR<0.4) continue;
 	  
-	  //save lepton
-	  rotLeptons.push_back(PhysicsObject_Lepton(rotLep,lit->id));
-	  break;
+	  if(minDR>0.4)
+	    {
+	      //save lepton
+	      rotLeptons.push_back(PhysicsObject_Lepton(rotLep,lit->id));
+	      break;
+	    }
 	} while( 1 );
     }
 
@@ -139,11 +148,11 @@ PhysicsObjectLeptonCollection MisassignmentMeasurement::randomlyRotate( PhysicsO
 void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHandler, double mcut, double minMlj, bool isData, int jetbin)
 {
   if(evHandler.getEntries()==0) return;
-  
+ 
   if(!isData) nMeasurements++;
   resetHistograms();    
-  std::map<TString,int> nCorrectAssignments, totalPairs, totalEventsUsed;
-      
+  std::map<TString,int> nCorrectAssignments, nCorrectAssignmentsFullSpectrum, totalEventsUsed;
+  
   //run over the entries
   TTree *evTree=evHandler.getTree();
   unsigned int ntrials(10);
@@ -152,7 +161,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       for(unsigned int i=0; i<evTree->GetEntriesFast(); i++)
 	{
 	  evTree->GetEntry(i);
-      
+
 	  EventSummary_t &ev = evHandler.getEvent();
 	  int evcat=ev.cat;
 
@@ -160,9 +169,8 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	  PhysicsEvent_t phys = getPhysicsEventFrom(ev);
 	  PhysicsObjectLeptonCollection ileptons = phys.leptons;
 	  PhysicsObjectJetCollection ijets = phys.jets;
-	  if(jetbin==2 && ijets.size()!=2) continue;
-	  if(jetbin==3 && ijets.size()<3)  continue;
-      
+	  if(jetbin!=0 && int(ijets.size())!=jetbin) continue;
+
 	  std::vector<TString> categs;
 	  categs.push_back("all");
 	  if(evcat==dilepton::MUMU) { categs.push_back("mumu"); categs.push_back("ll"); }
@@ -176,20 +184,29 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 		  totalEventsUsed[categs[icat]]++;
 		}
 	    }
-      
+      	  
 	  //
 	  // MODEL 1 get event mixed jets in equal number to current event's jet multiplicity
 	  //
 	  PhysicsObjectJetCollection mixjets;
 	  do{
+	    int imixtry(0);
 	    unsigned int j=rndGen.Uniform(0,evTree->GetEntriesFast());
 	    if(j==i) continue;
+	    imixtry++;
+	    
+	    if(imixtry>50) { 
+	      cout << "Failed to mix 1 event" << endl;
+	      cout << imixtry << " " << j << " " << i << " " << itrial << endl;
+	      continue; 
+	    }
+
 	    evTree->GetEntry(j);
 	    EventSummary_t &mixev = evHandler.getEvent();
 	    if(evcat!= mixev.cat) continue;
 
 	    //check for object separation
-	    PhysicsEvent_t mixphys = getPhysicsEventFrom(ev);
+	    PhysicsEvent_t mixphys = getPhysicsEventFrom(mixev);
 	    for(size_t ijet=0; ijet< mixphys.jets.size(); ijet++)
 	      {
 		double minDR(1000);
@@ -200,13 +217,14 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 		    minDR=dR;
 		  }
 		if(minDR<0.4) continue;
-		    
+		
 		//save jets
 		if(mixjets.size()<ijets.size()) mixjets.push_back( mixphys.jets[ijet] );
 	      }
-		
+
 	    //continue until jet multiplicity is filled
 	    if(mixjets.size()<ijets.size()) continue;	
+	    
 	    break;
 	  }while(1);
 	  
@@ -214,7 +232,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	  // MODEL 2 get rotated leptons
 	  //
 	  PhysicsObjectLeptonCollection rotLeptons = randomlyRotate(ileptons,ijets);
-      
+	  
 	  //
 	  // Fill the control histograms
 	  //
@@ -235,7 +253,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 		}
 	    }
       
-	  //invariant mass spectron
+	  //invariant mass spectrum
 	  for(PhysicsObjectLeptonCollection::iterator lit = ileptons.begin(); lit != ileptons.end(); lit++)
 	    {
 
@@ -258,13 +276,13 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 			  if(nCorrectAssignments.find(ctf)==nCorrectAssignments.end())
 			    {
 			      nCorrectAssignments[ctf]=0;
-			      totalPairs[ctf]=0;
 			    }
 			  if(mlj>minMlj) 
 			    {
 			      nCorrectAssignments[ctf] += isCorrect;
-			      totalPairs[ctf]++;
 			    }
+			  nCorrectAssignmentsFullSpectrum[ctf] += isCorrect;
+			
 		      
 			  controlHistos.fillHisto("inclusivemlj",ctf,mlj,1,true);
 			  controlHistos.fillHisto(isCorrect ? "correctmlj" : "wrongmlj",ctf,mlj,1,true);
@@ -374,10 +392,14 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       
       alphaEst[ctf]            = nCorrectPairsEst/(2*b);
       alphaEstErr[ctf]         = nCorrectPairsEstErr/(2*b);
-      fCorrectPairsEst[ctf]    = nCorrectPairsEst/nPairsTotal;//-bias[ctf]; //debug me
-      fCorrectPairsEstErr[ctf] = nCorrectPairsEstErr/nPairsTotal;
+      //      fCorrectPairsEst[ctf]    = nCorrectPairsEst/nPairsTotal;//-bias[ctf]; //debug me
+      // fCorrectPairsEstErr[ctf] = nCorrectPairsEstErr/nPairsTotal;
+      fCorrectPairsEst[ctf]    = 1.-nPairsAboveCut/nPairsModelAboveCut-bias[ctf];
+      fCorrectPairsEstErr[ctf] = sqrt(pow(nPairsAboveCut*nPairsModelAboveCutErr,2)+pow(nPairsModelAboveCut*nPairsBelowCutErr,2))/pow(nPairsModelAboveCut,2);
       fTrueCorrectPairs[ctf]   = double(nCorrectAssignments[ctf])/double(nPairsTotal);
-
+      //      fTrueCorrectPairsFullSpectrum[ctf]   = double(nCorrectAssignmentsFullSpectrum[ctf])/double(nPairsTotal);
+      double sfmc              = double(nCorrectAssignmentsFullSpectrum[ctf])/double(nCorrectAssignments[ctf]);
+      
       //average models for posterity
       TString prefix( isData ? "data" : "avg" );
       controlHistos.getHisto( prefix+"inclusivemlj",ctf )->Add( mljInclusiveH );
@@ -392,11 +414,12 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	{
 	  controlHistos.getHisto( "avgjetflavor", ctf )->Add( controlHistos.getHisto("jetflavor",ctf) );
 	  controlHistos.fillHisto("truefcorr", ctf, fTrueCorrectPairs[ctf]);
+	  controlHistos.fillHisto("fcorrsf", ctf, sfmc);
 	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst[ctf]);
 	  controlHistos.fillHisto("knorm",ctf,kNorm[ctf]);
-	  controlHistos.fillHisto("bias",ctf, (nCorrectPairsEst-nCorrectAssignments[ctf])/nCorrectAssignments[ctf] );
-	  controlHistos.fillHisto("pull",ctf, (nCorrectPairsEst-nCorrectAssignments[ctf])/nCorrectPairsEstErr );
-	  controlHistos.fillHisto("staterr",ctf, nCorrectPairsEstErr/nCorrectPairsEst);
+	  controlHistos.fillHisto("bias",ctf, fCorrectPairsEst[ctf]-fTrueCorrectPairs[ctf]);
+	  controlHistos.fillHisto("pull",ctf, (fCorrectPairsEst[ctf]-fTrueCorrectPairs[ctf])/fCorrectPairsEstErr[ctf]);
+	  controlHistos.fillHisto("staterr",ctf, fCorrectPairsEstErr[ctf]/fCorrectPairsEst[ctf]);
 	}
     }
 }

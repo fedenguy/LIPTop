@@ -31,6 +31,8 @@ EnsembleMeasurement_t MassMeasurement::DoMassFit(EventSummaryHandler &evHandler,
       evTree->GetEntry(i);
 
       EventSummary_t &ev = evHandler.getEvent();
+      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+      //      if(phys.met.pt()<20) continue;
       double topMass=ev.evmeasurements[0];
       if(topMass<minTopMass || topMass>maxTopMass) continue;
       int btagMult = ev.evmeasurements[4]; 

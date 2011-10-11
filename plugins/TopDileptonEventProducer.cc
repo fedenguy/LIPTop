@@ -157,11 +157,11 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
       reco::CandidatePtr muonPtr = hMu->ptrAt(iMuon);
       std::vector<double> isol=getLeptonIso(muonPtr,objConfig["LooseMuons"].getParameter<double>("minPt"));
       controlHistos_.fillHisto("rho","muon",*rho,weight);
-      controlHistos_.fillHisto("ecaliso","muon",isol[ECAL_ISO],weight);
-      controlHistos_.fillHisto("hcaliso","muon",isol[HCAL_ISO],weight);
-      controlHistos_.fillHisto("trackiso","muon",isol[TRACKER_ISO],weight);
-      controlHistos_.fillHisto("caloiso","muon",isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
-      controlHistos_.fillHisto("reliso","muon",isol[REL_ISO],weight);
+      controlHistos_.fillHisto("ecaliso","muon",isol[G_ISO],weight);
+      controlHistos_.fillHisto("hcaliso","muon",isol[N_ISO],weight);
+      controlHistos_.fillHisto("trackiso","muon",isol[C_ISO],weight);
+      controlHistos_.fillHisto("caloiso","muon",isol[G_ISO]+isol[N_ISO]+isol[C_ISO],weight);
+      controlHistos_.fillHisto("reliso","muon",isol[PFREL_ISO],weight);
     }
 
   //select electrons (id+conversion veto+very loose isolation)
@@ -186,11 +186,11 @@ void TopDileptonEventProducer::produce(edm::Event &iEvent, const edm::EventSetup
       reco::CandidatePtr elePtr = hEle->ptrAt(iEle);
       std::vector<double> isol=getLeptonIso(elePtr,objConfig["LooseMuons"].getParameter<double>("minPt"));
       controlHistos_.fillHisto("rho","electron",*rho,weight);
-      controlHistos_.fillHisto("ecaliso","electron",isol[ECAL_ISO],weight);
-      controlHistos_.fillHisto("hcaliso","electron",isol[HCAL_ISO],weight);
-      controlHistos_.fillHisto("trackiso","electron",isol[TRACKER_ISO],weight);
-      controlHistos_.fillHisto("caloiso","electron",isol[ECAL_ISO]+isol[HCAL_ISO]+isol[TRACKER_ISO],weight);
-      controlHistos_.fillHisto("reliso","electron",isol[REL_ISO],weight);
+      controlHistos_.fillHisto("ecaliso","electron",isol[G_ISO],weight);
+      controlHistos_.fillHisto("hcaliso","electron",isol[N_ISO],weight);
+      controlHistos_.fillHisto("trackiso","electron",isol[C_ISO],weight);
+      controlHistos_.fillHisto("caloiso","electron",isol[G_ISO]+isol[N_ISO]+isol[C_ISO],weight);
+      controlHistos_.fillHisto("reliso","electron",isol[PFREL_ISO],weight);
       
       if(electron.gsfTrack().isNull()) continue;
       controlHistos_.fillHisto("electron_"+cat+"misshits","electron",electron.gsfTrack()->trackerExpectedHitsInner().numberOfHits(),weight);
