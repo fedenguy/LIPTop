@@ -45,7 +45,7 @@ TopDileptonEventProducer::TopDileptonEventProducer(const edm::ParameterSet &iCon
   produces<std::vector<pat::EventHypothesis> >("selectedEvent");
   produces<reco::VertexCollection>("selectedVertices");
   produces<std::vector<int> >("selectionInfo");
-  std::string objs[]={"Generator", "Vertices", "Electrons", "LooseElectrons", "Muons", "LooseMuons", "Dileptons", "Jets", "MET" };
+  std::string objs[]={"Generator", "Trigger", "Vertices", "Electrons", "LooseElectrons", "Muons", "LooseMuons", "Dileptons", "Jets", "MET" };
   for(size_t iobj=0; iobj<sizeof(objs)/sizeof(string); iobj++)
     objConfig[ objs[iobj] ] = iConfig.getParameter<edm::ParameterSet>( objs[iobj] );
 

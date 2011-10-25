@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
-from CMGTools.HtoZZ2l2nu.StandardSelections_cfi import *
-evAnalyzer = cms.EDAnalyzer("DileptonEventCleaner",
+from LIP.Top.StandardSelections_cfi import *
+evAnalyzer = cms.EDAnalyzer("TopDileptonEventAnalyzer",
                             Trigger = BaseTriggerSelection.clone(),
                             Generator = BaseGeneratorSelection.clone(),
                             Vertices = BaseVertexSelection.clone(),
@@ -13,10 +13,4 @@ evAnalyzer = cms.EDAnalyzer("DileptonEventCleaner",
                             Jets = BaseJetSelection.clone(),
                             MET = BaseMetSelection.clone()
                             )
-
 evAnalyzer.Generator.filterSignal = cms.bool(False)
-evAnalyzer.Muons.id=cms.string("TMLastStationAngTight")
-evAnalyzer.Muons.usePFIso=cms.bool(True)
-evAnalyzer.LooseMuons.usePFIso=cms.bool(True)
-evAnalyzer.Electrons.usePFIso=cms.bool(True)
-evAnalyzer.LooseElectrons.usePFIso=cms.bool(True)

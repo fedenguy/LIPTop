@@ -312,7 +312,7 @@
                 {
                   "dtag":"DoubleElectronPromptRecov6_173380-173692",
                   "dset":"/DoubleElectron/Run2011A-PromptReco-v6/AOD",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/DoubleElectron/DoubleElectron-PromptReco-173380-173692"]
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/DoubleElectron/DoubleElectron-PromptReco-173380_173692"]
 		},
                 {
                   "dtag":"MuEGPromptRecov6_173380-173692",

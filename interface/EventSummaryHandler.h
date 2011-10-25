@@ -41,7 +41,7 @@ class EventSummaryHandler{
   //c/dtor
   EventSummaryHandler();
   ~EventSummaryHandler();
-  
+
   //current event
   EventSummary_t evSummary_;
   EventSummary_t &getEvent() { return evSummary_; }
@@ -113,8 +113,12 @@ typedef std::vector<PhysicsObject_Lepton> PhysicsObjectLeptonCollection;
 typedef std::vector<PhysicsObject_Jet>    PhysicsObjectJetCollection;
 
 //
-struct PhysicsEvent_t
+class PhysicsEvent_t
 {
+ public:
+  PhysicsEvent_t() {};
+  ~PhysicsEvent_t() {};
+
   LorentzVector met;
   LorentzVector vtx;
   PhysicsObjectJetCollection jets;
@@ -123,6 +127,8 @@ struct PhysicsEvent_t
   PhysicsObjectLeptonCollection leptons;
   LorentzVector top,antitop;
   PhysicsObjectCollection topdecay,antitopdecay;
+
+  static bool sortJetsByBtag(PhysicsObject_Jet a,PhysicsObject_Jet b)   {   return (a.btag1>b.btag1);  }  
 };
 
 //

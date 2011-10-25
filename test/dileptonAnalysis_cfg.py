@@ -7,25 +7,28 @@ from CMGTools.HtoZZ2l2nu.localPatTuples_cff import configureFromCommandLine
 castorDir, outFile, inputList = configureFromCommandLine()
 process.source = cms.Source("PoolSource",
                             fileNames = inputList
-                            #cms.untracked.vstring('file:/afs/cern.ch/user/f/federica/public/CMSSW_4_2_0/src/FastSimulation/ParticleFlow/test/PAT_FastSim_modified_cfg.root')
                             )
 
 print inputList    
 #load the analyzer
-process.load('LIP.Top.TopDileptonEventProducer_cfi')
-process.load('CMGTools.HtoZZ2l2nu.CleanEventFilter_cfi')
 process.load('CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi')
 process.load('LIP.Top.DileptonEventAnalysis_cfi')
-process.evAnalyzer.dtag=cms.string('top')
 process.TFileService = cms.Service("TFileService", fileName = cms.string(outFile) )
 
-#from CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi import getNormalizationForScenario
-#process.puWeights.normalizationDistribution = getNormalizationForScenario("nopileup")
-#process.cleanEvent.Generator.filterSignal=cms.bool(True)
+if(outFile.find('DYJets')>=0 and outFile.find('M20to50')>=0 ) :
+    process.evAnalyzer.Generator.filterDYmassWindow=cms.bool(True) 
+
+from CMGTools.HtoZZ2l2nu.PreselectionSequences_cff import addLumifilter
+if(outFile.find('May10ReReco')>=0):
+    addLumifilter(process,'/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Reprocessing/Cert_160404-163869_7TeV_May10ReReco_Collisions11_JSON_v3.txt')
+if(outFile.find('PromptReco')>=0):
+    addLumifilter(process,'/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Prompt/Cert_160404-178078_7TeV_PromptReco_Collisions11_JSON.txt')
+if(outFile.find('05AugReReco')>=0):
+    addLumifilter(process,'/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions11/7TeV/Reprocessing/Cert_170249-172619_7TeV_ReReco5Aug_Collisions11_JSON_v3.txt')
+
 
 #process the analysis
-process.p = cms.Path(process.puWeights*process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
-#process.p = cms.Path(process.cleanEvent*process.cleanEventFilter*process.evAnalyzer)
+process.p = cms.Path(process.puWeights*process.evAnalyzer)
 
 # message logger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")

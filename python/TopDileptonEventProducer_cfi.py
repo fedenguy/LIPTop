@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-from CMGTools.HtoZZ2l2nu.StandardSelections_cfi import *
+from LIP.Top.StandardSelections_cfi import *
 cleanEvent = cms.EDProducer("TopDileptonEventProducer",
                             Trigger = BaseTriggerSelection.clone(),
                             Generator = BaseGeneratorSelection.clone(),
@@ -14,8 +14,4 @@ cleanEvent = cms.EDProducer("TopDileptonEventProducer",
                             MET = BaseMetSelection.clone()
                             )
 cleanEvent.Generator.filterSignal = cms.bool(False)
-cleanEvent.Muons.id=cms.string("TMLastStationAngTight")
-cleanEvent.Muons.usePFIso=cms.bool(True)
-cleanEvent.LooseMuons.usePFIso=cms.bool(True)
-cleanEvent.Electrons.usePFIso=cms.bool(True)
-cleanEvent.LooseElectrons.usePFIso=cms.bool(True)
+

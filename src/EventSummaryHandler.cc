@@ -196,12 +196,11 @@ PhysicsEvent_t getPhysicsEventFrom(EventSummary_t &ev)
 	  newev.met = p4;
 	  break;
 	case 1:
-	  if(p4.pt()>30 && fabs(p4.eta())<2.5)
-	    {
-	      newev.jets.push_back( PhysicsObject_Jet(p4,ev.genid[ipart],ev.genflav[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info4[ipart], ev.info5[ipart], ev.info6[ipart], ev.info7[ipart], ev.info8[ipart],ev.info9[ipart]) );
-	      newev.nbjets +=(fabs(ev.genflav[ipart])==5);
-	      newev.nljets +=(fabs(ev.genflav[ipart])!=5);
-	    }
+	  {
+	    newev.jets.push_back( PhysicsObject_Jet(p4,ev.genid[ipart],ev.genflav[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info4[ipart], ev.info5[ipart], ev.info6[ipart], ev.info7[ipart], ev.info8[ipart],ev.info9[ipart]) );
+	    newev.nbjets +=(fabs(ev.genflav[ipart])==5);
+	    newev.nljets +=(fabs(ev.genflav[ipart])!=5);
+	  }
 	  break;
 	default:
 	  newev.leptons.push_back( PhysicsObject_Lepton(p4,ev.id[ipart],ev.genid[ipart]) );

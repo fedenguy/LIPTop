@@ -52,6 +52,13 @@ namespace gen
 	 @short finds TTchannel
       */
       int assignTTEvent(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+
+
+      /**
+	 @short get DY->ll mass
+       */
+      float getDYMass(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+      
     };
   }
 }

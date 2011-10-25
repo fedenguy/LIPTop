@@ -230,6 +230,30 @@ namespace gen
 	
       return ttChannel;
     }
+    
+
+    //
+    float Event::getDYMass(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+    {
+      //retrieve the generator level particle collection     
+      edm::Handle<edm::View<reco::GenParticle> > genParticles;
+      iEvent.getByLabel(genLabel_, genParticles);
+
+      float mass(0.);
+      for(size_t i = 0; i < genParticles->size(); ++ i) 
+	{
+	  const reco::GenParticle & p = (*genParticles)[i];
+	  int id_p   = p.pdgId();   
+	  
+	  //select Z
+	  if(abs(id_p) != 23 && abs(id_p)!=22) continue;   
+	  if( p.status()!=3) continue;
+	  
+	  mass = p.mass();
+	  break;
+	}
+      return mass;
+    }
   }
 }
 

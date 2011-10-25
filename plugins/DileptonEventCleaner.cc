@@ -77,11 +77,12 @@ DileptonEventCleaner::DileptonEventCleaner(const edm::ParameterSet& cfg)
     objConfig_["Trigger"] = cfg.getParameter<edm::ParameterSet>("Trigger");
     objConfig_["Vertices"] = cfg.getParameter<edm::ParameterSet>("Vertices");
     objConfig_["Jets"] = cfg.getParameter<edm::ParameterSet>("Jets");
+    objConfig_["Dileptons"] = cfg.getParameter<edm::ParameterSet>("Dileptons");
     objConfig_["Generator"] = cfg.getParameter<edm::ParameterSet>("Generator");
 
     TFileDirectory baseDir=fs->mkdir(cfg.getParameter<std::string>("dtag"));    
     TString streams[]={"ee","mumu","emu"};
-    TString selSteps[]={"Reco","2 leptons","Z-veto","#geq 2 jets","MET>40,0","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
+    TString selSteps[]={"Reco","2 leptons","M_{ll}>M_{min}","#geq 2 jets","MET>40,0","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
     const size_t nselsteps=sizeof(selSteps)/sizeof(TString);
     controlHistos_.addHistogram( baseDir.make<TH1F>("cutflow", ";Step; Events",nselsteps,0,nselsteps),false ); 
     for(size_t istream=0; istream<sizeof(streams)/sizeof(TString); istream++)
@@ -280,7 +281,8 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
         
     //Z+quarkonia veto
     bool isZCand(false);
-    if(dileptonP.mass()<20) return;
+    double minDileptonMass = objConfig_["Dileptons"].getParameter<double>("minDileptonMass");
+    if(dileptonP.mass()<minDileptonMass) return;
     if( (istream=="ee" || istream=="mumu") && fabs(dileptonP.mass()-91)<15) isZCand=true;
     if(!isZCand)
       {
@@ -292,11 +294,13 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
     std::vector<reco::CandidatePtr> seljets= evhyp.all("jet");
     int njets(0), nbjets(0);
     std::vector<const pat::Jet *> selJets,assocJets;
+    float minJetPt = objConfig_["Jets"].getParameter<double>("minPt");
+    float maxJetEta = objConfig_["Jets"].getParameter<double>("maxEta");
     for (pat::eventhypothesis::Looper<pat::Jet> jet = evhyp.loopAs<pat::Jet>("jet"); jet; ++jet) 
       {
 	
 	assocJets.push_back( jet.get() );
-	if(jet->pt()<30 || fabs(jet->eta())>2.5) continue;
+	if(jet->pt()<minJetPt || fabs(jet->eta())>maxJetEta) continue;
 	selJets.push_back( jet.get() );
 	
 	float btag=jet->bDiscriminator("trackCountingHighEffBJetTags");
@@ -365,8 +369,7 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
       }
 
     //require met for same flavor channels
-    //if(metP.pt()<20) return;
-    if( (istream=="ee" || istream=="mumu") && met.pt()<40) return;
+    //if( (istream=="ee" || istream=="mumu") && met.pt()<30) return;
     if(!isZCand)
       {
 	controlHistos_.fillHisto(istream+"_cutflow","all",4,weight);
@@ -464,7 +467,6 @@ void DileptonEventCleaner::analyze(const edm::Event& event,const edm::EventSetup
 //
 void DileptonEventCleaner::endLuminosityBlock(const edm::LuminosityBlock & iLumi, const edm::EventSetup & iSetup)
 {
-  cout << "[DileptonEventCleaner][endLuminosityBlock]" << endl;
   TString streams[]={"ee","mumu","emu"};
   edm::Handle<edm::MergeableCounter> ctrHandle;
   iLumi.getByLabel("startCounter", ctrHandle);

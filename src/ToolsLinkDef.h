@@ -44,7 +44,7 @@
 #pragma link C++ typedef PhysicsObjectCollection;
 #pragma link C++ typedef PhysicsObjectLeptonCollection;
 #pragma link C++ typedef PhysicsObjectJetCollection;
-#pragma link C++ struct PhysicsEvent_t;
+#pragma link C++ class PhysicsEvent_t;
 #pragma link C++ function getPhysicsEventFrom;
 #pragma link C++ class HeavyFlavorPDF;
 #pragma link C++ class HeavyFlavorDiffPDF;
