@@ -39,7 +39,7 @@ BaseMuonsSelection = cms.PSet( source = cms.InputTag("selectedPatMuonsPFlow"),
                                minValidMuonHits=cms.int32(1),
                                maxDistToBeamSpot=cms.double(0.02),
                                id = cms.string("GlobalMuonPromptTight"),
-                               maxRelIso = cms.double(0.2),
+                               maxRelIso = cms.double(0.15),
                                usePFIso = cms.bool(True)
                                )
 
@@ -79,8 +79,8 @@ BaseLooseElectronsSelection = BaseElectronsSelection.clone( minPt = cms.double(5
 BaseJetSelection = cms.PSet( source = cms.InputTag("selectedPatJetsPFlow"),
                              rho = cms.InputTag("kt6PFJetsPFlow:rho"),
                              jetId = cms.PSet( version = cms.string("FIRSTDATA"), quality = cms.string("LOOSE") ),
-                             minPt = cms.double(20),
-                             maxEta = cms.double(2.5),
+                             minPt = cms.double(15.),
+                             maxEta = cms.double(5.0),
                              minDeltaRtoLepton = cms.double(0.4)
                              )
 

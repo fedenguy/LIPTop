@@ -77,7 +77,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
       objConfig_[ objs[iobj] ] = cfg.getParameter<edm::ParameterSet>( objs[iobj] );
 
     //monitoring histograms
-    TString selSteps[]={"Reco","2 leptons","M_{ll}>M_{min}","#geq 2 jets","MET>40,0","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
+    TString selSteps[]={"Reco","2 leptons","M_{ll}","#geq 2 jets","MET>30,0","OS","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
     const size_t nselsteps=sizeof(selSteps)/sizeof(TString);
     controlHistos_.addHistogram("cutflow", ";Step; Events",nselsteps,0,nselsteps);
     for(int ibin=1; ibin<=controlHistos_.getHisto("cutflow","all")->GetXaxis()->GetNbins(); ibin++)
@@ -115,14 +115,18 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.addHistogram("jetpt",";p_{T} [GeV/c]; Jets",100,0,200);
     controlHistos_.addHistogram("jeteta",";#eta; Jets",100,-2.5,2.5);
     controlHistos_.addHistogram("njets",";Jet multiplicity; Events",4,0,4);
+    controlHistos_.addHistogram("njetsfinal",";Jet multiplicity; Events",4,0,4);
     controlHistos_.addHistogram("btags",";b tags (TCHE); Jets",100,-1,50);
     controlHistos_.addHistogram("bmult",";b tag multiplicity (TCHEL); Events",4,0,4);
+    controlHistos_.addHistogram("bmultfinal",";b tag multiplicity (TCHEL); Events",4,0,4);
     for(int ibin=1; ibin<=controlHistos_.getHisto("njets","all")->GetXaxis()->GetNbins(); ibin++)
       {
 	TString ilabel(""); ilabel+=(ibin-1);
 	if(ibin==controlHistos_.getHisto("njets","all")->GetXaxis()->GetNbins()) ilabel="#geq"+ilabel;
 	controlHistos_.getHisto("njets","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
+	controlHistos_.getHisto("njetsfinal","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
 	controlHistos_.getHisto("bmult","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
+	controlHistos_.getHisto("bmultfinal","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
       }
 
     //MET
@@ -302,8 +306,8 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	    controlHistos_.fillHisto(lepType+"reliso",ctf,isol[lepton::PFREL_ISO] , weight);
 	  }
       }    
-
     if(selLeptons.size()<2) return;
+
     selStreams.clear();
     selStreams.push_back("all");
     if(selElectrons.size()>1) selStreams.push_back("ee");
@@ -330,6 +334,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     float dilpt=dileptonP.pt();
     float dilmass=dileptonP.mass();
     bool isZCand( ( (selPath==dilepton::EE || selPath==dilepton::MUMU) && fabs(dilmass-91)<15) );
+    bool isOS(lepton1->charge()*lepton2->charge()<0);
     double minDileptonMass = objConfig_["Dileptons"].getParameter<double>("minDileptonMass");
     double maxDileptonMass = objConfig_["Dileptons"].getParameter<double>("maxDileptonMass");
     if(dilmass<minDileptonMass || dilmass>maxDileptonMass) return;
@@ -349,20 +354,17 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	if(!isZCand) controlHistos_.fillHisto("cutflow",ctf,2.,weight);
       }
 
-    //leptons to save in the tree
+    //leptons to save in the tree (dilepton+all selected loose leptons) 
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);
     leptons.push_back(lepton2);
-    for(size_t il=0; il<2; il++)
+    for(CandidateWithVertexCollection::iterator lit = selLooseLeptons.begin(); lit != selLooseLeptons.end(); lit++)
       {
-	for(CandidateWithVertexCollection::iterator lit = selLooseLeptons.begin(); lit != selLooseLeptons.end(); lit++)
-	  {
-	    if(deltaR(lit->first->eta(),lit->first->phi(),lepton1->eta(),lepton1->phi())<0.1 
-	       || deltaR(lit->first->eta(),lit->first->phi(),lepton2->eta(),lepton2->phi())<0.1 ) continue;
-	    leptons.push_back(lit->first);
-	  }
+	if(deltaR(lit->first->eta(),lit->first->phi(),lepton1->eta(),lepton1->phi())<0.1 
+	   || deltaR(lit->first->eta(),lit->first->phi(),lepton2->eta(),lepton2->phi())<0.1 ) continue;
+	leptons.push_back(lit->first);
       }
-
+    
 
     //
     // JETS
@@ -371,7 +373,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     edm::Handle<edm::View<reco::Candidate> > hJet;
     event.getByLabel(objConfig_["Jets"].getParameter<edm::InputTag>("source"), hJet);
     CandidateWithVertexCollection jets = jet::filter(hJet, selLeptons, selVertices, objConfig_["Jets"]);
-    int njets(jets.size()), nbjets(0);
+    int njets(0), nbjets(0);
     std::vector<const pat::Jet *> selJets;
     if(!isZCand)
       {
@@ -379,9 +381,11 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	  {
 	    const pat::Jet *j=dynamic_cast<const pat::Jet*>(jit->first.get());
 	    selJets.push_back(j);
+	    
+	    if(j->pt()>30 && fabs(j->eta())<2.5) njets++;
 	    float btag=j->bDiscriminator("trackCountingHighEffBJetTags");
 	    if(btag>1.74) nbjets+=1; //loose point
-	    
+	       
 	    for(size_t is=0; is<selStreams.size(); is++)
 	      {
 		TString ctf=selStreams[is];
@@ -406,9 +410,11 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	    controlHistos_.fillHisto("njets",ctf,njets,weight);
 	  }
       }
-    if(njets<2) return;
-
-    if(!isZCand)
+    bool passJets(njets>=2);
+    int btagbin(nbjets);
+    if(btagbin>2) btagbin=2;
+    
+    if(!isZCand && passJets)
       {
 	for(size_t is=0; is<selStreams.size(); is++)
 	  {
@@ -430,25 +436,33 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     float chargedemetfrac=pfmet.ChargedEMEtFraction();
     float chargedhadetfrac=pfmet.ChargedHadEtFraction();
     float muonetfrac=pfmet.MuonEtFraction();
+    bool passMET( selPath==dilepton::EMU || met.pt()>30);  
     if(!isZCand)
       {
-	bool passMET( selPath==dilepton::EMU || met.pt()>30);
-	int btagbin(nbjets);
-	if(btagbin>2) btagbin=2;
-	
 	for(size_t is=0; is<selStreams.size(); is++)
 	  {
 	    TString ctf=selStreams[is];
-	    controlHistos_.fillHisto("met",ctf,met.pt(),weight);
-	    controlHistos_.fillHisto("neutralhadetfrac",ctf,neutralhadetfrac,weight);
-	    controlHistos_.fillHisto("neutralemetfrac",ctf,neutralemetfrac,weight);
-	    controlHistos_.fillHisto("chargedemetfrac",ctf,chargedemetfrac,weight);
-	    controlHistos_.fillHisto("chargedhadetfrac",ctf,chargedhadetfrac,weight);
-	    controlHistos_.fillHisto("muonetfrac",ctf,muonetfrac,weight);
-	      
+	    if(passJets)
+	      {
+		controlHistos_.fillHisto("met",ctf,met.pt(),weight);
+		controlHistos_.fillHisto("neutralhadetfrac",ctf,neutralhadetfrac,weight);
+		controlHistos_.fillHisto("neutralemetfrac",ctf,neutralemetfrac,weight);
+		controlHistos_.fillHisto("chargedemetfrac",ctf,chargedemetfrac,weight);
+		controlHistos_.fillHisto("chargedhadetfrac",ctf,chargedhadetfrac,weight);
+		controlHistos_.fillHisto("muonetfrac",ctf,muonetfrac,weight);
+	      }
+	    
 	    if(!passMET) continue;
-	    controlHistos_.fillHisto("cutflow",ctf,4,weight);
-	    controlHistos_.fillHisto("cutflow",ctf,5.+btagbin,weight);
+	    if(passJets) controlHistos_.fillHisto("cutflow",ctf,4,weight);
+	    if(!isOS) continue;
+	
+	    if(passJets) controlHistos_.fillHisto("cutflow",ctf,5,weight);
+	    controlHistos_.fillHisto("njetsfinal",ctf,njets,weight);
+	    if(passJets) 
+	      {
+		controlHistos_.fillHisto("bmultfinal",ctf,nbjets,weight);
+		controlHistos_.fillHisto("cutflow",ctf,6.+btagbin,weight);
+	      }
 	  }
       }
     
