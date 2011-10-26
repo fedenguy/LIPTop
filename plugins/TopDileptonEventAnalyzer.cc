@@ -71,6 +71,10 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
 {
   try{
 
+    //summary tree 
+    edm::Service<TFileService> fs;
+    summaryHandler_.initTree( fs->make<TTree>("data","Event Summary") );
+
     //configure the selection
     std::string objs[]={"Generator", "Trigger", "Vertices", "Electrons", "LooseElectrons", "Muons", "LooseMuons", "Dileptons", "Jets", "MET" };
     for(size_t iobj=0; iobj<sizeof(objs)/sizeof(string); iobj++)
@@ -142,10 +146,6 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.initMonitorForStep("emu");
     controlHistos_.initMonitorForStep("mumu");
 
-    //summary tree 
-    edm::Service<TFileService> fs;
-    summaryHandler_.initTree( fs->make<TTree>("data","Event Summary") );
-
   }catch(std::exception &e){
   }  
 }
@@ -169,6 +169,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     int npuOOT(0),npuIT(0);
     int gentteventcode=gen::top::Event::UNKNOWN;
     float dyMass(0.);
+    summaryHandler_.evSummary_.nmcparticles=0;
     if(!event.isRealData())
       {
 	edm::Handle<float> puWeightHandle;
@@ -205,7 +206,6 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	genParticles["quarks"] = genEvent_.quarks;
 	genParticles["leptons"] = genEvent_.leptons;
 	genParticles["neutrinos"]  = genEvent_.neutrinos;
-	summaryHandler_.evSummary_.nmcparticles=0;
 	for(std::map<std::string,std::list<reco::CandidatePtr> >::iterator it = genParticles.begin();
 	    it != genParticles.end(); it++)
 	  {
@@ -575,7 +575,7 @@ void TopDileptonEventAnalyzer::saveEvent(const edm::Event& event, int evCat, std
   summaryHandler_.evSummary_.id[pidx] = 0;
   summaryHandler_.evSummary_.genid[pidx] = -9999;
   summaryHandler_.evSummary_.genflav[pidx] = -9999;
-
+  
   //no further measurements for now
   summaryHandler_.evSummary_.nmeasurements=0;
 

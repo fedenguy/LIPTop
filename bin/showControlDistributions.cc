@@ -362,28 +362,24 @@ int main(int argc, char* argv[])
   for (int inum=evStart; inum < evEnd; ++inum)
     {
       if(inum%500==0) printf("\r [ %d/100 ] %s",int(100*float(inum-evStart)/float(evEnd)),evurl.Data());
-      cout << "here? "<< inum << endl;
+    
       evTree->GetEvent(inum);
-      cout << inum << endl;
       EventSummary_t &ev = evSummaryHandler.getEvent();
-      cout << "passed" << endl;
       if(isMC && mcTruthMode>0)
 	{
 	  if(mcTruthMode==1 && !ev.isSignal) continue;
 	  if(mcTruthMode==2 && ev.isSignal)  continue;
 	}
-      cout << ev.run << " " << ev.cat << endl;
+      
       if(duplicatesChecker.isDuplicate(ev.run,ev.lumi, ev.event,ev.cat)){ 
-	cout << ev.run << " " << ev.cat << endl;
 	NumberOfDuplicated++; continue; 
       }
-      cout << "here??" << endl;
       float puweight = ev.weight/cnorm;    
       float normWeight = ev.normWeight;
 
       //get particles from event
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-      cout << "or here???" << endl;
+      
       bool isSameFlavor(false);
       TString ch("");
       if(ev.cat==dilepton::MUMU)  { isSameFlavor=true; ch="mumu"; }
@@ -650,7 +646,7 @@ int main(int argc, char* argv[])
 	  bool passMtCut(mtsum>75);
 	  bool passTightLepton(min(l1.pt(),l2.pt())>40);
 	  bool passTightJets(nseljetsTight>1);
-	  cout << isInQuarkoniaRegion << " " << isZcand << " " << passLooseJets << " "<< passMet << " " << isOS << endl;
+	  
 
 	  //fill selection histograms
 	  for(size_t ictf=0; ictf<nCatsToFill; ictf++)
