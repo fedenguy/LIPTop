@@ -362,24 +362,28 @@ int main(int argc, char* argv[])
   for (int inum=evStart; inum < evEnd; ++inum)
     {
       if(inum%500==0) printf("\r [ %d/100 ] %s",int(100*float(inum-evStart)/float(evEnd)),evurl.Data());
-
+      cout << "here? "<< inum << endl;
       evTree->GetEvent(inum);
+      cout << inum << endl;
       EventSummary_t &ev = evSummaryHandler.getEvent();
+      cout << "passed" << endl;
       if(isMC && mcTruthMode>0)
 	{
 	  if(mcTruthMode==1 && !ev.isSignal) continue;
 	  if(mcTruthMode==2 && ev.isSignal)  continue;
 	}
+      cout << ev.run << " " << ev.cat << endl;
       if(duplicatesChecker.isDuplicate(ev.run,ev.lumi, ev.event,ev.cat)){ 
 	cout << ev.run << " " << ev.cat << endl;
 	NumberOfDuplicated++; continue; 
       }
+      cout << "here??" << endl;
       float puweight = ev.weight/cnorm;    
       float normWeight = ev.normWeight;
 
       //get particles from event
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-
+      cout << "or here???" << endl;
       bool isSameFlavor(false);
       TString ch("");
       if(ev.cat==dilepton::MUMU)  { isSameFlavor=true; ch="mumu"; }
@@ -421,10 +425,12 @@ int main(int argc, char* argv[])
       std::vector< std::pair<LorentzVector,double> > correctPairKin, wrongPairKin; 
       for(size_t ijet=0; ijet<orderedJetColl.size(); ijet++)
 	{
-	  jets.push_back(orderedJetColl[ijet]);
 	  float pt=orderedJetColl[ijet].pt();
-	  if(pt<30) continue;
+	  float eta=orderedJetColl[ijet].eta();
+	  if(pt<20 || fabs(eta)>2.5) continue;
+	  jets.push_back(orderedJetColl[ijet]);
 
+	  if(pt<30) continue;
 	  bool hasBflavor(fabs(orderedJetColl[ijet].flavid)==5);
 	  TString flavCat(( hasBflavor ? "b" : "udscg" ) );
 	  int ptbins[2]={0,0};
@@ -530,11 +536,18 @@ int main(int argc, char* argv[])
 	  	  
 	  //kinematics with propagated variations
 	  int nseljetsLoose(0), nseljetsTight(0);
+	  LorentzVectorCollection prunedJetColl;
 	  for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
 	    {
-	      nseljetsLoose += (jetColl[ijet].pt()>30 && fabs(jetColl[ijet].eta())<2.5);
-	      nseljetsTight += (jetColl[ijet].pt()>40 && fabs(jetColl[ijet].eta())<2.5);
+	      if(jetColl[ijet].pt()>30 && fabs(jetColl[ijet].eta())<2.5)
+		{
+		  nseljetsLoose ++;
+		  prunedJetColl.push_back(jetColl[ijet]);
+		  nseljetsTight += (jetColl[ijet].pt()>40 && fabs(jetColl[ijet].eta())<2.5);
+		}
 	    }
+	  jetColl=prunedJetColl;
+
 	  double acosine      = getArcCos(l1,l2);
 	  double ptsum        = l1.pt()+l2.pt();
 	  double drll         = deltaR(l1,l2);
@@ -571,7 +584,7 @@ int main(int argc, char* argv[])
 	  //lepton-jet pairs with leading b-ranked jets
 	  LorentzVector l1ji[2]={LorentzVector(0,0,0,0),LorentzVector(0,0,0,0)};
 	  LorentzVector l2ji[2]={LorentzVector(0,0,0,0),LorentzVector(0,0,0,0)};
-	  if(jetColl.size()>1) {
+	  if(nseljetsLoose>1) {
 	    l1ji[0]=l1+jetColl[0]; l1ji[1]=l1+jetColl[1];
 	    l2ji[0]=l2+jetColl[0]; l2ji[1]=l2+jetColl[1];
 	  }
@@ -580,27 +593,30 @@ int main(int argc, char* argv[])
 	  LorentzVector mostIsolPair,   leastIsolPair;
 	  LorentzVector mostIsolLepton, leastIsolLepton;
 	  float mostIsolDr(0), leastIsolDr(0);
-	  if(minL1ji < minL2ji)
+	  if(nseljetsLoose)
 	    {
-	      mostIsolLepton=l1;
-	      leastIsolLepton=l2;
-	      int iComb1=(l1ji[0].mass()<l1ji[1].mass() ? 0 : 1);
-	      int iComb2=(iComb1==0 ? 1 : 0); 
-	      mostIsolPair=l1ji[iComb1]; 
-	      leastIsolPair=l2ji[iComb2]; 
-	      mostIsolDr = deltaR(l1,jetColl[iComb1]);
-	      leastIsolDr = deltaR(l2,jetColl[iComb2]);
-	    }
-	  else
-	    {
-	      leastIsolLepton=l1;
-	      mostIsolLepton=l2;
-	      int iComb2=(l2ji[0].mass()<l2ji[1].mass() ? 0 : 1);
-	      int iComb1=(iComb2==0 ? 1 : 0);
-	      mostIsolPair=l2ji[iComb2];
-	      leastIsolPair=l1ji[iComb1];
-	      leastIsolDr = deltaR(l1,jetColl[iComb1]);
-	      mostIsolDr = deltaR(l2,jetColl[iComb2]);
+	      if(minL1ji < minL2ji)
+		{
+		  mostIsolLepton=l1;
+		  leastIsolLepton=l2;
+		  int iComb1=(l1ji[0].mass()<l1ji[1].mass() ? 0 : 1);
+		  int iComb2=(iComb1==0 ? 1 : 0); 
+		  mostIsolPair=l1ji[iComb1]; 
+		  leastIsolPair=l2ji[iComb2]; 
+		  mostIsolDr = deltaR(l1,jetColl[iComb1]);
+		  leastIsolDr = deltaR(l2,jetColl[iComb2]);
+		}
+	      else
+		{
+		  leastIsolLepton=l1;
+		  mostIsolLepton=l2;
+		  int iComb2=(l2ji[0].mass()<l2ji[1].mass() ? 0 : 1);
+		  int iComb1=(iComb2==0 ? 1 : 0);
+		  mostIsolPair=l2ji[iComb2];
+		  leastIsolPair=l1ji[iComb1];
+		  leastIsolDr = deltaR(l1,jetColl[iComb1]);
+		  mostIsolDr = deltaR(l2,jetColl[iComb2]);
+		}
 	    }
 	  float mostIsolMt = mtComp.compute(mostIsolLepton,theMET,false);
 	  float leastIsolMt = mtComp.compute(leastIsolLepton,theMET,false);
@@ -634,7 +650,8 @@ int main(int argc, char* argv[])
 	  bool passMtCut(mtsum>75);
 	  bool passTightLepton(min(l1.pt(),l2.pt())>40);
 	  bool passTightJets(nseljetsTight>1);
-	  
+	  cout << isInQuarkoniaRegion << " " << isZcand << " " << passLooseJets << " "<< passMet << " " << isOS << endl;
+
 	  //fill selection histograms
 	  for(size_t ictf=0; ictf<nCatsToFill; ictf++)
 	    {

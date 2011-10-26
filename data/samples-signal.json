@@ -168,12 +168,41 @@
 	 "lcolor":1,
          "data":[
 		{
- 	        "dtag":"TTJets_signal",
+ 	        "dtag":"TTJets_signaldd",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
                 "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	  ]
+	},
+        {
+           "tag":"data",
+           "isdata":true,
+           "color":1,
+           "fill":0,
+           "marker":20,
+           "data":[
+               {
+                  "dtag":"DoubleMuMay10ReReco",
+                  "dset":"/DoubleMu/Run2011A-May10ReReco-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v1/DoubleMu-May10ReReco"]
+	        },
+	        {
+	          "dtag":"SingleMuMay10ReReco",
+	          "dset":"/SingleMu/Run2011A-May10ReReco-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v1/SingleMu-May10ReReco"]
+             	},
+		{
+		  "dtag":"DoubleElectronMay10ReReco",
+		  "dset":"/DoubleElectron/Run2011A-May10ReReco-v1/AOD",
+                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v1_fix/DoubleElectron-May10ReReco"]
+	        },
+                {
+                  "dtag":"MuEGMay10ReReco",
+		   "dset":"/MuEG/Run2011A-May10ReReco-v1/AOD",
+	          "patdir":["/castor/cern.ch/cms/store/cmst3/user/cerminar/zzllvv_42X_v1/MuEG-May10ReReco"]
+                }
+	   ]
 	}
     ]	
 }

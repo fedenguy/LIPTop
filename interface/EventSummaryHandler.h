@@ -15,7 +15,7 @@
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > LorentzVector;
 typedef std::vector<LorentzVector> LorentzVectorCollection;
 
-#define MAXPARTICLES 25
+#define MAXPARTICLES 100
 #define MAXMEASUREMENTS 10
 struct EventSummary_t
 {
