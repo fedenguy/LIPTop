@@ -131,8 +131,6 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( (TH1 *) lepMult->Clone("ssnleptons") );
   controlHistos.addHistogram( new TH1D("dilarccosine",";arcCos(l,l');Events",100,-3.2,3.2) );
   controlHistos.addHistogram( new TH1D("dilcharge",";Charge;Events",3,-1.5,1.5) );
-  controlHistos.addHistogram( new TH1D("mtsum",";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
-  controlHistos.addHistogram( new TH1D("ptsum",";p_{T}(l^{(1)})+p_{T}(l^{(2)});Events",100,0,500) );
   controlHistos.addHistogram( new TH1D("dphill",";#Delta#phi(l^{(1)},l^{(2)});Events",100,-3.2,3.2) );
   controlHistos.addHistogram( new TH1D("drll",";#Delta R(l^{(1)},l^{(2)});Events",100,0,6) );
 
@@ -237,8 +235,9 @@ int main(int argc, char* argv[])
       TH1D *cutflowH=new TH1D("evtflow"+cats[ivar],";Cutflow;Events",nsteps,0,nsteps);
       for(int ibin=0; ibin<nsteps; ibin++) cutflowH->GetXaxis()->SetBinLabel(ibin+1,labels[ibin]);
       controlHistos.addHistogram( cutflowH );
-
       controlHistos.addHistogram( new TH1D("dilmassctr"+cats[ivar],";Region;Events",2,0,2) );
+      controlHistos.addHistogram( new TH1D("mtsum"+cats[ivar],";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
+      controlHistos.addHistogram( new TH1D("ptsum"+cats[ivar],";p_{T}(l^{(1)})+p_{T}(l^{(2)});Events",100,0,500) );
     }
 
   //TMVA configuration
@@ -329,6 +328,12 @@ int main(int argc, char* argv[])
     }
   cout << " Xsec x Br=" << xsec << " analyzing " << totalEntries << "/" << cnorm << " original events"<< endl;
 
+  //efficiency (trigger,id+isolation) corrections for the different channels
+  std::map<int,float> effCorr;
+  effCorr[dilepton::MUMU] = 0.92*pow(1.0,2);
+  effCorr[dilepton::EMU]  = 1.0*1.0*0.96;
+  effCorr[dilepton::EE]   = 1.0*pow(0.96,2);
+
   //check PU normalized entries                                                                                                                                                                                                                                                                              
   evTree->Draw(">>elist","normWeight==1");
   TEventList *elist = (TEventList*)gDirectory->Get("elist");
@@ -390,6 +395,8 @@ int main(int argc, char* argv[])
       TString catsToFill[]={"all",ch};
       const size_t nCatsToFill=sizeof(catsToFill)/sizeof(TString);            
 
+      //efficiency correction for MC
+      if(isMC && ev.isSignal) puweight *= effCorr[ev.cat];
 
       //b-tag analysis
       bcomp.compute(phys.nbjets,phys.nljets);
@@ -637,17 +644,16 @@ int main(int argc, char* argv[])
 	      for(size_t imet=0; imet<methodList.size(); imet++)
 		discriResults[imet]=tmvaReader->EvaluateMVA( methodList[imet] );
 	    }
-	  
+
 	  bool isInQuarkoniaRegion( dileptonSystem.mass()<12 );
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( !isSameFlavor || (theMET.pt()>40) );
+	  bool passMet( !isSameFlavor || (theMET.pt()>30) );
 	  bool isOS(dilcharge<0);
 	  bool passMtCut(mtsum>75);
 	  bool passTightLepton(min(l1.pt(),l2.pt())>40);
 	  bool passTightJets(nseljetsTight>1);
 	  
-
 	  //fill selection histograms
 	  for(size_t ictf=0; ictf<nCatsToFill; ictf++)
 	    {
@@ -686,6 +692,9 @@ int main(int argc, char* argv[])
 		  selEvents+=weight;
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELOS,weight);
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SEL0BTAGS+btagbin,weight);
+		  controlHistos.fillHisto("mtsum"+cats[ivar],ctf,mtsum,weight);
+		  controlHistos.fillHisto("ptsum"+cats[ivar],ctf,ptsum,weight);
+
 		  if(ivar==0)
 		    {
 		      if(isMC)
@@ -754,8 +763,6 @@ int main(int argc, char* argv[])
 		      controlHistos.fillHisto("dphimetleastisolep",ctf,fabs(deltaPhi( leastIsolLepton.phi(),theMET.phi())),weight);
 		      controlHistos.fillHisto("nleptons",ctf,phys.leptons.size()-2,weight);
 		      controlHistos.fillHisto("alpha",ctf,min(nGoodassigments,2),weight);
-		      controlHistos.fillHisto("mtsum",ctf,mtsum,weight);
-		      controlHistos.fillHisto("ptsum",ctf,ptsum,weight);
 		      controlHistos.fillHisto("leadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),weight);
 		      controlHistos.fillHisto("subleadjet",ctf,min(jetColl[0].pt(),jetColl[1].pt()),weight);
 		      controlHistos.fill2DHisto("leadjetvssubleadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),min(jetColl[0].pt(),jetColl[1].pt()),weight);

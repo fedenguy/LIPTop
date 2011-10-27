@@ -375,17 +375,18 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     CandidateWithVertexCollection jets = jet::filter(hJet, selLeptons, selVertices, objConfig_["Jets"]);
     int njets(0), nbjets(0);
     std::vector<const pat::Jet *> selJets;
-    if(!isZCand)
+    for(CandidateWithVertexCollection::iterator jit = jets.begin(); jit!=jets.end(); jit++)
       {
-	for(CandidateWithVertexCollection::iterator jit = jets.begin(); jit!=jets.end(); jit++)
-	  {
-	    const pat::Jet *j=dynamic_cast<const pat::Jet*>(jit->first.get());
-	    selJets.push_back(j);
+	const pat::Jet *j=dynamic_cast<const pat::Jet*>(jit->first.get());
+	selJets.push_back(j);
 	    
-	    if(j->pt()>30 && fabs(j->eta())<2.5) njets++;
-	    float btag=j->bDiscriminator("trackCountingHighEffBJetTags");
-	    if(btag>1.74) nbjets+=1; //loose point
-	       
+	if(j->pt()>30 && fabs(j->eta())<2.5) njets++;
+	float btag=j->bDiscriminator("trackCountingHighEffBJetTags");
+	if(btag>1.74) nbjets+=1; //loose point
+
+	//monitor jets
+	if(!isZCand)
+	  {       
 	    for(size_t is=0; is<selStreams.size(); is++)
 	      {
 		TString ctf=selStreams[is];
@@ -393,7 +394,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 		  controlHistos_.fillHisto("jetpt",ctf,j->pt(),weight);
 		  controlHistos_.fillHisto("jeteta",ctf,j->eta(),weight);
 		  controlHistos_.fillHisto("btags",ctf,btag,weight);
-
+		  
 		  controlHistos_.fillHisto("jetchhadenfrac",ctf, j->chargedHadronEnergyFraction(), weight );
 		  controlHistos_.fillHisto("jetneuthadenfrac",ctf, j->neutralHadronEnergyFraction(), weight );
 		  controlHistos_.fillHisto("jetchemenfrac",ctf, j->chargedEmEnergyFraction(),weight );
@@ -403,7 +404,11 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 		}
 	      }
 	  }
+      }
 
+    //monitor jet multiplicity
+    if(!isZCand)
+      {
 	for(size_t is=0; is<selStreams.size(); is++)
 	  {
 	    TString ctf=selStreams[is];
@@ -414,6 +419,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     int btagbin(nbjets);
     if(btagbin>2) btagbin=2;
     
+    //monitor b-tag multiplicity for events with >= 2 jets
     if(!isZCand && passJets)
       {
 	for(size_t is=0; is<selStreams.size(); is++)
