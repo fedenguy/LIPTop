@@ -376,7 +376,7 @@ int main(int argc, char* argv[])
 	  if(mcTruthMode==2 && ev.isSignal)  continue;
 	}
       
-      if(duplicatesChecker.isDuplicate(ev.run,ev.lumi, ev.event,ev.cat)){ 
+      if(duplicatesChecker.isDuplicate( ev.run, ev.lumi, ev.event)){ 
 	NumberOfDuplicated++; continue; 
       }
       float puweight = ev.weight/cnorm;    

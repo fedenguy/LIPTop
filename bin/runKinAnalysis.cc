@@ -25,13 +25,13 @@ int main(int argc, char* argv[])
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
-
+  
   //check arguments
   if ( argc < 2 ) {
     std::cout << "Usage : " << argv[0] << " [parameters.py]" << std::endl;
     return 0;
   }
-
+  
   const edm::ParameterSet &kinProcess = edm::readPSetsFrom(argv[1])->getParameter<edm::ParameterSet>("kinProcess");
   TString url=kinProcess.getParameter<std::string>("input");
   TString output=kinProcess.getParameter<std::string>("output");
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
       file->Close();
       return -1;
     }
-
+  
   //check run range
   if(evEnd<0 || evEnd>evSummaryHandler.getEntries() ) 
     evEnd=evSummaryHandler.getEntries();
@@ -82,6 +82,7 @@ int main(int argc, char* argv[])
   TString localFile(argv[1]);
   localFile.ReplaceAll("_cfg.py",".root"); 
   KinAnalysis kin(scheme,maxTries,maxJetMult,mw,mb,localFile,true);
+
   for( int iev=evStart; iev<evEnd; iev++)
     {
       evSummaryHandler.getEntry(iev);
