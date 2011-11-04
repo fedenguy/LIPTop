@@ -87,10 +87,10 @@ bool EventSummaryHandler::attachToTree(TTree *t)
   t_->GetBranch("info3")->SetAddress(evSummary_.info3);
   t_->GetBranch("info4")->SetAddress(evSummary_.info4);
   t_->GetBranch("info5")->SetAddress(evSummary_.info5);
-  t_->GetBranch("info6")->SetAddress(evSummary_.info6);
-  t_->GetBranch("info7")->SetAddress(evSummary_.info7);
-  t_->GetBranch("info8")->SetAddress(evSummary_.info8);
-  t_->GetBranch("info9")->SetAddress(evSummary_.info9);
+  if(t_->GetBranch("info6")) t_->GetBranch("info6")->SetAddress(evSummary_.info6);
+  if(t_->GetBranch("info7")) t_->GetBranch("info7")->SetAddress(evSummary_.info7);
+  if(t_->GetBranch("info8")) t_->GetBranch("info8")->SetAddress(evSummary_.info8);
+  if(t_->GetBranch("info9")) t_->GetBranch("info9")->SetAddress(evSummary_.info9);
 
   if(t_->GetBranch("nmcparticles"))
     {
