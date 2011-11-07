@@ -72,7 +72,7 @@ class HFCMeasurement
     /**
        @short steer the fit
     */
-    void fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString dilCat);
+    void fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, TString dilCat);
     
     /**
        @short setters for parameters

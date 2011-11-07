@@ -78,7 +78,7 @@ KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, 
 }
 
 //
-void KinAnalysis::runOn(EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc)
+void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc)
 {
   try{
     

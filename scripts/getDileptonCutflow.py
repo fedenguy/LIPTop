@@ -30,6 +30,9 @@ def getInTableFormat(tit,h,isData=False,addErrors=True):
             tableRow += ' & '
             fmtValue = str(int(val))
             if(not isData) :
+                #fmtValue = '%3.0f' % val
+                #fmtValue += '$\\pm$'
+                #fmtValue += '%3.0f' % valerr
                 fmtValue = '%3.2f' % val
                 if(addErrors) :
                     fmtValue = toLatexRounded(val,valerr)
@@ -66,8 +69,6 @@ for o,a in opts:
 
 evCats=['','emu','mumu','ee']
 evTitles=['$Inclusive$','$e\\mu$','$\\mu\\mu$','$ee$']
-systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
-singleSyst= [True,  False,   False,    False,  False]
 
 procs=[
     "Di-bosons",
@@ -78,18 +79,32 @@ procs=[
     "t#bar{t} dileptons",
     "data"
     ]
+procs=["data"]
+#procs=[
+#    "WH80", "HH80",
+#    "WH90", "HH90",
+#    "WH100","HH100",
+#    "WH120","HH120",
+#    "WH140","HH140",
+#    "WH150","HH150",
+#    "WH155","HH155",
+#    "WH160","HH160"
+#    ]
+systs     = []#'jer', 'jesup','jesdown','puup', 'pudown']
+singleSyst= []#True,  False,   False,    False,  False]
 
 #procs=["t#bar{t} matching down",
 #       "t#bar{t} matching up",
 #       "t#bar{t} scale down",
 #       "t#bar{t} scale up",
-#       "Z-#gamma^{*}+jets#rightarrow ll (M>20)",
 #       "Single top (DS)"
 #       ]
+#systs=[]
+#singleSyst=[]
 
 f = ROOT.TFile.Open(inputFile)
-href=f.Get('data/'+countHisto)
-
+href=f.Get(procs[0]+"/"+countHisto)
+print href
 hsummary    = ROOT.TH2F("summaryyields","summaryyields",len(evCats),0,len(evCats),len(procs),0,len(procs))
 
 #create tables for each event category
@@ -138,8 +153,11 @@ for ec in evCats:
             for isyst in systs:
                 hvar=f.Get(p + "/" +prefix+countHisto+isyst)
                 if(hvar==None):continue
-                yieldDiff=(hvar.GetBinContent(ibinSyst)-h.GetBinContent(ibinSyst))
-                if(singleSyst[systCtr]) : yieldDiff = fabs(yieldDiff)*0.5
+                yieldDiff=0
+                if(h.GetBinContent(ibinSyst)>0):
+                    yieldDiff=(hvar.GetBinContent(ibinSyst)-h.GetBinContent(ibinSyst))
+                    if(singleSyst[systCtr]) : yieldDiff = fabs(yieldDiff)*0.5
+                    yieldDiff=100*yieldDiff/h.GetBinContent(ibinSyst)
                 systVarH.Fill(procCtr,systCtr,yieldDiff)
                 systCtr+=1
         else :

@@ -208,7 +208,7 @@ void HFCMeasurement::resetModelValues()
 
 
 //
-void HFCMeasurement::fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString dilCategory)
+void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, TString dilCategory)
 {
   if(evHandler.getEntries()==0) return;
 
@@ -221,17 +221,17 @@ void HFCMeasurement::fitHFCtoEnsemble(EventSummaryHandler &evHandler, TString di
   for(int i=0; i<evHandler.getEntries(); i++)
     {
       evHandler.getEntry(i);
-      EventSummary_t &ev = evHandler.getEvent();
+      top::EventSummary_t &ev = evHandler.getEvent();
       
       //filter the even type
-      if(dilCategory=="ll" && ev.cat == dilepton::EMU)         continue;
-      else if(dilCategory=="emu" && ev.cat != dilepton::EMU)   continue;
-      else if(dilCategory=="ee" && ev.cat != dilepton::EE)     continue;
-      else if(dilCategory=="mumu" && ev.cat != dilepton::MUMU) continue;
+      if(dilCategory=="ll" && ev.cat == EMU)         continue;
+      else if(dilCategory=="emu" && ev.cat != EMU)   continue;
+      else if(dilCategory=="ee" && ev.cat != EE)     continue;
+      else if(dilCategory=="mumu" && ev.cat != MUMU) continue;
       else if(dilCategory!="all") continue;
 
       //count the number of b-tags
-      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       
       int njets=0;
       int nbtags=0;

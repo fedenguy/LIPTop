@@ -93,7 +93,7 @@ class MassMeasurement
   /**
      @short performs the standard unbinned likelihood fit to a set of mass measurements
   */
-  EnsembleMeasurement_t DoMassFit(EventSummaryHandler &evHandler, bool debug=false);
+  EnsembleMeasurement_t DoMassFit(top::EventSummaryHandler &evHandler, bool debug=false);
 
   /**
      @short fits the mass to an ensemble

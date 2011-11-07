@@ -2,6 +2,8 @@
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
 using namespace std;
+using namespace top;
+using namespace top;
 
 //
 void MisassignmentMeasurement::bookMonitoringHistograms()
@@ -173,9 +175,9 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 
 	  std::vector<TString> categs;
 	  categs.push_back("all");
-	  if(evcat==dilepton::MUMU) { categs.push_back("mumu"); categs.push_back("ll"); }
-	  if(evcat==dilepton::EE)   { categs.push_back("ee");   categs.push_back("ll"); }
-	  if(evcat==dilepton::EMU)  { categs.push_back("emu"); }
+	  if(evcat==MUMU) { categs.push_back("mumu"); categs.push_back("ll"); }
+	  if(evcat==EE)   { categs.push_back("ee");   categs.push_back("ll"); }
+	  if(evcat==EMU)  { categs.push_back("emu"); }
 	  if(itrial==0)
 	    {
 	      for(size_t icat=0; icat<categs.size(); icat++)

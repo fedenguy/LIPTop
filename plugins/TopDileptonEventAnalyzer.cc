@@ -43,6 +43,10 @@
 
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > LorentzVector;
 
+using namespace std;
+using namespace reco;
+using namespace top;
+
 class TopDileptonEventAnalyzer : public edm::EDAnalyzer 
 {
 public:
@@ -254,7 +258,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     event.getByLabel(objConfig_["Vertices"].getParameter<edm::InputTag>("source"), hVtx);
     edm::Handle<reco::BeamSpot> beamSpot;
     event.getByLabel( objConfig_["Vertices"].getParameter<edm::InputTag>("beamSpot"), beamSpot);
-    std::vector<reco::VertexRef> selVertices = vertex::filter(hVtx,objConfig_["Vertices"]);
+    std::vector<reco::VertexRef> selVertices = getGoodVertices(hVtx,objConfig_["Vertices"]);
     edm::Handle< double > rhoH;
     event.getByLabel(objConfig_["Jets"].getParameter<edm::InputTag>("rho"),rhoH);
     float rho =*rhoH;
@@ -265,8 +269,12 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	for(size_t ivtx=0; ivtx<selVertices.size(); ivtx++)
 	  {
 	    TString vtype=(ivtx ==0 ? "" : "other");
-	    controlHistos_.fillHisto(vtype+"vertex_sumpt",ctf,vertex::getVertexMomentumFlux(selVertices[ivtx].get()) , weight);
 	    controlHistos_.fillHisto(vtype+"vertex_ndof",ctf,selVertices[ivtx]->ndof() , weight);
+	    try{
+	      controlHistos_.fillHisto(vtype+"vertex_sumpt",ctf,getVertexMomentumFlux(selVertices[ivtx].get()) , weight);
+	    }catch(std::exception &e){
+	      //tracks might not have been saved
+	    }
 	  }
       }
     if(selVertices.size()==0) return;
@@ -280,30 +288,30 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     edm::Handle<edm::View<reco::Candidate> > hEle;
     event.getByLabel(objConfig_["Electrons"].getParameter<edm::InputTag>("source"), hEle);
 
-    CandidateWithVertexCollection selLooseMuons = muon::filter(hMu, selVertices, *beamSpot, rho, objConfig_["LooseMuons"]);
-    CandidateWithVertexCollection selLooseElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, rho, objConfig_["LooseElectrons"]);
-    CandidateWithVertexCollection selLooseLeptons = selLooseMuons;
+    std::vector<CandidatePtr> selLooseMuons     = getGoodMuons(hMu, *beamSpot, rho, objConfig_["LooseMuons"]);
+    std::vector<CandidatePtr> selLooseElectrons = getGoodElectrons(hEle, hMu, *beamSpot, rho, objConfig_["LooseElectrons"]);
+    std::vector<CandidatePtr> selLooseLeptons   = selLooseMuons;
     selLooseLeptons.insert(selLooseLeptons.end(), selLooseElectrons.begin(), selLooseElectrons.end());
 
-    CandidateWithVertexCollection selMuons = muon::filter(hMu, selVertices, *beamSpot, rho, objConfig_["Muons"]);
-    CandidateWithVertexCollection selElectrons = electron::filter(hEle, hMu, selVertices, *beamSpot, rho, objConfig_["Electrons"]);
-    CandidateWithVertexCollection selLeptons = selMuons;
+    std::vector<CandidatePtr> selMuons     = getGoodMuons(hMu, *beamSpot, rho, objConfig_["Muons"]);
+    std::vector<CandidatePtr> selElectrons = getGoodElectrons(hEle, hMu, *beamSpot, rho, objConfig_["Electrons"]);
+    std::vector<CandidatePtr> selLeptons   = selMuons;
     selLeptons.insert(selLeptons.end(), selElectrons.begin(), selElectrons.end());
     
-    for(CandidateWithVertexCollection::iterator lepIt = selLooseLeptons.begin(); lepIt != selLooseLeptons.end(); lepIt++)
+    for(std::vector<CandidatePtr>::iterator lepIt = selLooseLeptons.begin(); lepIt != selLooseLeptons.end(); lepIt++)
       {
-	reco::CandidatePtr &lep=lepIt->first;
+	reco::CandidatePtr &lep=*lepIt;
 	float pt=lep->pt();
 	if(pt<20) continue;
-	std::vector<double> isol = lepton::getLeptonIso(lep,20.);
-	TString lepType( fabs(lepton::getLeptonId(lep))==lepton::MUON ? "mu":"e" );
+	std::vector<double> isol = getLeptonIso(lep,20.);
+	TString lepType( fabs(getLeptonId(lep))==MUON ? "mu":"e" );
 	for(size_t is=0; is<selStreams.size(); is++)
 	  {
 	    TString ctf=selStreams[is];
-	    controlHistos_.fillHisto(lepType+"gammaiso", ctf,isol[lepton::G_ISO]/pt , weight);
-	    controlHistos_.fillHisto(lepType+"chhadroniso",ctf,isol[lepton::C_ISO]/pt , weight);
-	    controlHistos_.fillHisto(lepType+"neuhadroniso",ctf,isol[lepton::N_ISO]/pt , weight);
-	    controlHistos_.fillHisto(lepType+"reliso",ctf,isol[lepton::PFREL_ISO] , weight);
+	    controlHistos_.fillHisto(lepType+"gammaiso", ctf,isol[G_ISO]/pt , weight);
+	    controlHistos_.fillHisto(lepType+"chhadroniso",ctf,isol[C_ISO]/pt , weight);
+	    controlHistos_.fillHisto(lepType+"neuhadroniso",ctf,isol[N_ISO]/pt , weight);
+	    controlHistos_.fillHisto(lepType+"reliso",ctf,isol[PFREL_ISO] , weight);
 	  }
       }    
     if(selLeptons.size()<2) return;
@@ -322,18 +330,18 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     //
     // DILEPTON
     //
-    std::pair<CandidateWithVertex,CandidateWithVertex> dileptonWithVertex = dilepton::filter(selLeptons, objConfig_["Dileptons"], iSetup);
-    int selPath =  dilepton::classify(dileptonWithVertex);
-    if(selPath==dilepton::UNKNOWN) return;
-    reco::CandidatePtr lepton1 = dileptonWithVertex.first.first;
-    reco::CandidatePtr lepton2 = dileptonWithVertex.second.first;
+    std::vector<CandidatePtr> dilepton = getDileptonCandidate(selLeptons, objConfig_["Dileptons"], iSetup);
+    int selPath =  getDileptonId(dilepton);
+    if(selPath==UNKNOWN) return;
+    reco::CandidatePtr lepton1 = dilepton[0];
+    reco::CandidatePtr lepton2 = dilepton[1];
     LorentzVector lepton1P = lepton1->p4();
     LorentzVector lepton2P = lepton2->p4();
     LorentzVector dileptonP=lepton1P+lepton2P;
     float dilsumpt=lepton1P.pt()+lepton2P.pt();
     float dilpt=dileptonP.pt();
     float dilmass=dileptonP.mass();
-    bool isZCand( ( (selPath==dilepton::EE || selPath==dilepton::MUMU) && fabs(dilmass-91)<15) );
+    bool isZCand( ( (selPath==EE || selPath==MUMU) && fabs(dilmass-91)<15) );
     bool isOS(lepton1->charge()*lepton2->charge()<0);
     double minDileptonMass = objConfig_["Dileptons"].getParameter<double>("minDileptonMass");
     double maxDileptonMass = objConfig_["Dileptons"].getParameter<double>("maxDileptonMass");
@@ -341,9 +349,9 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 
     selStreams.clear();
     selStreams.push_back("all");
-    if(selPath==dilepton::EE)   selStreams.push_back("ee");
-    if(selPath==dilepton::EMU)  selStreams.push_back("emu");
-    if(selPath==dilepton::MUMU) selStreams.push_back("mumu");
+    if(selPath==EE)   selStreams.push_back("ee");
+    if(selPath==EMU)  selStreams.push_back("emu");
+    if(selPath==MUMU) selStreams.push_back("mumu");
     for(size_t is=0; is<selStreams.size(); is++)
       {
 	TString ctf=selStreams[is];
@@ -358,32 +366,31 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     std::vector<reco::CandidatePtr> leptons;
     leptons.push_back(lepton1);
     leptons.push_back(lepton2);
-    for(CandidateWithVertexCollection::iterator lit = selLooseLeptons.begin(); lit != selLooseLeptons.end(); lit++)
+    for(vector<CandidatePtr>::iterator lit = selLooseLeptons.begin(); lit != selLooseLeptons.end(); lit++)
       {
-	if(deltaR(lit->first->eta(),lit->first->phi(),lepton1->eta(),lepton1->phi())<0.1 
-	   || deltaR(lit->first->eta(),lit->first->phi(),lepton2->eta(),lepton2->phi())<0.1 ) continue;
-	leptons.push_back(lit->first);
+	if(deltaR((*lit)->eta(),(*lit)->phi(),lepton1->eta(),lepton1->phi())<0.1 
+	   || deltaR((*lit)->eta(),(*lit)->phi(),lepton2->eta(),lepton2->phi())<0.1 ) continue;
+	leptons.push_back(*lit);
       }
     
-
     //
     // JETS
     //
     //add also the jets                                                                                                                                                             
     edm::Handle<edm::View<reco::Candidate> > hJet;
     event.getByLabel(objConfig_["Jets"].getParameter<edm::InputTag>("source"), hJet);
-    CandidateWithVertexCollection jets = jet::filter(hJet, selLeptons, selVertices, objConfig_["Jets"]);
+    std::vector<CandidatePtr> jets = getGoodJets(hJet, selLeptons, objConfig_["Jets"]);
     int njets(0), nbjets(0);
     std::vector<const pat::Jet *> selJets;
-    for(CandidateWithVertexCollection::iterator jit = jets.begin(); jit!=jets.end(); jit++)
+    for(std::vector<CandidatePtr>::iterator jit = jets.begin(); jit!=jets.end(); jit++)
       {
-	const pat::Jet *j=dynamic_cast<const pat::Jet*>(jit->first.get());
+	const pat::Jet *j=dynamic_cast<const pat::Jet*>(jit->get());
 	selJets.push_back(j);
-	    
+	
 	if(j->pt()>30 && fabs(j->eta())<2.5) njets++;
 	float btag=j->bDiscriminator("trackCountingHighEffBJetTags");
 	if(btag>1.74) nbjets+=1; //loose point
-
+	
 	//monitor jets
 	if(!isZCand)
 	  {       
@@ -442,7 +449,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     float chargedemetfrac=pfmet.ChargedEMEtFraction();
     float chargedhadetfrac=pfmet.ChargedHadEtFraction();
     float muonetfrac=pfmet.MuonEtFraction();
-    bool passMET( selPath==dilepton::EMU || met.pt()>30);  
+    bool passMET( selPath==EMU || met.pt()>30);  
     if(!isZCand)
       {
 	for(size_t is=0; is<selStreams.size(); is++)
@@ -517,14 +524,14 @@ void TopDileptonEventAnalyzer::saveEvent(const edm::Event& event, int evCat, std
       summaryHandler_.evSummary_.pz[ilepton]=leptons[ilepton].get()->pz();
       summaryHandler_.evSummary_.en[ilepton]=leptons[ilepton].get()->energy();
 
-      std::vector<double> liso=lepton::getLeptonIso(leptons[ilepton],0.);
-      summaryHandler_.evSummary_.info1[ilepton]=lepton::getPtErrorFor(leptons[ilepton]);
-      summaryHandler_.evSummary_.info2[ilepton]=liso[lepton::C_ISO];
-      summaryHandler_.evSummary_.info3[ilepton]=liso[lepton::G_ISO];
-      summaryHandler_.evSummary_.info4[ilepton]=liso[lepton::N_ISO];
+      std::vector<double> liso=getLeptonIso(leptons[ilepton],0.);
+      summaryHandler_.evSummary_.info1[ilepton]=getLeptonPtError(leptons[ilepton]);
+      summaryHandler_.evSummary_.info2[ilepton]=liso[C_ISO];
+      summaryHandler_.evSummary_.info3[ilepton]=liso[G_ISO];
+      summaryHandler_.evSummary_.info4[ilepton]=liso[N_ISO];
 
-      int id = lepton::getLeptonId(leptons[ilepton]);
-      const reco::GenParticle *gen=lepton::getLeptonGenMatch(leptons[ilepton]);
+      int id = getLeptonId(leptons[ilepton]);
+      const reco::GenParticle *gen=getLeptonGenMatch(leptons[ilepton]);
       int genid( gen ? gen->pdgId() : -9999);  
       summaryHandler_.evSummary_.id[ilepton] = id;
       summaryHandler_.evSummary_.genid[ilepton] = genid;

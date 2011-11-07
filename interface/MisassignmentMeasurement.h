@@ -42,12 +42,12 @@ class MisassignmentMeasurement
   /**
      @short returns a collection of randomly rotated leptons
   */
-  PhysicsObjectLeptonCollection randomlyRotate( PhysicsObjectLeptonCollection &leptons, PhysicsObjectJetCollection &jets);
+  top::PhysicsObjectLeptonCollection randomlyRotate( top::PhysicsObjectLeptonCollection &leptons, top::PhysicsObjectJetCollection &jets);
 
   /**
      @short runs the measurement
   */
-  void measureMisassignments(EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1);
+  void measureMisassignments(top::EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1);
   
   /**
      @short getters

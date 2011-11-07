@@ -3,6 +3,7 @@
 #include "TSystem.h"
 
 using namespace std;
+using namespace top;
 
 //
 KinResultsHandler::KinResultsHandler()

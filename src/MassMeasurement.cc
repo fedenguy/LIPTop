@@ -8,10 +8,10 @@
 
 using namespace std;
 using namespace RooFit;
-
+using namespace top;
 
 //
-EnsembleMeasurement_t MassMeasurement::DoMassFit(EventSummaryHandler &evHandler, bool debug)
+EnsembleMeasurement_t MassMeasurement::DoMassFit(top::EventSummaryHandler &evHandler, bool debug)
 {
   EnsembleMeasurement_t em;
   em.status=false;
@@ -30,8 +30,8 @@ EnsembleMeasurement_t MassMeasurement::DoMassFit(EventSummaryHandler &evHandler,
     {
       evTree->GetEntry(i);
 
-      EventSummary_t &ev = evHandler.getEvent();
-      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+      top::EventSummary_t &ev = evHandler.getEvent();
+      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       //      if(phys.met.pt()<20) continue;
       double topMass=ev.evmeasurements[0];
       if(topMass<minTopMass || topMass>maxTopMass) continue;
@@ -39,7 +39,7 @@ EnsembleMeasurement_t MassMeasurement::DoMassFit(EventSummaryHandler &evHandler,
       
       em.evMasses[em.nEvents] = topMass;
       if(cattype==0) em.evSample[em.nEvents]=0;
-      if(cattype==1) em.evSample[em.nEvents] = ( ev.cat==dilepton::EMU );
+      if(cattype==1) em.evSample[em.nEvents] = ( ev.cat==EMU );
       if(cattype==2) em.evSample[em.nEvents] = ( btagMult>=2 ? 2 : btagMult );
       em.nEvents++;
     }  

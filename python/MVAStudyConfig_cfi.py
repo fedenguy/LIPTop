@@ -12,23 +12,23 @@ pairSelStudy = cms.PSet(  doTrain = cms.bool(False),
 
 
 # simple study
-chargedHiggsStudy = cms.PSet(  evCategories = cms.vint32(),
-                               input      = cms.string("/data/psilva/Top/chargedHiggs/EventSummaries.root"),
-                               studyTag   = cms.string("simpleChHiggsDiscriminator"),
-                               weightsDir = cms.string("${CMSSW_BASE}/src/LIP/Top/weights"),
-                               methodList = cms.vstring('Likelihood'),#'BDT','MLP'),
-                               varsList   = cms.vstring("mindrlj","mljmostiso","mtleastisolep","mtmostisolep"),#"drmostisol","drleastisol"),
-#                               varsList   = cms.vstring('mljmostiso','ptleastisollep','ptmostisollep','dphimetleastisolep','mtleastisolep'),
-                               procList   = cms.vstring('WH_120_Summer11',
-                           #                             'SingleT_tW',
-                           #                             'SingleTbar_tW',
-                           #                             'TTJets',
-                                                        'TTJets_signal',
-                           #                             'WW','WZ','ZZ',
-                           #                             'DYJetsToLL'
-                                                        ),
-                               procType   = cms.vint32 (1,2),#2,2,2,2,2,2,2),
-                               procWeight = cms.vdouble(1,1),#1,1,1,1,1,1,1)
+chargedHiggsStudy = cms.PSet( evCategories = cms.vint32(),
+                              input      = cms.string("/data/psilva/Top/chargedHiggs/EventSummaries.root"),
+                              studyTag   = cms.string("simpleChHiggsDiscriminator"),
+                              weightsDir = cms.string("${CMSSW_BASE}/src/LIP/Top/weights"),
+                              methodList = cms.vstring('Likelihood'),#'BDT','MLP'),
+                              varsList   = cms.vstring("mindrlj","mljmostiso","mtleastisolep","mtmostisolep"),#"drmostisol","drleastisol"),
+                              #                               varsList   = cms.vstring('mljmostiso','ptleastisollep','ptmostisollep','dphimetleastisolep','mtleastisolep'),
+                              procList   = cms.vstring('WH_120_Summer11',
+                                                       #                             'SingleT_tW',
+                                                       #                             'SingleTbar_tW',
+                                                       #                             'TTJets',
+                                                       'TTJets_signal',
+                                                       #                             'WW','WZ','ZZ',
+                                                       #                             'DYJetsToLL'
+                                                       ),
+                              procType   = cms.vint32 (1,2),#2,2,2,2,2,2,2),
+                              procWeight = cms.vdouble(1,1),#1,1,1,1,1,1,1)
                                )
 
 

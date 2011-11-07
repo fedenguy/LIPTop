@@ -25,8 +25,8 @@
 
 #include "CMGTools/HtoZZ2l2nu/interface/TMVAUtils.h"
 
-
 using namespace std;
+using namespace top;
 
 struct bTagSorter{
   bool operator() (PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag1>b.btag1);  }
@@ -267,11 +267,11 @@ int main(int argc, char* argv[])
     
       std::vector<TString> categs;
       categs.push_back("all");
-      if(ev.cat==dilepton::MUMU)  categs.push_back("mumu");
-      if(ev.cat==dilepton::EE)  categs.push_back("ee");
-      if(ev.cat==dilepton::EMU) categs.push_back("emu");
-      if(ev.cat==dilepton::ETAU) categs.push_back("etau");
-      if(ev.cat==dilepton::MUTAU) categs.push_back("mutau");
+      if(ev.cat==MUMU)  categs.push_back("mumu");
+      if(ev.cat==EE)  categs.push_back("ee");
+      if(ev.cat==EMU) categs.push_back("emu");
+      if(ev.cat==ETAU) categs.push_back("etau");
+      if(ev.cat==MUTAU) categs.push_back("mutau");
     
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       sort(phys.jets.begin(),phys.jets.end(),sortByBtag);
@@ -390,7 +390,7 @@ int main(int argc, char* argv[])
       //Compute dilepton/dijet invariant mass
       LorentzVector dil = phys.leptons[0]+phys.leptons[1];
       float dilmass = dil.mass();
-      bool isZcand(fabs(dilmass-91)<15 && (ev.cat==dilepton::EE || ev.cat==dilepton::MUMU));
+      bool isZcand(fabs(dilmass-91)<15 && (ev.cat==EE || ev.cat==MUMU));
       bool isSS( phys.leptons[0].id*phys.leptons[1].id >0 );
       double ptlep1(max(phys.leptons[0].pt(),phys.leptons[1].pt())), ptlep2(min(phys.leptons[0].pt(),phys.leptons[1].pt()));    
       LorentzVector dij = phys.jets[0]+phys.jets[1];

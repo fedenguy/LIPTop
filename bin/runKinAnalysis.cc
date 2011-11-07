@@ -18,6 +18,7 @@
 #include "TCanvas.h"
 
 using namespace std;
+using namespace top;
 
 //
 int main(int argc, char* argv[])
