@@ -411,13 +411,18 @@ int main(int argc, char* argv[])
   effCorr[EE]   = 1.0*pow(0.96,2);
   for(std::map<TString, TH1F *>::iterator hit = cutflowhistos.begin(); hit != cutflowhistos.end(); hit++)
     {
+      double ieff=1;
+      if( hit->first=="mumu" ) ieff=effCorr[MUMU];
+      if( hit->first=="emu" )  ieff=effCorr[EMU];
+      if( hit->first=="ee" )   ieff=effCorr[EE];
+      
       for(int ivar=0;ivar<nvarcats; ivar++) 
 	{
 	  TH1 *h=controlHistos.getHisto("evtflow"+cats[ivar],hit->first);
-	  h->SetBinContent(1,hit->second->GetBinContent(2)/cnorm);
-	  h->SetBinError(1,hit->second->GetBinError(2)/cnorm);
-	  h->SetBinContent(2,hit->second->GetBinContent(3)/cnorm);
-	  h->SetBinError(2,hit->second->GetBinError(3)/cnorm);
+	  h->SetBinContent(1,ieff*hit->second->GetBinContent(2)/cnorm);
+	  h->SetBinError(1,ieff*hit->second->GetBinError(2)/cnorm);
+	  h->SetBinContent(2,ieff*hit->second->GetBinContent(3)/cnorm);
+	  h->SetBinError(2,ieff*hit->second->GetBinError(3)/cnorm);
 	}
     }
   cout << " Xsec x Br=" << xsec << " analyzing " << totalEntries << "/" << cnorm << " original events"<< endl;
@@ -436,16 +441,27 @@ int main(int argc, char* argv[])
   float summaryWeight(1);
   if(saveSummaryTree && normEntries>0)
     {
+      gSystem->Exec("mkdir -p " + outdir);
+      TString summaryName = outdir + "/" + gSystem->BaseName(evurl);
+      summaryName.ReplaceAll(".root","_summary.root");
+      gSystem->ExpandPathName(summaryName);
+      
       summaryWeight = xsec * float(totalEntries) / (cnorm * float(normEntries) );
+      
       spyEvents = new EventSummaryHandler;
-      spyFile = TFile::Open("EventSummaries.root","UPDATE");
+      
+      spyFile = TFile::Open(summaryName,"RECREATE");
+      
       TString evtag=gSystem->BaseName(evurl);
       evtag.ReplaceAll(".root","");
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
+      
       TTree *outT = evTree->CloneTree(0);
       outT->SetDirectory(spyDir);
       spyEvents->initTree(outT,false);
+      
+      cout << "Creating event summary file:" << summaryName << endl;
     }
   
   //
@@ -945,6 +961,7 @@ int main(int argc, char* argv[])
   evfile->Close();
   if(spyEvents)
     {
+      cout << "Finishing summary tree with " << spyEvents->getTree()->GetEntriesFast() << " events" << endl; 
       spyDir->cd();
       spyEvents->getTree()->Write();
       spyFile->Write();
