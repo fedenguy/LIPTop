@@ -1,5 +1,6 @@
 #
-# submit ntuple production
+# NTUPLE PRODUCTION
+# use the lxbatch to run over the pat-tuples and create the ntuples
 #
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -s True -d patdir -t QCD
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -s True -d patdir -t WJets
@@ -14,17 +15,52 @@ runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t Aug05
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t v6
 
+# merge the outputs (hadd)
+./test/mergeOutputs.sh
+
 #
-# create control distributions and event summaries
+# CREATE CONTROL DISTRIBUTIONS AND EVENT SUMMARIES
+# it will run an executable and store the outputs in root files named after each sample
 #
-# submit the local analysis to batch
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.10.31 -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s True
 
-# plot the results
+
+#
+# PLOTTING THE RESULTS
+# besides creating the plots it will collect all in a file called plotter.root
+#
 runPlotter --iLumi 1947 --inDir ~/scratch0/top/ --outDir /tmp/psilva/ --json data/samples-signal.json
+
+
+#
+# DY control
+#
+# count events under the Z mass peak ee/mumu
+python bin/macros/getDileptonCutflow.py -c dilmassctr -b 2 -i plotter.root 
+
+# fit the sum MT distribution for the emu channel
+root -l bin/macros/fitDYdistribution.C
+
+#
+# EVENT YIELDS
+# 
+python bin/macros/getDileptonCutflow.py -c evtflow -b 4 -i plotter.root 
+
+
 
 # create a single event summary file
 hadd EventSummaries.root ${HOME}/scratch0/*_summary.root 
 rm ${HOME}/scratch0/*_summary.root
 
 
+
+
+#
+# OTHERS
+#
+# mount user area in pclip11
+./test/mount_store.sh
+
+#when you're done unmount it
+fusermount -u store
+rm -rf store

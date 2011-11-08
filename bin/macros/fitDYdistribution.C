@@ -15,7 +15,8 @@
   using namespace RooFit;
   using namespace std;
 
-  TString baseURL="~/scratch0/";
+  TString baseURL="${CMSSW_BASE}/src/LIP/Top";
+  gSystem->ExpandPathName(baseURL);
 
   //histograms of interest
   TString histCompare[]={"emu_leadlepton","emu_subleadlepton","emu_ptsum",
@@ -26,11 +27,11 @@
   //
   //get histograms from files
   //
-  TString tautauReplacementUrl=baseURL+"taurep/plots/plotter.root";
+  TString tautauReplacementUrl=baseURL+"/syst_plotter.root";
   TFile *tautauReplacementFile=TFile::Open(tautauReplacementUrl);
   TObjArray tautauReplacementHistos;
   
-  TString stdUrl=baseURL+"syst/plots/plotter.root";
+  TString stdUrl=baseURL+"/std_plotter.root";
   TFile *stdFile=TFile::Open(stdUrl);
  
   TObjArray mcHistos,dymcHistos,dataHistos;
@@ -52,8 +53,9 @@
 
 	  //if(theHisto.Contains("mtsum") && !procs[iproc].Contains("data")) theHisto += "pudown";
 	  TH1F *histo = (TH1F *) stdFile->Get(procs[iproc]+"/"+theHisto);
+	  //if(!procs[iproc].Contains("data")) histo.Scale(1.0-0.045);
 	  if(!procs[iproc].Contains("data")) histo.Scale(1.0+0.04);
-	  //if(procs[iproc].Contains("t#bar{t}")) histo.Scale(1.0+0.04);
+	  //if(procs[iproc].Contains("t#bar{t}")) histo.Scale(1.0-0.04);
 
 	  //check category
 	  TString key("Other processes"), keyName("other");
@@ -159,7 +161,7 @@
   std::cout << " Fitting now ..." << std::endl;
   RooAddPdf shapeModel("shapemodel","signal+background",RooArgList(modelDataTemplate,modelMcTemplate),RooArgList(ndytautau,nother));
   RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(other_constraint,shapeModel));
-  model.fitTo(*sumData,Extended(kTRUE), Constrain(nother),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(0,100));
+  model.fitTo(*sumData,Extended(kTRUE), Constrain(nother),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(0,150));
   
   RooPlot *genericFrame = x.frame();
   genericFrame->GetXaxis()->SetTitle( kindata->GetXaxis()->GetTitle() );
@@ -185,7 +187,7 @@
   TPad *npad = new TPad("llpad","ll", 0.6, 0.6, 0.9, 0.9);
   npad->Draw();
   npad->cd();
-  RooNLLVar *nll = (RooNLLVar*) model.createNLL(*sumData,RooFit::CloneData(kFALSE),Extended(kTRUE),Constrain(nother),Range(0,100));
+  RooNLLVar *nll = (RooNLLVar*) model.createNLL(*sumData,RooFit::CloneData(kFALSE),Extended(kTRUE),Constrain(nother),Range(0,150));
   RooMinuit minuit(*nll); 
   minuit.migrad();
   minuit.hesse();
