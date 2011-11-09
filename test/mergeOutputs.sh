@@ -20,3 +20,6 @@ for i in ${tags[@]}; do
 #    rm ${i}_*.root
 done
 
+
+cd ${outputdir}
+ln -s TTJets.root TTJets_signal.root
