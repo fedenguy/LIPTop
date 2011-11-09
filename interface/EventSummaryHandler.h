@@ -139,5 +139,7 @@ namespace top
   PhysicsEvent_t getPhysicsEventFrom(EventSummary_t &ev);
 
 }
+
+top::EventSummaryHandler *eventHandlerFactory();
   
 #endif

@@ -232,3 +232,9 @@ namespace top
   }
   
 }
+
+//
+top::EventSummaryHandler *eventHandlerFactory()
+{
+  return new top::EventSummaryHandler;
+}

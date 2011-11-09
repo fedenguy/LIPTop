@@ -14,6 +14,7 @@ def usage() :
     print '  -i : input file'
     print '  -c : counting histo (=evtflow by default)'
     print '  -b : bin to compute systematic variations for (=6 by default)'
+    print '  -s : scale factors and uncertainties for DY emu/mumu/ee e.g. -s  1.2:0.26/1.34:0.38/1.38:0.39 to be applied to the summary yields'
     print ' '
 
 """
@@ -48,7 +49,7 @@ def getInTableFormat(tit,h,isData=False,addErrors=True):
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "i:c:b:h?"
+    shortopts  = "i:c:b:s:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -56,9 +57,18 @@ except getopt.GetoptError:
     usage()
     sys.exit(1)
 
+
+evCats=['','emu','mumu','ee']
+evTitles=['$Inclusive$','$e\\mu$','$\\mu\\mu$','$ee$']
+
 inputFile='plotter.root'
 countHisto='evtflow'
-ibinSyst=5
+ibinSyst=4
+dySfactors={
+    "emu":[1.0,0.0],
+    "mumu":[1.0,0.0],
+    "ee":[1.0,0.0]
+    }
 for o,a in opts:
     if o in("-?", "-h"):
         usage()
@@ -66,22 +76,27 @@ for o,a in opts:
     elif o in('-i'): inputFile = a
     elif o in('-c'): countHisto = a
     elif o in('-b'): ibinSyst = int(a)
-
-evCats=['','emu','mumu','ee']
-evTitles=['$Inclusive$','$e\\mu$','$\\mu\\mu$','$ee$']
+    elif o in('-s'):
+        sfactors=a.split('/')
+        for i in xrange(0,len(sfactors)) :
+            sf=sfactors[i].split(':')
+            val=float(sf[0])
+            err=float(sf[1])
+            dySfactors[evCats[i+1]]=[val,err]
+ 
 
 # standard analysis
-procs=[
-    "Di-bosons",
-    "Single top",
-    "other t#bar{t}",
-    "W+jets",
-    "Z-#gamma^{*}+jets#rightarrow ll",
-    "t#bar{t} dileptons",
-    "data"
-    ]
-systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
-singleSyst= [True,  False,   False,    False,  False]
+#procs=[
+#    "Di-bosons",
+#    "Single top",
+#    "other t#bar{t}",
+#    "W+jets",
+#    "Z-#gamma^{*}+jets#rightarrow ll",
+#    "t#bar{t} dileptons",
+#    "data"
+#    ]
+#systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
+#singleSyst= [True,  False,   False,    False,  False]
 
 # charged higgs
 #procs=[
@@ -98,14 +113,14 @@ singleSyst= [True,  False,   False,    False,  False]
 #singleSyst= [True,  False,   False,    False,  False]
 
 # top systematics
-#procs=["t#bar{t} matching down",
-#       "t#bar{t} matching up",
-#       "t#bar{t} scale down",
-#       "t#bar{t} scale up",
-#       "Single top (DS)"
-#       ]
-#systs=[]
-#singleSyst=[]
+procs=["t#bar{t} matching down",
+       "t#bar{t} matching up",
+       "t#bar{t} scale down",
+       "t#bar{t} scale up",
+       "Single top (DS)"
+       ]
+systs=[]
+singleSyst=[]
 
 f = ROOT.TFile.Open(inputFile)
 href=f.Get(procs[0]+"/"+countHisto)
@@ -147,8 +162,16 @@ for ec in evCats:
     procCtr=0
     for p in procs:
         h=f.Get(p + "/" +prefix+countHisto)
-        hsummary.SetBinContent(iec+1,procCtr+1, h.GetBinContent(ibinSyst))
-        hsummary.SetBinError(iec+1,procCtr+1, h.GetBinError(ibinSyst))
+
+        sf=1.0
+        sferr=0.0
+        if(p.find("Z-#gamma^{*}+jets#rightarrow ll")>=0) :
+            if(len(ec)>0):
+                sf=dySfactors[ec][0]
+                sferr=dySfactors[ec][1]
+                print 'Will apply DY-SF to ' + ec + ' ' +  str(sf) + ' +/- ' + str(sferr) 
+        hsummary.SetBinContent(iec+1,procCtr+1, h.GetBinContent(ibinSyst)*sf)
+        hsummary.SetBinError(iec+1,procCtr+1, sqrt(pow(h.GetBinError(ibinSyst)*sf,2)+pow(h.GetBin(ibinSyst)*sferr,2)) )
         hsummary.GetXaxis().SetBinLabel(iec+1,ec)
         hsummary.GetYaxis().SetBinLabel(procCtr+1,p)
         
@@ -226,6 +249,9 @@ tabtex += '\\label{tab:summaryyields}\n'
 tabtex += '\\begin{tabular}{'+colfmt+'} \\hline\n'
 tabtex += 'Channel '+colnames+'\\\\ \\hline\\hline\n'
 
+sumFinal = hsummary.ProjectionY('_py',2,len(evCats))
+totFinalErr=ROOT.Double(0.0)
+totFinal=sumFinal.IntegralAndError(1,len(procs)-1,totFinalErr)
 hsummaryfinal    = ROOT.TH1F("summaryfinalyields","Total expected",len(evCats),0,len(evCats))
 for ip in xrange(1,hsummary.GetYaxis().GetNbins()+1):
     projxH=hsummary.ProjectionX('_px',ip,ip)

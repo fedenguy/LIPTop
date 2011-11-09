@@ -63,7 +63,7 @@ for o,a in opts:
 # load macros
 import ROOT
 ROOT.gSystem.Load('${CMSSW_BASE}/lib/${SCRAM_ARCH}/libLIPTop.so')
-from ROOT import HFCMeasurement, MisassignmentMeasurement, EventSummaryHandler, getNewCanvas, showPlotsAndMCtoDataComparison, setStyle, formatForCmsPublic, formatPlot
+from ROOT import HFCMeasurement, MisassignmentMeasurement, eventHandlerFactory, getNewCanvas, showPlotsAndMCtoDataComparison, setStyle, formatForCmsPublic, formatPlot
 
 if(not plotOnly) :
     inF=ROOT.TFile.Open(ifile)
@@ -72,28 +72,24 @@ if(not plotOnly) :
     procList=json.load(jsonFile,encoding='utf-8').items()
 
     #run over sample
-    evHandler       = EventSummaryHandler()
+    evHandler       = eventHandlerFactory()
     misMeasurement  = MisassignmentMeasurement()
 
-    misMeasurement.setBiasCorrections("all",-0.0188118558)
-    misMeasurement.setBiasCorrections("emu",0.0088410018)
-    misMeasurement.setBiasCorrections("ll",-0.0334519059)
+    misMeasurement.setBiasCorrections("ee",0.023)
+    misMeasurement.setBiasCorrections("mumu",0.036)
+    misMeasurement.setBiasCorrections("emu",0.022)
     if(jetbin==2) :
-        misMeasurement.setBiasCorrections("all",0.0208030449)
-        misMeasurement.setBiasCorrections("emu",-0.0345264636)
-        misMeasurement.setBiasCorrections("ll",-0.018515963)
+        misMeasurement.setBiasCorrections("ee",0.06)
+        misMeasurement.setBiasCorrections("mumu",0.04)
+        misMeasurement.setBiasCorrections("emu",0.06)
     elif(jetbin==3) :
-        misMeasurement.setBiasCorrections("all",-0.032760782)
-        misMeasurement.setBiasCorrections("emu",-0.0129281559)
-        misMeasurement.setBiasCorrections("ll",-0.0758820633)
-    elif(jetbin==4):
-        misMeasurement.setBiasCorrections("all",-0.0606490967)
-        misMeasurement.setBiasCorrections("emu",-0.0220872477)
-        misMeasurement.setBiasCorrections("ll",0.0904430383)
-        #    else :
-    misMeasurement.setBiasCorrections("all",0)
-    misMeasurement.setBiasCorrections("emu",0)
-    misMeasurement.setBiasCorrections("ll",0)
+        misMeasurement.setBiasCorrections("ee",0.016)
+        misMeasurement.setBiasCorrections("emu",0.056)
+        misMeasurement.setBiasCorrections("mumu",0.038)
+ 
+#    misMeasurement.setBiasCorrections("ee",0)
+#    misMeasurement.setBiasCorrections("emu",0)
+#    misMeasurement.setBiasCorrections("mumu",0)
         
     hfcFitter=None
     if(fitType>=0):
@@ -112,7 +108,7 @@ if(not plotOnly) :
         print '.',
         sys.stdout.flush()
         
-        ensembleHandler = EventSummaryHandler()
+        ensembleHandler = eventHandlerFactory()
         ensembleInfo  += '<table>'
         ensembleInfo += '<tr><th><b>Info for '
         if(ipe==0) : ensembleInfo += 'data'
@@ -133,7 +129,7 @@ if(not plotOnly) :
                 data = desc['data']
                 for d in data :
                     tag = getByLabel(d,'dtag','')
- 
+
                     #get tree of events from file
                     t=inF.Get(tag+'/data')
                     
@@ -158,6 +154,7 @@ if(not plotOnly) :
                     nevtsExpected=nevts
                     if(ipe>0):
                         evHandler.getEntry(0)
+                        if(tag.find("DY")>=0) : nevtsExpected *= 1.3
                         nevtsExpected=lumi*(evHandler.evSummary_.weight)*nevtsSel
                         nevts = int(ROOT.gRandom.Poisson( nevtsExpected ))
 
@@ -181,7 +178,7 @@ if(not plotOnly) :
             misMeasurement.measureMisassignments( ensembleHandler, 180, 40, (ipe==0), jetbin )
 
             #print info
-            categories=['all', 'emu','ll']
+            categories=['ee', 'mumu','emu']
             for cat in categories : 
                 fcorrectTrue  = misMeasurement.getTrueCorrectPairsFraction(cat)
                 fcorrectEst   = misMeasurement.getCorrectPairsFraction(cat)
@@ -239,16 +236,16 @@ if(not plotOnly) :
 
 #display results
 plotF = ROOT.TFile.Open("MisassignmentMeasurement.root")
-cats=['all','emu','ll']
+cats=['ee','mumu','emu']
 setStyle()
 cnv = getNewCanvas('misc','misc',False)
-cnv.SetWindowSize(1500,500)
+cnv.SetCanvasSize(1500,500)
 cnv.Divide(3,1)
 cnv2 =getNewCanvas('misresc','misresc',False)
-cnv2.SetWindowSize(1500,500)
+cnv2.SetCanvasSize(1500,500)
 cnv2.Divide(3,1)
 cnv3 =getNewCanvas('fractfitc','fracfitc',False)
-cnv3.SetWindowSize(1500,500)
+cnv3.SetCanvasSize(1500,500)
 cnv3.Divide(3,1)
 fracFitter=[]
 icnv=0
@@ -287,9 +284,12 @@ for c in cats:
     
     pad=cnv.cd(icnv)
     leg=showPlotsAndMCtoDataComparison(pad,stack,spimpose,data)
-    subpad1=pad.cd(1)    
+    subpad1=pad.cd(1)
+    subpad1.SetGridx(False)
+    subpad1.SetGridy(False)
     subpad1.SetLogx()
     subpad2=pad.cd(2)
+    subpad2.SetGridx(False)
     subpad2.SetLogx()
     if(icnv==1) : formatForCmsPublic(pad.cd(1),leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
     else        : leg.Delete()
@@ -318,8 +318,11 @@ for c in cats:
     leg=showPlotsAndMCtoDataComparison(pad2,stack2,spimpose2,data2)
     subpad12=pad2.cd(1)
     subpad12.SetLogx()
+    subpad12.SetGridx(False)
+    subpad12.SetGridy(False)
     subpad22=pad2.cd(2)
     subpad22.SetLogx()
+    subpad22.SetGridx(False)
     if(icnv==1) : formatForCmsPublic(pad2.cd(1),leg,'CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.0f pb^{-1}' % lumi ,2)
     else        : leg.Delete()
 
@@ -367,7 +370,9 @@ for c in cats:
     biasFit=biasH.GetFunction('gaus')
     fCorrBias=biasFit.GetParameter(1)
     fCorrBiasErr=biasFit.GetParError(1)
-
+    fCorrBias=biasH.GetMean()
+    fCorrBiasErr=biasH.GetMeanError()
+    
     #debug
     print c,
     #print ' f_{correct}=' + str(avgFcorr) + ' +/- ' + str(fCorrErr),
@@ -381,12 +386,14 @@ cnv.Draw()
 cnv.Modified()
 cnv.Update()
 cnv.SaveAs('mljwithmodel.C')
+cnv.SaveAs('mljwithmodel.png')
 
 cnv2.cd()
 cnv2.Draw()
 cnv2.Modified()
 cnv2.Update()
 cnv2.SaveAs('mljsubtracted.C')
+cnv2.SaveAs('mljsubtracted.png')
 
     
 raw_input(' *** Any key to end')    

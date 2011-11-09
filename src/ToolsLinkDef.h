@@ -37,6 +37,7 @@
 #pragma link C++ namespace top;
 #pragma link C++ struct top::EventSummary_t;
 #pragma link C++ class top::EventSummaryHandler;
+#pragma link C++ function eventHandlerFactory;
 #pragma link C++ typedef LorentzVector;
 #pragma link C++ typedef LorentzVectorCollection;
 #pragma link C++ top::PhysicsObject;

@@ -1,10 +1,22 @@
 #!/bin/bash
 
-tags=(WWtoAnything_Spring11 WZtoAnything_Spring11 ZZtoAnything_Spring11 TToBLNu_tW-channel_Spring11 TToBLNu_t-channel_Spring11 TToBLNu_s-channel_Spring11 TTJets_madgraph_Spring11 WJetsToLNu_Spring11 DYToEE_M-20_Spring11 DYToMuMu_M-20_Spring11 DYToTauTau_M-20_Spring11 QCD_Pt-30to50_Spring11 QCD_Pt-50to80_Spring11 QCD_Pt-80to120_Spring11 QCD_Pt-120to170_Spring11 QCD_Pt-170to300_Spring11 QCD_Pt-300to470_Spring11 QCD_Pt-470to600_Spring11 QCD_Pt-600to800_Spring11 QCD_Pt-800to1000_Spring11 DoubleMuon-v3 DoubleMuon-v5 DoubleMuon-v6 DoubleMuon-v7 DoubleMuon-v8 DoubleElectron-v3 DoubleElectron-v5 DoubleElectron-v6 DoubleElectron-v7 DoubleElectron-v8  MuEG-v3 MuEG-v5 MuEG-v6 MuEG-v7 MuEG-v8)
+inputdir=$1
+outputdir=${inputdir}/merged
+mkdir -p ${outputdir}
+
+tags=(WW ZZ WZ 
+    WJetsToLNu DYJetsToLL DYJetsToEE DYJetsToMuMu
+    TTJets TTJets_matchingup TTJets_matchingdown TTJets_scaleup TTJets_scaledown
+    SingleTbar_tW SingleTbar_t SingleTbar_s SingleT_tW SingleT_t SingleT_s SingleTbar_tW_DS SingleT_tW_DS
+    DoubleElectronMay10ReReco DoubleMuMay10ReReco MuEGMay10ReReco SingleMuMay10ReReco
+    DoubleElectronPromptRecov4 DoubleMuPromptRecov4 MuEGPromptRecov4 SingleMuPromptRecov4
+    DoubleElectron05AugReReco DoubleMu05AugReReco MuEG05AugReReco SingleMu05AugReReco
+    DoubleElectronPromptRecov6_172620_173244 DoubleMuPromptRecov6_172620_173244 MuEGPromptRecov6_172620_173244 SingleMuPromptRecov6_172620_173244
+)
 
 for i in ${tags[@]}; do
     echo "****** $i *******"
-    hadd -f ${i}.root ${i}_*.root
-    rm ${i}_*.root
+    hadd -f ${outputdir}/${i}.root ${inputdir}/${i}_*.root
+#    rm ${i}_*.root
 done
 
