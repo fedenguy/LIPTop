@@ -85,7 +85,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
       objConfig_[ objs[iobj] ] = cfg.getParameter<edm::ParameterSet>( objs[iobj] );
 
     //monitoring histograms
-    TString selSteps[]={"Reco","2 leptons","M_{ll}","#geq 2 jets","MET>30,0","OS","=0 b-tags","=1 b-tags", "#geq 2 b-tags"};
+    TString selSteps[]={"Reco","2 leptons","M_{ll}","#geq 2 jets","MET>30,0","OS","=0 b-tags","=1 b-tags", "#geq 2 b-tags", "SS"};
     const size_t nselsteps=sizeof(selSteps)/sizeof(TString);
     controlHistos_.addHistogram("cutflow", ";Step; Events",nselsteps,0,nselsteps);
     for(int ibin=1; ibin<=controlHistos_.getHisto("cutflow","all")->GetXaxis()->GetNbins(); ibin++)
@@ -467,8 +467,10 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	    
 	    if(!passMET) continue;
 	    if(passJets) controlHistos_.fillHisto("cutflow",ctf,4,weight);
-	    if(!isOS) continue;
-	
+	    if(!isOS){ 
+	      if(passJets) controlHistos_.fillHisto("cutflow",ctf,9, weight);
+	      continue;
+	    }
 	    if(passJets) controlHistos_.fillHisto("cutflow",ctf,5,weight);
 	    controlHistos_.fillHisto("njetsfinal",ctf,njets,weight);
 	    if(passJets) 
