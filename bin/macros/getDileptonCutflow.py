@@ -191,9 +191,9 @@ for ec in evCats:
                 teerr=trigEffs[ec][1]
                 print p + ': Will apply trigger efficiency to ' + ec + ' ' + str(te) + ' +/- ' + str(teerr)
         hsummary.SetBinContent(iec+1,procCtr+1, h.GetBinContent(ibinSyst)*sf*te)
-        tempErr=sqrt(pow(h.GetBinError(ibinSyst)*sf,2)+pow(h.GetBin(ibinSyst)*sferr,2))
+        tempErr=sqrt(pow(h.GetBinError(ibinSyst)*sf,2)+pow(h.GetBinContent(ibinSyst)*sferr,2))
         if(p!='data') :
-            hsummary.SetBinError(iec+1,procCtr+1, sqrt(pow(tempErr*te,2)+pow(h.GetBin(ibinSyst)*teerr,2)) )
+            hsummary.SetBinError(iec+1,procCtr+1, sqrt(pow(tempErr*te,2)+pow(h.GetBinContent(ibinSyst)*teerr,2)) )
         else :
             hsummary.SetBinError(iec+1,procCtr+1,tempErr)
         hsummary.GetXaxis().SetBinLabel(iec+1,ec)
