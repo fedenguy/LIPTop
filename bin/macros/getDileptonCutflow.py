@@ -123,7 +123,7 @@ systs=[]
 singleSyst=[]
 
 f = ROOT.TFile.Open(inputFile)
-href=f.Get(procs[0]+"/"+countHisto)
+href=f.Get(procs[0]+'/'+countHisto)
 print href
 hsummary    = ROOT.TH2F("summaryyields","summaryyields",len(evCats),0,len(evCats),len(procs),0,len(procs))
 
@@ -155,8 +155,9 @@ for ec in evCats:
     #print to table
     tabtex =  '\\begin{table}[htp]\n'
     tabtex += '\\begin{center}\n'
-    tabtex += '\\caption{}\n'
+    tabtex += '\\caption{$'+prefix+'-$yields}\n'
     tabtex += '\\label{tab:'+prefix+'yields}\n'
+    tabtex += '\\tiny\n'
     tabtex += '\\begin{tabular}{'+colfmt+'} \\hline\n'
     tabtex += 'Process ' + colnames + '\\\\ \\hline\\hline\n'
     procCtr=0
@@ -211,7 +212,7 @@ for ec in evCats:
             colnames += ' & ' + isyst
         systTabtex =  '\\begin{table}[htp]\n'
         systTabtex += '\\begin{center}\n'
-        systTabtex += '\\caption{}\n'
+        systTabtex += '\\caption{$'+prefix+ '-$systematics on yields}\n'
         systTabtex += '\\label{tab:'+prefix+'systuncyields}\n'
         systTabtex += '\\begin{tabular}{'+colfmt+'} \\hline\n'
         systTabtex += 'Process' + colnames + '\\\\ \\hline\\hline\n'
@@ -219,7 +220,7 @@ for ec in evCats:
             projyH=systVarH.ProjectionY('_py',iy,iy)
             #        if(projyH.Integral()>0):
             systTabtex += getInTableFormat(procs[iy-1],projyH,False,False)
-            systTabtex += '\\hline\n'
+            systTabtex += '\\\\ \\hline\n'
         systTabtex += '\\hline\\hline\n'
 
         systTabtex += '\\end{tabular}\n'
