@@ -15,7 +15,8 @@ def usage() :
     print '  -c : counting histo (=evtflow by default)'
     print '  -b : bin to compute systematic variations for (=6 by default)'
     print '  -s : scale factors and uncertainties for DY emu/mumu/ee e.g. -s  1.2:0.26/1.34:0.38/1.38:0.39 to be applied to the summary yields'
-    print ' '
+    print '  -o : overall trigger efficiencies and uncertainties for all MC emu/umu/ee e.g. -o 0.946:0.008/0.920:0.003/0.966:0.008 to be applied to all yields'
+    print '  '
 
 """
 prints histogram to table row
@@ -49,7 +50,7 @@ def getInTableFormat(tit,h,isData=False,addErrors=True):
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "i:c:b:s:h?"
+    shortopts  = "i:c:b:s:o:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -63,8 +64,13 @@ evTitles=['$Inclusive$','$e\\mu$','$\\mu\\mu$','$ee$']
 
 inputFile='plotter.root'
 countHisto='evtflow'
-ibinSyst=4
+ibinSyst=6
 dySfactors={
+    "emu":[1.0,0.0],
+    "mumu":[1.0,0.0],
+    "ee":[1.0,0.0]
+    }
+trigEffs={
     "emu":[1.0,0.0],
     "mumu":[1.0,0.0],
     "ee":[1.0,0.0]
@@ -83,20 +89,26 @@ for o,a in opts:
             val=float(sf[0])
             err=float(sf[1])
             dySfactors[evCats[i+1]]=[val,err]
- 
-
+    elif o in ('-o'):
+        treffs=a.split('/')
+        for i in xrange(0,len(treffs)) :
+            te=treffs[i].split(':')
+            val=float(te[0])
+            err=float(te[1])
+            trigEffs[evCats[i+1]]=[val,err]
+            
 # standard analysis
-#procs=[
-#    "Di-bosons",
-#    "Single top",
-#    "other t#bar{t}",
-#    "W+jets",
-#    "Z-#gamma^{*}+jets#rightarrow ll",
+procs=[
+    "Di-bosons",
+    "Single top",
+    "other t#bar{t}",
+    "W+jets",
+    "Z-#gamma^{*}+jets#rightarrow ll",
 #    "t#bar{t} dileptons",
-#    "data"
-#    ]
-#systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
-#singleSyst= [True,  False,   False,    False,  False]
+    "data"
+    ]
+systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
+singleSyst= [True,  False,   False,    False,  False]
 
 # charged higgs
 #procs=[
@@ -113,14 +125,14 @@ for o,a in opts:
 #singleSyst= [True,  False,   False,    False,  False]
 
 # top systematics
-procs=["t#bar{t} matching down",
-       "t#bar{t} matching up",
-       "t#bar{t} scale down",
-       "t#bar{t} scale up",
-       "Single top (DS)"
-       ]
-systs=[]
-singleSyst=[]
+#procs=["t#bar{t} matching down",
+#       "t#bar{t} matching up",
+#       "t#bar{t} scale down",
+#       "t#bar{t} scale up",
+#       "Single top (DS)"
+#       ]
+#systs=[]
+#singleSyst=[]
 
 f = ROOT.TFile.Open(inputFile)
 href=f.Get(procs[0]+'/'+countHisto)
@@ -140,7 +152,7 @@ for ec in evCats:
         binlabel=binlabel.replace('#','\\')
         binlabel=binlabel.replace(' ','~')
         colnames += ' & ' + binlabel
-
+        
     prefix=ec
     if(len(prefix)>0): prefix = prefix+'_'
 
@@ -171,8 +183,19 @@ for ec in evCats:
                 sf=dySfactors[ec][0]
                 sferr=dySfactors[ec][1]
                 print 'Will apply DY-SF to ' + ec + ' ' +  str(sf) + ' +/- ' + str(sferr) 
-        hsummary.SetBinContent(iec+1,procCtr+1, h.GetBinContent(ibinSyst)*sf)
-        hsummary.SetBinError(iec+1,procCtr+1, sqrt(pow(h.GetBinError(ibinSyst)*sf,2)+pow(h.GetBin(ibinSyst)*sferr,2)) )
+        te=1.0
+        teerr=0.0
+        if(p!='data') :
+            if(len(ec)>0):
+                te=trigEffs[ec][0]
+                teerr=trigEffs[ec][1]
+                print p + ': Will apply trigger efficiency to ' + ec + ' ' + str(te) + ' +/- ' + str(teerr)
+        hsummary.SetBinContent(iec+1,procCtr+1, h.GetBinContent(ibinSyst)*sf*te)
+        tempErr=sqrt(pow(h.GetBinError(ibinSyst)*sf,2)+pow(h.GetBin(ibinSyst)*sferr,2))
+        if(p!='data') :
+            hsummary.SetBinError(iec+1,procCtr+1, sqrt(pow(tempErr*te,2)+pow(h.GetBin(ibinSyst)*teerr,2)) )
+        else :
+            hsummary.SetBinError(iec+1,procCtr+1,tempErr)
         hsummary.GetXaxis().SetBinLabel(iec+1,ec)
         hsummary.GetYaxis().SetBinLabel(procCtr+1,p)
         
