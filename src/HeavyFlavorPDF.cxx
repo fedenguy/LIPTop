@@ -84,14 +84,9 @@ Double_t HeavyFlavorPDF::_evaluate(int jetMult,int nBtags) const
 	  return 0; 
 	}
 	
-	//double alpha2=pow(alpha,2)*fttbar;
-	//double alpha1=(2*alpha*(1-alpha)+alpha*fsingletop)*fttbar;
-	//double alpha0=1-alpha2-alpha1;
-
-	double alpha2=pow(alpha,2);
-	double alpha1=2*alpha*(1-alpha);//+fsingletop*alpha;
+	double alpha2=pow(alpha,2)*fttbar;
+	double alpha1=(2*alpha*(1-alpha)+alpha*fsingletop)*fttbar;
 	double alpha0=1-alpha2-alpha1;
-	//	cout << jmult << " "  << alpha2 << " " << alpha1 << " " << alpha0 << endl;
 	
 	//compute probability
 	prob =  alpha2*_evaluateKernel(0,nBtags);

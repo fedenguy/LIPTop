@@ -104,7 +104,7 @@ procs=[
     "other t#bar{t}",
     "W+jets",
     "Z-#gamma^{*}+jets#rightarrow ll",
-#    "t#bar{t} dileptons",
+    "t#bar{t} dileptons",
     "data"
     ]
 systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
