@@ -14,6 +14,8 @@
 #include "TRandom2.h"
 #include "TH1D.h"
 
+#include "CondFormats/JetMETObjects/interface/JetResolution.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 
 /**
    @short 
@@ -23,8 +25,10 @@
 class MisassignmentMeasurement
 {
  public:
-
+  
   MisassignmentMeasurement() : nMeasurements(0)  { bookMonitoringHistograms();  }
+    
+    void initJetUncertainties(TString uncFileName,  TString ptFileName, TString etaFileName,  TString phiFileName);
 
   ~MisassignmentMeasurement()  { }
 
@@ -47,7 +51,7 @@ class MisassignmentMeasurement
   /**
      @short runs the measurement
   */
-  void measureMisassignments(top::EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1);
+  void measureMisassignments(top::EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1, TString syst="");
   
   /**
      @short getters
@@ -81,6 +85,9 @@ class MisassignmentMeasurement
   std::map<TString,double> alphaEst,alphaEstErr;
 
   std::map<TString,double> bias;
+
+  JetResolution *stdEtaResol_, *stdPhiResol_, *stdPtResol_;
+  JetCorrectionUncertainty *jecUnc_;
 
 };
 

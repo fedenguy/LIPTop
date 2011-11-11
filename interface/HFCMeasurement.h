@@ -26,8 +26,8 @@
 
 //
 #define MAXJETMULT 8
-#define MAXCATEGORIES 5
-enum JetMultBins{BIN_2=0,BIN_3,BIN_4,BIN_5, BIN_6, BIN_7, BIN_8};
+#define MAXCATEGORIES 8
+enum JetMultBins{BIN_2=0,BIN_3, BIN_4};
 struct CombinedHFCModel_t
 {
   RooArgSet pdfSet,constrPDFSet;
@@ -38,13 +38,13 @@ struct CombinedHFCModel_t
   RooRealVar *abseq,*sfeq,*sfeq_mean_constrain,*sfeq_sigma_constrain;
   RooFormulaVar *eq;
   RooGaussian *sfeq_constrain;
-  RooRealVar *jetocc[MAXJETMULT];
-  RooRealVar *fcorrect[MAXJETMULT],*fcorrect_mean_constrain[MAXJETMULT],*fcorrect_sigma_constrain[MAXJETMULT];
-  RooGaussian *fcorrect_constrain[MAXJETMULT];
-  RooRealVar *fttbar[MAXJETMULT],*fttbar_mean_constrain[MAXJETMULT],*fttbar_sigma_constrain[MAXJETMULT];
-  RooGaussian *fttbar_constrain[MAXJETMULT];
-  RooRealVar *fsingletop[MAXJETMULT],*fsingletop_mean_constrain[MAXJETMULT],*fsingletop_sigma_constrain[MAXJETMULT];
-  RooGaussian *fsingletop_constrain[MAXJETMULT];
+  RooRealVar *jetocc[MAXCATEGORIES];
+  RooRealVar *fcorrect[MAXCATEGORIES],*fcorrect_mean_constrain[MAXCATEGORIES],*fcorrect_sigma_constrain[MAXCATEGORIES];
+  RooGaussian *fcorrect_constrain[MAXCATEGORIES];
+  RooRealVar *fttbar[MAXCATEGORIES],*fttbar_mean_constrain[MAXCATEGORIES],*fttbar_sigma_constrain[MAXCATEGORIES];
+  RooGaussian *fttbar_constrain[MAXCATEGORIES];
+  RooRealVar *fsingletop[MAXCATEGORIES],*fsingletop_mean_constrain[MAXCATEGORIES],*fsingletop_sigma_constrain[MAXCATEGORIES];
+  RooGaussian *fsingletop_constrain[MAXCATEGORIES];
 };
 
 //
@@ -57,7 +57,7 @@ class HFCMeasurement
   /**
      @short CTOR
    */
-  HFCMeasurement(int maxJets=4, int fitType=0) : 
+  HFCMeasurement(int fitType=0, int maxJets=3) : 
     isInit_(false), fitType_(fitType), maxJets_(maxJets),  smR_(1.0), nMeasurements_(0)  
     {
       bookMonitoringHistograms();
@@ -72,7 +72,7 @@ class HFCMeasurement
     /**
        @short steer the fit
     */
-    void fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, TString dilCat);
+    void fitHFCtoEnsemble(top::EventSummaryHandler &evHandler);
     
     /**
        @short setters for parameters
@@ -85,31 +85,32 @@ class HFCMeasurement
       algoCut_  = cut;
     }
     
-    void setBtagEfficiency(double eff, double sfactor, double sfactorUnc,int jetBin=0)
+    void setBtagEfficiency(double eff, double sfactor, double sfactorUnc)
     {
-      effb_[jetBin]=eff;
-      sfb_[jetBin]=sfactor;
-      sfbUnc_[jetBin]=sfactorUnc;
+      effb_   = eff;
+      sfb_    = sfactor;
+      sfbUnc_ = sfactorUnc;
     } 
 
-    void setMistagEfficiency(double eff, double sfactor, double sfactorUnc,int jetBin=0)
+    void setMistagEfficiency(double eff, double sfactor, double sfactorUnc)
     {
-      effq_[jetBin]=eff;
-      sfq_[jetBin]=sfactor;
-      sfqUnc_[jetBin]=sfactorUnc;
+      effq_   = eff;
+      sfq_    = sfactor;
+      sfqUnc_ = sfactorUnc;
     } 
 
     void setSelectionFractions(double fcorrect,   double fcorrectunc, 
 			       double fttbar,     double fttbarunc,
 			       double fsingletop, double fsingletopunc,
-			       int jetBin=0)
+			       int jetBin=0,      TString dilChannel="emu")
     {
-      fcorrect_[jetBin]=fcorrect;
-      fcorrectUnc_[jetBin]=fcorrectunc;
-      fttbar_[jetBin]=fttbar;
-      fttbarUnc_[jetBin]=fttbarunc;
-      fsingletop_[jetBin]=fsingletop;
-      fsingletopUnc_[jetBin]=fsingletopunc;
+      dilChannel += jetBin;
+      fcorrect_[dilChannel]      = fcorrect;
+      fcorrectUnc_[dilChannel]   = fcorrectunc;
+      fttbar_[dilChannel]        = fttbar;
+      fttbarUnc_[dilChannel]     = fttbarunc;
+      fsingletop_[dilChannel]    = fsingletop;
+      fsingletopUnc_[dilChannel] = fsingletopunc;
     }
 
   
@@ -123,7 +124,7 @@ class HFCMeasurement
  private:
 
     void initHFCModel();
-    void runHFCFit(TString dilCat);
+    void runHFCFit();
     void runHFCDiffFit(TString dilCat);
 
     void bookMonitoringHistograms();
@@ -134,6 +135,7 @@ class HFCMeasurement
     int fitType_;
 
     int maxJets_;
+    std::vector<TString> categoryKeys_;
 
     //R
     double smR_;
@@ -141,14 +143,17 @@ class HFCMeasurement
     //btag algorithm 
     TString btagAlgo_;    
     double algoCut_;
-    std::map<Int_t,Float_t>  effb_, sfb_, sfbUnc_, effq_, sfq_, sfqUnc_;
+    Float_t  effb_, sfb_, sfbUnc_, effq_, sfq_, sfqUnc_;
 
-    //event types
-    std::map<Int_t, Float_t> fcorrect_,  fcorrectUnc_, 
+    //parametrizations for purity 
+    std::map<TString, Float_t> fcorrect_,  fcorrectUnc_, 
       fttbar_, fttbarUnc_,
       fsingletop_, fsingletopUnc_;
     
+    //the histograms
     SelectionMonitor controlHistos_;    
+
+    //a counter for pseudo-experiments
     int nMeasurements_;
 };
 

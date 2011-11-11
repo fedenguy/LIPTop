@@ -77,13 +77,22 @@ Double_t HeavyFlavorPDF::_evaluate(int jetMult,int nBtags) const
 	int nevents = jetocc;
 	int npairs=2*jmult*nevents;
 	
-	if((2*fttbar+fsingletop)*nevents==0) return 0;
-	double alpha=(fcorrect*npairs)/((2*fttbar+fsingletop)*nevents);
-	if(alpha<0 || alpha>1) { cout<< "[HeavyFlavorPDF::_evaluate] unphysical value for alpha: " << alpha << endl; return 0; }
-	double alpha2=pow(alpha,2)*fttbar;
-	double alpha1=2*alpha*(1-alpha)*fttbar+alpha*fsingletop;
+	if((2+fsingletop)*fttbar*nevents==0) return 0;
+	double alpha=(fcorrect*npairs)/((2+fsingletop)*fttbar*nevents);
+	if(alpha<0 || alpha>1) {
+	  //cout<< "[HeavyFlavorPDF::_evaluate] unphysical value for alpha: " << alpha << endl; 
+	  return 0; 
+	}
+	
+	//double alpha2=pow(alpha,2)*fttbar;
+	//double alpha1=(2*alpha*(1-alpha)+alpha*fsingletop)*fttbar;
+	//double alpha0=1-alpha2-alpha1;
+
+	double alpha2=pow(alpha,2);
+	double alpha1=2*alpha*(1-alpha);//+fsingletop*alpha;
 	double alpha0=1-alpha2-alpha1;
 	//	cout << jmult << " "  << alpha2 << " " << alpha1 << " " << alpha0 << endl;
+	
 	//compute probability
 	prob =  alpha2*_evaluateKernel(0,nBtags);
 	prob += alpha1*_evaluateKernel(1,nBtags);

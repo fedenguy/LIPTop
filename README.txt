@@ -53,6 +53,15 @@ hadd EventSummaries.root ${HOME}/scratch0/*_summary.root
 rm ${HOME}/scratch0/*_summary.root
 
 
+#
+# HFC studies
+# the scripts are in bin/HFC
+# the fit parameters are configured in hfcFitter_cfg.json
+# fit b-tag efficiency
+python runHFCMeasurement.py -l 1957 -j ../../data/samples-signal.json -i ~/scratch0/top/EventSummary.root -f 1 -a TCHEL
+python runHFCMeasurement.py -l 1957 -j ../../data/samples-signal.json -i ~/scratch0/top/EventSummary.root -f 5 -a TCHEL
+
+# fit R
 
 
 #
