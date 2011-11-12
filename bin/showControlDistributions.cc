@@ -406,9 +406,9 @@ int main(int argc, char* argv[])
   if(isMC) cnorm=cutflowhistos["all"]->GetBinContent(1);
   //efficiency (trigger,id+isolation) corrections for the different channels
   std::map<int,float> effCorr;
-  effCorr[MUMU] = 0.92*pow(1.0,2);
-  effCorr[EMU]  = 1.0*1.0*0.96;
-  effCorr[EE]   = 1.0*pow(0.96,2);
+  effCorr[MUMU] = isMC ? 0.920 : 1.0;
+  effCorr[EMU]  = isMC ? 0.946 : 1.0;
+  effCorr[EE]   = isMC ? 0.966 : 1.0;
   for(std::map<TString, TH1F *>::iterator hit = cutflowhistos.begin(); hit != cutflowhistos.end(); hit++)
     {
       double ieff=1;
