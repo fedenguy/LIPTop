@@ -268,7 +268,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     for(size_t is=0; is<selStreams.size(); is++)
       {
 	TString ctf=selStreams[is];
-	controlHistos_.fillHisto("ngoodvertex", ctf,selVertices.size());
+	controlHistos_.fillHisto("ngoodvertex", ctf,selVertices.size(),weight);
 	for(size_t ivtx=0; ivtx<selVertices.size(); ivtx++)
 	  {
 	    TString vtype=(ivtx ==0 ? "" : "other");
