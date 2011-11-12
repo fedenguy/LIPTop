@@ -58,7 +58,7 @@ public:
 private:
 
   void saveEvent(const edm::Event& event, int evCat, std::vector<reco::CandidatePtr> &leptons, std::vector<const pat::Jet *> &jets, const pat::MET *met, 
-		 int nvertices, int npuIT, float rho, float weight, float normWeight);
+		 int nvertices, float rho, float weight, float normWeight);
 
   std::map<std::string, edm::ParameterSet> objConfig_;
   
@@ -170,7 +170,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     //MC TRUTH, WEIGHT, ETC.
     //
     float weight(1),normWeight(1);
-    int npuOOT(0),npuIT(0);
+    int npuOOTm1(0),npuOOTp1(0),npuIT(0);
     int gentteventcode=gen::top::Event::UNKNOWN;
     float dyMass(0.);
     summaryHandler_.evSummary_.nmcparticles=0;
@@ -188,10 +188,13 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	event.getByType(puInfoH);
 	for(std::vector<PileupSummaryInfo>::const_iterator it = puInfoH->begin(); it != puInfoH->end(); it++)
 	  {
-	    if(it->getBunchCrossing()==0) npuIT += it->getPU_NumInteractions();
-	    else npuOOT += it->getPU_NumInteractions();
+	    if(it->getBunchCrossing()==0)  npuIT += it->getPU_NumInteractions();
+	    if(it->getBunchCrossing()==-1) npuOOTm1 += it->getPU_NumInteractions();
+	    else                           npuOOTp1 += it->getPU_NumInteractions();
 	  }
-	
+	summaryHandler_.evSummary_.ngenpu=npuIT;
+	summaryHandler_.evSummary_.ngenootpum1=npuOOTm1;
+	summaryHandler_.evSummary_.ngenootpup1=npuOOTp1;
 	
 	genEvent_.genLabel_ = objConfig_["Generator"].getParameter<edm::InputTag>("source");
 
@@ -484,7 +487,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     //
     // ALL DONE: SAVE TO NTUPLE
     //    
-    saveEvent(event,selPath,leptons,selJets,&pfmet,selVertices.size(),npuIT,rho,weight,normWeight);
+    saveEvent(event,selPath,leptons,selJets,&pfmet,selVertices.size(),rho,weight,normWeight);
     
   } catch(std::exception &e) {
     std::cout << "[TopDileptonEventAnalyzer][analyze] failed with " << e.what() << std::endl;
@@ -504,7 +507,7 @@ void TopDileptonEventAnalyzer::endLuminosityBlock(const edm::LuminosityBlock & i
 
 //
 void TopDileptonEventAnalyzer::saveEvent(const edm::Event& event, int evCat, std::vector<reco::CandidatePtr> &leptons, std::vector<const pat::Jet *> &jets, const pat::MET *met, 
-				     int nvertices, int npuIT, float rho, float weight, float normWeight)
+				     int nvertices, float rho, float weight, float normWeight)
 {
   //save event header
   summaryHandler_.evSummary_.run=event.id().run();
@@ -514,7 +517,6 @@ void TopDileptonEventAnalyzer::saveEvent(const edm::Event& event, int evCat, std
   summaryHandler_.evSummary_.weight=weight; 
   summaryHandler_.evSummary_.normWeight=normWeight; 
   summaryHandler_.evSummary_.nvtx=nvertices;
-  summaryHandler_.evSummary_.ngenpu=npuIT;
   summaryHandler_.evSummary_.rho=rho;
   summaryHandler_.evSummary_.nparticles=leptons.size()+jets.size()+1;
 

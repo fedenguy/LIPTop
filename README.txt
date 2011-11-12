@@ -29,7 +29,7 @@ runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_
 # CREATE CONTROL DISTRIBUTIONS AND EVENT SUMMARIES
 # it will run an executable and store the outputs in root files named after each sample
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.10.31 -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s True
+runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.11.11 -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s True
 
 
 #

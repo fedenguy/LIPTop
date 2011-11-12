@@ -26,6 +26,8 @@ namespace top
     t_->Branch("isSignal",   &evSummary_.isSignal,   "isSignal/O");
     t_->Branch("nvtx",       &evSummary_.nvtx,   "nvtx/I");
     t_->Branch("ngenpu",     &evSummary_.ngenpu,   "ngenpu/I");
+    t_->Branch("ngenootpum1",     &evSummary_.ngenootpum1,   "ngenootpum1/I");
+    t_->Branch("ngenootpup1",     &evSummary_.ngenootpup1,   "ngenootpup1/I");
     t_->Branch("rho",        &evSummary_.rho,    "rho/F");
     t_->Branch("weight",     &evSummary_.weight,   "weight/F");
     t_->Branch("normWeight",     &evSummary_.normWeight,   "normWeight/F");
@@ -36,16 +38,16 @@ namespace top
     t_->Branch("en",         evSummary_.en,          "en[nparticles]/F");
     t_->Branch("id",         evSummary_.id,          "id[nparticles]/I");
     t_->Branch("genid",      evSummary_.genid,       "genid[nparticles]/I"); 
-    t_->Branch("genflav",      evSummary_.genflav,       "genflav[nparticles]/I"); 
+    t_->Branch("genflav",    evSummary_.genflav,     "genflav[nparticles]/I"); 
     t_->Branch("info1",      evSummary_.info1,       "info1[nparticles]/F");
     t_->Branch("info2",      evSummary_.info2,       "info2[nparticles]/F");
     t_->Branch("info3",      evSummary_.info3,       "info3[nparticles]/F");
     t_->Branch("info4",      evSummary_.info4,       "info4[nparticles]/F");
     t_->Branch("info5",      evSummary_.info5,       "info5[nparticles]/F");
-    if(t_->GetBranch("info6")) t_->GetBranch("info6")->SetAddress(evSummary_.info6);
-    if(t_->GetBranch("info7")) t_->GetBranch("info7")->SetAddress(evSummary_.info7);
-    if(t_->GetBranch("info8")) t_->GetBranch("info8")->SetAddress(evSummary_.info8);
-    if(t_->GetBranch("info9")) t_->GetBranch("info9")->SetAddress(evSummary_.info9);
+    t_->Branch("info6",      evSummary_.info6,       "info6[nparticles]/F");
+    t_->Branch("info7",      evSummary_.info7,       "info7[nparticles]/F");
+    t_->Branch("info8",      evSummary_.info8,       "info8[nparticles]/F");
+    t_->Branch("info9",      evSummary_.info9,       "info9[nparticles]/F");
 
 
     t_->Branch("nmcparticles", &evSummary_.nmcparticles, "nmcparticles/I");
@@ -74,7 +76,9 @@ namespace top
     if(t_->GetBranch("hasTrigger")) t_->GetBranch("hasTrigger")->SetAddress(&evSummary_.hasTrigger);
     t_->GetBranch("isSignal")->SetAddress(&evSummary_.isSignal);
     if(t_->GetBranch("nvtx"))   t_->GetBranch("nvtx")->SetAddress(&evSummary_.nvtx);
-    if(t_->GetBranch("ngenpu")) t_->GetBranch("ngenpu")->SetAddress(&evSummary_.ngenpu);
+    t_->GetBranch("ngenpu")->SetAddress(&evSummary_.ngenpu);
+    if(t_->GetBranch("ngenootpup1")) t_->GetBranch("ngenootpup1")->SetAddress(&evSummary_.ngenootpup1);
+    if(t_->GetBranch("ngenootpum1")) t_->GetBranch("ngenootpum1")->SetAddress(&evSummary_.ngenootpum1);
     if(t_->GetBranch("rho"))    t_->GetBranch("rho")->SetAddress(&evSummary_.rho);
     t_->GetBranch("weight")->SetAddress(&evSummary_.weight);
     if(t_->GetBranch("normWeight") ) t_->GetBranch("normWeight")->SetAddress(&evSummary_.normWeight);
@@ -91,10 +95,10 @@ namespace top
     t_->GetBranch("info3")->SetAddress(evSummary_.info3);
     t_->GetBranch("info4")->SetAddress(evSummary_.info4);
     t_->GetBranch("info5")->SetAddress(evSummary_.info5);
-    t_->GetBranch("info6")->SetAddress(evSummary_.info6);
-    t_->GetBranch("info7")->SetAddress(evSummary_.info7);
-    t_->GetBranch("info8")->SetAddress(evSummary_.info8);
-    t_->GetBranch("info9")->SetAddress(evSummary_.info9);
+    if(t_->GetBranch("info6")) t_->GetBranch("info6")->SetAddress(evSummary_.info6);
+    if(t_->GetBranch("info7")) t_->GetBranch("info7")->SetAddress(evSummary_.info7);
+    if(t_->GetBranch("info8")) t_->GetBranch("info8")->SetAddress(evSummary_.info8);
+    if(t_->GetBranch("info9")) t_->GetBranch("info9")->SetAddress(evSummary_.info9);
 
     if(t_->GetBranch("nmcparticles"))
       {

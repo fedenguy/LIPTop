@@ -144,6 +144,7 @@ int main(int argc, char* argv[])
   btagCuts["TCHEL"]=1.7;
   btagCuts["TCHEM"]=3.3;
   btagCuts["TCHET"]=10.2;
+  btagCuts["TCHPL"]=1.19 ;
   btagCuts["TCHPM"]=1.93;
   btagCuts["TCHPT"]=3.41;
   btagCuts["JBPL"]=1.33;
@@ -628,6 +629,7 @@ int main(int argc, char* argv[])
 	      nbtags["TCHEL"]  += (orderedJetColl[baseIdx].btag1>btagCuts["TCHEL"]);
 	      nbtags["TCHEM"]  += (orderedJetColl[baseIdx].btag1>btagCuts["TCHEM"]);
 	      nbtags["TCHET"]  += (orderedJetColl[baseIdx].btag1>btagCuts["TCHET"]);
+	      nbtags["TCHPL"]  += (orderedJetColl[baseIdx].btag2>btagCuts["TCHPL"]);
 	      nbtags["TCHPM"]  += (orderedJetColl[baseIdx].btag2>btagCuts["TCHPM"]);
 	      nbtags["TCHPT"]  += (orderedJetColl[baseIdx].btag2>btagCuts["TCHPT"]);
 	      nbtags["SSVHEM"] += (orderedJetColl[baseIdx].btag3>btagCuts["SSVHEM"]);		

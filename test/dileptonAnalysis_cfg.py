@@ -12,9 +12,10 @@ process.source = cms.Source("PoolSource",
 print inputList    
 #load the analyzer
 process.load('CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi')
-process.puWeights.mc           = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Summer11Truth.root')
-process.puWeights.data         = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/PileupTruth2011A.root')
-process.puWeights.puWeightFile = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Weight3D_2011A.root')
+process.puWeights.mc           = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Summer11Observed.root')
+process.puWeights.data         = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Pileup2011A.root')
+process.puWeights.puWeightFile = cms.string('')
+process.puWeights.use3D        = cms.bool(False)
 
 process.load('LIP.Top.DileptonEventAnalysis_cfi')
 process.TFileService = cms.Service("TFileService", fileName = cms.string(outFile) )
