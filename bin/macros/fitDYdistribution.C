@@ -75,7 +75,7 @@
       for(size_t iproc=0; iproc<nprocs; iproc++)
 	{
 	  TString theHisto=histCompare[ihisto];
-	  if(ihisto==histoFit && !procs[iproc].Contains("data")) 
+	  //if(ihisto==histoFit && !procs[iproc].Contains("data"))  //scale variations
 	    {
 	      //theHisto += "pudown";
 	      //theHisto += "puup";
@@ -90,7 +90,7 @@
 	  //if(!procs[iproc].Contains("data")) histo.Scale(1.0+0.04);    //selection
 	  //if(!procs[iproc].Contains("data")) histo.Scale(1.0-0.04);
 	  //if(procs[iproc].Contains("t#bar{t}")) histo.Scale(1.0-0.04);  //ttbar xsec
-	  if(procs[iproc].Contains("t#bar{t}")) histo.Scale(1.0+0.04);  
+	  //if(procs[iproc].Contains("t#bar{t}")) histo.Scale(1.0+0.04);  
 
 	  //check category
 	  TString key("Other processes"), keyName("other");
