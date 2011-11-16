@@ -5,7 +5,7 @@ outputdir=${inputdir}/merged
 mkdir -p ${outputdir}
 
 tags=(WW ZZ WZ 
-    WJetsToLNu DYJetsToLL DYJetsToEE DYJetsToMuMu
+    WJetsToLNu DYJetsToLL DYJetsToEE_M20to50 DYJetsToMuMu_M20to50
     TTJets TTJets_matchingup TTJets_matchingdown TTJets_scaleup TTJets_scaledown
     SingleTbar_tW SingleTbar_t SingleTbar_s SingleT_tW SingleT_t SingleT_s SingleTbar_tW_DS SingleT_tW_DS
     DoubleElectronMay10ReReco DoubleMuMay10ReReco MuEGMay10ReReco
