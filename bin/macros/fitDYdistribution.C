@@ -75,10 +75,10 @@
       for(size_t iproc=0; iproc<nprocs; iproc++)
 	{
 	  TString theHisto=histCompare[ihisto];
-	  //if(ihisto==histoFit && !procs[iproc].Contains("data"))  //scale variations
+	  if(ihisto==histoFit && !procs[iproc].Contains("data"))  //scale variations
 	    {
 	      //theHisto += "pudown";
-	      //theHisto += "puup";
+	      theHisto += "puup";
 	      //theHisto += "jesup";
 	      //theHisto += "jesdown";
 	      //theHisto += "jer";
@@ -198,6 +198,8 @@
   RooAddPdf shapeModel("shapemodel","signal+background",RooArgList(modelDataTemplate,modelMcTemplate),RooArgList(ndy,nother));
   RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(other_constraint,shapeModel));
   model.fitTo(*sumData,Extended(kTRUE), Constrain(nother),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(fitmin,fitmax));
+  //RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(shapeModel));
+  //model.fitTo(*sumData,Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(fitmin,fitmax));
   
   RooPlot *genericFrame = x.frame();
   genericFrame->GetXaxis()->SetTitle( kindata->GetXaxis()->GetTitle() );

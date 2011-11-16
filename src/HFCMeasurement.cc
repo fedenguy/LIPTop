@@ -98,13 +98,13 @@ void HFCMeasurement::initHFCModel()
   RooAbsReal::defaultIntegratorConfig()->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",50);
 
   //what do we want to fit from the observable
-  bool fitR(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC || FIT_R_AND_EB);
+  bool fitR(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC || fitType_==FIT_R_AND_EB);
   bool fitEb(fitType_==FIT_EB || fitType_==FIT_R_AND_EB || fitType_==FIT_EB_AND_XSEC || fitType_==FIT_EB_AND_EQ);
   bool fitEq(fitType_==FIT_EB_AND_EQ);
 
   //top decay modelling
   if(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC) model.r = new RooRealVar("r","R",1.0,0.,2.0);
-  else if(fitType_==FIT_R_AND_EB)                 model.r = new RooRealVar("r","R",1.0,0.95,1.05);
+  else if(fitType_==FIT_R_AND_EB)                 model.r = new RooRealVar("r","R",1.0,0.9,1.1);
   else                                            model.r = new RooRealVar("r","R",smR_);
 
   //this is a correction for acceptance (keep constant for now)
@@ -140,19 +140,19 @@ void HFCMeasurement::initHFCModel()
 
 	  model.jetocc[icat] = new RooRealVar("jetocc"+tag,"occ"+tag,1);
 	  
-	  if(fitEq)  model.fcorrect[icat]=new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag]);
+	  if(fitEq || fitType_==FIT_R_AND_EB)  model.fcorrect[icat]=new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag]);
 	  else       model.fcorrect[icat]=new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag],fcorrect_[tag]-3*fcorrectUnc_[tag],fcorrect_[tag]+3*fcorrectUnc_[tag]);
 	  model.fcorrect_mean_constrain[icat] = new RooRealVar("meanfcorrect_"+tag,"#bar{f_{correct}^{"+tag+"}}",fcorrect_[tag]);
 	  model.fcorrect_sigma_constrain[icat] = new RooRealVar("uncfcorrect_"+tag,"#sigma_{f_{correct}^{"+tag+"}}",fcorrectUnc_[tag]);
 	  model.fcorrect_constrain[icat] = new RooGaussian("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],*model.fcorrect_mean_constrain[icat],*model.fcorrect_sigma_constrain[icat]);
 	  	  
-	  if(fitEq)  model.fttbar[icat]                 = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag]);
+	  if(fitEq ||  fitType_==FIT_R_AND_EB)  model.fttbar[icat]                 = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag]);
 	  else       model.fttbar[icat]                 = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag],fttbar_[tag]-3*fttbarUnc_[tag],fttbar_[tag]+3*fttbarUnc_[tag]);
 	  model.fttbar_mean_constrain[icat]  = new RooRealVar("meanfttbar_"+tag,"#bar{f_{t#bar{t}}^{"+tag+"}}",fttbar_[tag]);
 	  model.fttbar_sigma_constrain[icat] = new RooRealVar("uncfttbar_"+tag,"#sigma_{f_{t#bar{t}}^{"+tag+"}}",fttbarUnc_[tag]);
 	  model.fttbar_constrain[icat]       = new RooGaussian("ctr_fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"} constrain",*model.fttbar[icat],*model.fttbar_mean_constrain[icat],*model.fttbar_sigma_constrain[icat]);
       
-	  if(fitEq)   model.fsingletop[icat]                 = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag]);
+	  if(fitEq ||  fitType_==FIT_R_AND_EB)   model.fsingletop[icat]                 = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag]);
 	  else        model.fsingletop[icat]                 = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag],fsingletopUnc_[tag]-3*fsingletopUnc_[tag],fsingletop_[tag]+3*fsingletopUnc_[tag]);
 	  model.fsingletop_mean_constrain[icat]  = new RooRealVar("meanfsingletop_"+tag,"#bar{f_{t}^{"+tag+"}}",fsingletop_[tag]);
 	  model.fsingletop_sigma_constrain[icat] = new RooRealVar("uncfsingletop_"+tag,"#sigma_{f_{t}^{"+tag+"}}",fsingletopUnc_[tag]);
@@ -165,10 +165,13 @@ void HFCMeasurement::initHFCModel()
       
 	  //add the constraints
 	  RooProdPdf *modelconstr=0;
-	  if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
+	  if(fitType_==FIT_EB || fitType_==FIT_R)
 	    {
-	      //modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.fttbar_constrain[icat],*model.fsingletop_constrain[icat]));
-	      modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.fttbar_constrain[icat],*model.fsingletop_constrain[icat],*model.fcorrect_constrain[icat]));
+	      modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.fttbar_constrain[icat],*model.fsingletop_constrain[icat]));
+	    }
+	  else if (fitType_==FIT_R_AND_EB) 
+	    {
+	      modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc));
 	    }
 	  else if(fitType_==FIT_EB_AND_EQ)
 	    modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.sfeq_constrain));
@@ -300,7 +303,10 @@ void HFCMeasurement::runHFCFit()
       RooProdPdf *modelconstr = dynamic_cast<RooProdPdf *>( pdfIt->Next() );
       if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
 	{
-	  //	  nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.fttbar[icat],*model.fsingletop[icat])),NumCPU(2));
+	  nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.fttbar[icat],*model.fsingletop[icat])),NumCPU(2));
+	}
+      else if(  fitType_==FIT_R_AND_EB)
+	{
 	  nll = (RooNLLVar *) modelconstr->createNLL(*ds,NumCPU(2));
 	}
       else if(fitType_==FIT_EB_AND_EQ /*|| fitType_==FIT_R_AND_EQ*/)  
@@ -461,7 +467,7 @@ void HFCMeasurement::runHFCDiffFit(TString dilCategory)
 
       RooNLLVar *nll=0;
       RooProdPdf *modelconstr = dynamic_cast<RooProdPdf *>( pdfIt->Next() );
-      if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) nll = (RooNLLVar *) modelconstr->createNLL(*ds);//,Constrain(RooArgSet(*model.fttbar[jmult-2],*model.fsingletop[jmult-2])));
+      if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.fttbar[jmult-2],*model.fsingletop[jmult-2])));
       else if(fitType_==FIT_EB_AND_EQ /*|| fitType_==FIT_R_AND_EQ*/)    nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(/**model.fttbar[jmult-2],*model.fsingletop[jmult-2],*/*model.sfeq)));
       TString itit("=");    itit+=jmult; itit += " jets";
       nll->SetTitle(itit);

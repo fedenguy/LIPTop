@@ -94,13 +94,13 @@ bool isQQlike(LorentzVectorCollection &jets, LorentzVector &l1, LorentzVector &l
 }
 
 
-float getArcCos(LorentzVector &a, LorentzVector &b)
+std::pair<float,float> getArcCos(LorentzVector &a, LorentzVector &b)
 {
   TVector3 mom1(a.px(),a.py(),a.pz());
   TVector3 mom2(b.px(),b.py(),b.pz());
   double cosine = mom1.Dot(mom2)/(mom1.Mag()*mom2.Mag());
-  double arcCosine = acos(cosine)-TMath::Pi();
-  return arcCosine;
+  double arcCosine = acos(cosine);
+  return std::pair<float,float>(cosine,arcCosine);
 }
 
 //
@@ -189,7 +189,6 @@ int main(int argc, char* argv[])
   TH1 *sslepMult = (TH1 *) lepMult->Clone("ssnleptons");
 
   controlHistos.addHistogram( sslepMult );
-  controlHistos.addHistogram( new TH1D("dilarccosine",";arcCos(l,l');Events",100,-3.2,3.2) );
   controlHistos.addHistogram( new TH1D("dilcharge",";Charge;Events",3,-1.5,1.5) );
   controlHistos.addHistogram( new TH1D("dphill",";#Delta#phi(l^{(1)},l^{(2)});Events",100,-3.2,3.2) );
   controlHistos.addHistogram( new TH1D("drll",";#Delta R(l^{(1)},l^{(2)});Events",100,0,6) );
@@ -297,6 +296,10 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( cutflowH );
       controlHistos.addHistogram( new TH1D("dilmassctr"+cats[ivar],";Region;Events",2,0,2) );
       controlHistos.addHistogram( new TH1D("mtsum"+cats[ivar],";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
+      controlHistos.addHistogram( new TH1D("dilarccosine"+cats[ivar],";arcCos(l,l');Events",100,-3.2,3.2) );
+      controlHistos.addHistogram( new TH1D("dilcosine"+cats[ivar],";Cos(l,l');Events",100,-1.2,1.2) );
+      controlHistos.addHistogram( new TH1D("dilarccosinelowmet"+cats[ivar],";arcCos(l,l');Events",100,-3.2,3.2) );
+      controlHistos.addHistogram( new TH1D("dilcosinelowmet"+cats[ivar],";Cos(l,l');Events",100,-1.2,1.2) );
       controlHistos.addHistogram( new TH1D("ptsum"+cats[ivar],";p_{T}(l^{(1)})+p_{T}(l^{(2)});Events",100,0,500) );
 
 
@@ -612,14 +615,14 @@ int main(int argc, char* argv[])
 	      int assignCode1=(phys.leptons[0].genid*orderedJetColl[baseIdx].genid);
 	      bool isCorrect1( (assignCode1<0) && hasBflavor);
 	      LorentzVector mlj=phys.leptons[0]+orderedJetColl[baseIdx]; 
-	      double dthetalj=getArcCos(phys.leptons[0],orderedJetColl[baseIdx]); 
+	      double dthetalj=getArcCos(phys.leptons[0],orderedJetColl[baseIdx]).second; 
 	      if(isCorrect1) correctPairKin.push_back(std::pair<LorentzVector,double> (mlj,dthetalj) );
 	      else           wrongPairKin.push_back(std::pair<LorentzVector,double> (mlj,dthetalj) );
 
 	      int assignCode2=(phys.leptons[1].genid*orderedJetColl[baseIdx].genid);
 	      bool isCorrect2 = ( (assignCode2<0) && hasBflavor);
 	      mlj=phys.leptons[1]+orderedJetColl[baseIdx]; 
-	      dthetalj=getArcCos(phys.leptons[1],orderedJetColl[baseIdx]); 
+	      dthetalj=getArcCos(phys.leptons[1],orderedJetColl[baseIdx]).second; 
 	      if(isCorrect2) correctPairKin.push_back(std::pair<LorentzVector,double> (mlj,dthetalj) );
 	      else           wrongPairKin.push_back(std::pair<LorentzVector,double> (mlj,dthetalj) );
 	      
@@ -672,7 +675,9 @@ int main(int argc, char* argv[])
 	    }
 	  jetColl=prunedJetColl;
 
-	  double acosine      = getArcCos(l1,l2);
+	  std::pair<float,float> arcosres=getArcCos(l1,l2);
+	  double cosine       = arcosres.first;
+	  double acosine      = arcosres.second;
 	  double ptsum        = l1.pt()+l2.pt();
 	  double drll         = deltaR(l1,l2);
 	  double dphill       = deltaPhi(l1.phi(),l2.phi());
@@ -771,6 +776,7 @@ int main(int argc, char* argv[])
 
 	  bool isInQuarkoniaRegion( dileptonSystem.mass()<12 );
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
+	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
 	  bool passMet( !isSameFlavor || (theMET.pt()>30) );
 	  bool isOS(dilcharge<0);
@@ -797,24 +803,33 @@ int main(int argc, char* argv[])
 		}
 
 	      //MET
-	      if(!passMet) continue;
+	      if(!passMet) 
+		{
+		  if(!isZcand && isOS)
+		    {
+		      controlHistos.fillHisto("dilcosinelowmet"+cats[ivar],ctf,cosine,weight);
+		      controlHistos.fillHisto("dilarccosinelowmet"+cats[ivar],ctf,acosine,weight);
+		    }
+		  continue;
+		}
 	      if(!isZcand)
 		{
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELMET,weight);
 		  if(ivar==0) 
 		    {
 		      controlHistos.fillHisto("dilcharge",ctf,dilcharge,weight);
-		      controlHistos.fillHisto("dilarccosine",ctf,acosine,weight);
 		    }
 		}
  
 	      // OS dilepton
 	      if(!isOS) continue;
 	      if(ivar==0)  controlHistos.fillHisto("dilmass",ctf,dileptonSystem.mass(),weight);
-	      controlHistos.fillHisto("dilmassctr"+cats[ivar],ctf,isZcand,weight);
+	      controlHistos.fillHisto("dilmassctr"+cats[ivar],ctf,isZcand||isEmuInZRegion ,weight);
 	      if(!isZcand)
 		{
 		  selEvents+=weight;
+		  controlHistos.fillHisto("dilcosine"+cats[ivar],ctf,cosine,weight);
+		  controlHistos.fillHisto("dilarccosine"+cats[ivar],ctf,acosine,weight);
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELOS,weight);
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SEL0BTAGS+btagbin,weight);
 		  controlHistos.fillHisto("mtsum"+cats[ivar],ctf,mtsum,weight);
