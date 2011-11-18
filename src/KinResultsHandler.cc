@@ -1,6 +1,8 @@
 #include "LIP/Top/interface/KinResultsHandler.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "TSystem.h"
+#include "TRFIOFile.h"
+
 
 using namespace std;
 using namespace top;
@@ -31,6 +33,7 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
       if(!outpath.Contains(".root"))
 	{
 	  std::map<int,TString> files;
+	  if(outpath.Contains("castor")) outpath="rfio://"+outpath;
 	  void *dirp=gSystem->OpenDirectory(outpath);
 	  while(dirp){
 	    TString entry(gSystem->GetDirEntry(dirp));
