@@ -111,35 +111,6 @@
                 "xsec":165
                 }
 	  ]
-	},
-	{
-           "tag":"data",
-           "isdata":true,
-           "color":1,
-           "fill":0,
-           "marker":20,
-           "data":[
-               {
-                  "dtag":"DoubleMu2011AAug5thTauReplacement",
-                  "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_Aug5th_TauReplacement"]
-                },
-                {
-                  "dtag":"DoubleMu2011AMay10thTauReplacement",
-                  "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_May10th_TauReplacement"]
-                },
-               {
-                  "dtag":"DoubleMu2011APRv4TauReplacement",
-                  "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_PR_v4_TauReplacement"]
-                },
-               {
-                  "dtag":"DoubleMu2011APRv6TauReplacement",
-                  "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_PR_v6_TauReplacement"]
-                }
-	    ]	
 	}
     ]	
 }
