@@ -35,6 +35,7 @@ except getopt.GetoptError:
 subToBatch=False
 samplesDB = ''
 evPerJob=-1
+evToRun=-1
 extraParams=''
 summaryDir=''
 tagSel=''
@@ -46,6 +47,7 @@ for o,a in opts:
     elif o in('-j'): samplesDB = a
     elif o in('-t'): tagSel=a
     elif o in('-e'): evPerJob=int(a)
+    elif o in('-n'): evToRun=int(a)
     elif o in('-p'): extraParams = a
     elif o in('-d'): summaryDir = a
 
@@ -85,6 +87,8 @@ for proc in procList :
                 fin = ROOT.TFile.Open(fileName)
                 data=fin.Get("evAnalyzer/data")
                 nentries=data.GetEntriesFast()
+                if(evToRun>0) :
+                    nentries=evToRun
                 fin.Close()
                 njobs=nentries/evPerJob+1
                 print "Nentries=" + str(nentries)
