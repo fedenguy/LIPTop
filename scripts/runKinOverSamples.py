@@ -15,6 +15,7 @@ def usage(msg='') :
     print '  -s : submit or not to batch'
     print '  -j : json file containing the samples'
     print '  -e : number of events per job'
+    print '  -n : number of events to run per sample'
     print '  -d : directory containing the event summaries'
     print '  -t : select tag to submit'
     print '  -p : extra parameters to pass to KIN'
@@ -24,7 +25,7 @@ def usage(msg='') :
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "s:j:e:p:d:t:h?"
+    shortopts  = "s:j:e:n:p:d:t:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
