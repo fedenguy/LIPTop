@@ -35,65 +35,6 @@ using namespace std;
 using namespace top;
 
 
-//
-bool isQQlike(LorentzVectorCollection &jets, LorentzVector &l1, LorentzVector &l2)
-{
-  int NJetsQQ(0);
-  LorentzVector QQj1(0,0,0,0),QQj2(0,0,0,0);
-  LorentzVectorCollection centralJets;
-  for(size_t ijet=0; ijet<jets.size(); ijet++) 
-    {
-      float jpt  = jets[ijet].pt();
-      float jeta = jets[ijet].eta();
-      if(jpt<30)continue;
-      if(fabs(jeta)<2.5)
-	{
-	  centralJets.push_back(jets[ijet]); 
-	  continue;
-	}
-      
-      NJetsQQ++;
-      if(jets[ijet].pt()>QQj1.pt()) 
-	{
-	  QQj2=QQj1;    
-	  QQj1=jets[ijet];
-	}
-      else if (jets[ijet].pt()>QQj2.pt())
-	{
-	  QQj2=jets[ijet];
-	}
-      
-    }
-  
-  bool isQQ = false;
-  if(NJetsQQ>=2)
-    {
-      LorentzVector QQSyst = QQj1+QQj2;
-      double j1eta=QQj1.eta();
-      double j2eta=QQj2.eta();
-      double dEta = fabs(j1eta-j2eta);
-	
-      double MaxEta, MinEta;
-      if(j1eta<j2eta) { MinEta=j1eta; MaxEta=j2eta;}
-      else            { MinEta=j2eta; MaxEta=j1eta;}
-
-      int NCentralLepton(0);
-      if(l1.eta()>MinEta && l1.eta()<MaxEta) NCentralLepton++;
-      if(l2.eta()>MinEta && l2.eta()<MaxEta) NCentralLepton++;
-
-      int NCentralJet(0);
-      for(size_t icentralJets=0; icentralJets<centralJets.size(); icentralJets++)
-	if(centralJets[icentralJets].eta()>MinEta && centralJets[icentralJets].eta()<MaxEta)
-	  NCentralJet++;
-      
-      
-      isQQ = (dEta>3.5) && (QQSyst.M()>450) && (NCentralLepton==2) && (NCentralJet==2);
-    }
-  
-  return isQQ;
-}
-
-
 std::pair<float,float> getArcCos(LorentzVector &a, LorentzVector &b)
 {
   TVector3 mom1(a.px(),a.py(),a.pz());
@@ -296,10 +237,14 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( cutflowH );
       controlHistos.addHistogram( new TH1D("dilmassctr"+cats[ivar],";Region;Events",2,0,2) );
       controlHistos.addHistogram( new TH1D("mtsum"+cats[ivar],";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
-      controlHistos.addHistogram( new TH1D("dilarccosine"+cats[ivar],";arcCos(l,l');Events",100,-3.2,3.2) );
-      controlHistos.addHistogram( new TH1D("dilcosine"+cats[ivar],";Cos(l,l');Events",100,-1.2,1.2) );
-      controlHistos.addHistogram( new TH1D("dilarccosinelowmet"+cats[ivar],";arcCos(l,l');Events",100,-3.2,3.2) );
-      controlHistos.addHistogram( new TH1D("dilcosinelowmet"+cats[ivar],";Cos(l,l');Events",100,-1.2,1.2) );
+
+      TString thetallcats[]={"","lowmet","eq0jets","eq0jetslowmet","eq1jets","eq1jetslowmet"};
+      for(size_t k=0; k<sizeof(thetallcats)/sizeof(TString); k++)
+	{
+	  controlHistos.addHistogram( new TH1D(thetallcats[k]+"dilarccosine"+cats[ivar],";arcCos(l,l');Events",100,-3.2,3.2) );
+	  controlHistos.addHistogram( new TH1D(thetallcats[k]+"dilarccosinelowmet"+cats[ivar],";arcCos(l,l');Events",100,-3.2,3.2) );
+	}
+      
       controlHistos.addHistogram( new TH1D("ptsum"+cats[ivar],";p_{T}(l^{(1)})+p_{T}(l^{(2)});Events",100,0,500) );
 
 
@@ -372,7 +317,6 @@ int main(int argc, char* argv[])
   controlHistos.initMonitorForStep("ee");
   controlHistos.initMonitorForStep("emu");
   controlHistos.initMonitorForStep("mumu");
-  controlHistos.initMonitorForStep("qqlike");
   
   ///
   // process events file
@@ -562,7 +506,6 @@ int main(int argc, char* argv[])
 	  std::vector<TString> catsToFill;
 	  catsToFill.push_back("all");
 	  catsToFill.push_back(ch);
-	  if(isQQlike(jetColl,l1,l2)) catsToFill.push_back("qqlike");
 	  const size_t nCatsToFill=catsToFill.size();
 	  	  
 	  //kinematics with propagated variations
@@ -788,10 +731,23 @@ int main(int argc, char* argv[])
 	  for(size_t ictf=0; ictf<nCatsToFill; ictf++)
 	    {
 	      TString ctf=catsToFill[ictf];
+
+	      //reinforce dilepton selection
 	      if(isInQuarkoniaRegion) continue;
-	      if(!passLooseJets)      continue;
+	      
+	      //DY control from thetall
+	      if(!isZcand && isOS)   
+		{
+		  TString jetCat="";
+		  if(nseljetsLoose==0) jetCat="eq0jets";
+		  if(nseljetsLoose==1) jetCat="eq1jets"; 
+		  TString metCat( passMet ? "" : "lowmet");
+		  controlHistos.fillHisto(jetCat+metCat+"dilarccosine"+cats[ivar],ctf,acosine,weight);
+		}
+	      
 	      
 	      // >= 2 jets
+	      if(!passLooseJets) continue;
 	      if(!isZcand)
 		{
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELJETS,weight);
@@ -803,15 +759,8 @@ int main(int argc, char* argv[])
 		}
 
 	      //MET
-	      if(!passMet) 
-		{
-		  if(!isZcand && isOS)
-		    {
-		      controlHistos.fillHisto("dilcosinelowmet"+cats[ivar],ctf,cosine,weight);
-		      controlHistos.fillHisto("dilarccosinelowmet"+cats[ivar],ctf,acosine,weight);
-		    }
-		  continue;
-		}
+	      if(!passMet) continue;
+
 	      if(!isZcand)
 		{
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELMET,weight);
@@ -828,8 +777,6 @@ int main(int argc, char* argv[])
 	      if(!isZcand)
 		{
 		  selEvents+=weight;
-		  controlHistos.fillHisto("dilcosine"+cats[ivar],ctf,cosine,weight);
-		  controlHistos.fillHisto("dilarccosine"+cats[ivar],ctf,acosine,weight);
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELOS,weight);
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SEL0BTAGS+btagbin,weight);
 		  controlHistos.fillHisto("mtsum"+cats[ivar],ctf,mtsum,weight);
@@ -1002,14 +949,12 @@ int main(int argc, char* argv[])
   outDirs["ee"]=baseOutDir->mkdir("ee");
   outDirs["emu"]=baseOutDir->mkdir("emu");
   outDirs["mumu"]=baseOutDir->mkdir("mumu");
-  outDirs["qqlike"]=baseOutDir->mkdir("qqlike");
   for(SelectionMonitor::StepMonitor_t::iterator it =mons.begin(); it!= mons.end(); it++)
     {
       TString icat("all");
       if(it->first.BeginsWith("ee")) icat="ee";
       if(it->first.BeginsWith("emu")) icat="emu";
       if(it->first.BeginsWith("mumu")) icat="mumu";
-      if(it->first.BeginsWith("qqlike")) icat="qqlike";
       outDirs[icat]->cd();
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
 	{

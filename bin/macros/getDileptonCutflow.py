@@ -32,14 +32,14 @@ def getInTableFormat(tit,h,isData=False,addErrors=True):
             tableRow += ' & '
             fmtValue = str(int(val))
             if(not isData) :
-                #fmtValue = '%3.0f' % val
-                #fmtValue += '$\\pm$'
-                #fmtValue += '%3.0f' % valerr
-                fmtValue = '%3.2f' % val
+                fmtValue = '%3.0f' % val
                 if(addErrors) :
-                    fmtValue = toLatexRounded(val,valerr)
-                    fmtValue = fmtValue.replace("[","(")
-                    fmtValue = fmtValue.replace("]",")")
+                    fmtValue += '$\\pm$'
+                    fmtValue += '%3.0f' % valerr
+                #if(addErrors) :
+                #    fmtValue = toLatexRounded(val,valerr)
+                #    fmtValue = fmtValue.replace("[","(")
+                #    fmtValue = fmtValue.replace("]",")")
             tableRow += fmtValue
         except:
             tableRow += ' & '
