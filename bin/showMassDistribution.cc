@@ -221,7 +221,8 @@ int main(int argc, char* argv[])
   kinUrl.ReplaceAll(".root","/"+kindir);
   gSystem->ExpandPathName(kinUrl);
   cout << "Kin results from " << kinUrl << " to be processed with summary from " << evurl << endl;
-  KinResultsHandler kinHandler;
+ 
+ KinResultsHandler kinHandler;
   kinHandler.init(kinUrl,false);
   TChain *t=kinHandler.getResultsChain();
  
@@ -231,6 +232,24 @@ int main(int argc, char* argv[])
   {
     evTree->GetEvent(inum);
     EventSummary_t &ev = evSummaryHandler.getEvent();
+    top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+
+    //preselect for KIN level: 2 jets, MET (no OS, no Z-veto)
+    bool isSameFlavor(false);
+    if(ev.cat==MUMU || ev.cat==EE) isSameFlavor=true;
+
+    int njets(0);
+    for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
+      {
+	if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.5) continue;
+	njets++;
+      }
+    if(njets<2) continue;
+    
+    bool passMet( !isSameFlavor || (phys.met.pt()>30) );
+    if(!passMet) continue;
+   
+
     TString key(""); key+= ev.run; key+="-"; key += ev.lumi; key+="-"; key += ev.event;
     selEvents[key]=inum;
   }
