@@ -63,7 +63,7 @@ evCats=['','emu','mumu','ee']
 evTitles=['$Inclusive$','$e\\mu$','$\\mu\\mu$','$ee$']
 
 inputFile='plotter.root'
-countHisto='evtflow'
+countHisto='cutflow'
 ibinSyst=6
 dySfactors={
     "emu":[1.0,0.0],
@@ -101,10 +101,11 @@ for o,a in opts:
 procs=[
     "Di-bosons",
     "Single top",
-    "other t#bar{t}",
+    #"other t#bar{t}",
     "W+jets",
     "Z-#gamma^{*}+jets#rightarrow ll",
-    "t#bar{t} dileptons",
+    "other t#bar{t}",
+    #"t#bar{t} dileptons",
     "data"
     ]
 systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
@@ -165,11 +166,16 @@ for ec in evCats:
     systVarH = ROOT.TH2F(prefix+'systvar',prefix+'systvar',len(procs),0,len(procs),len(systs),0,len(systs)) 
 
     #print to table
-    tabtex =  '\\begin{table}[htp]\n'
-    tabtex += '\\begin{center}\n'
-    tabtex += '\\caption{$'+prefix+'-$yields}\n'
+
+
+    tabtex = '\\documentclass[]{beamer}\n'
+    tabtex += '\\usepackage[utf8]{inputenc}\n'
+    tabtex += '\\begin{document}\n'
+    tabtex += '\\begin{table}[htp]\n'
+    tabtex += '\\caption{$'+prefix+'$yields for an integrated luminosity of $2165^{-1}$pb}\n'
     tabtex += '\\label{tab:'+prefix+'yields}\n'
-    tabtex += '\\tiny\n'
+    tabtex += '\\hspace*{-0.9cm}\n'
+    tabtex += '\\scalebox{0.45}{\n'
     tabtex += '\\begin{tabular}{'+colfmt+'} \\hline\n'
     tabtex += 'Process ' + colnames + '\\\\ \\hline\\hline\n'
     procCtr=0
@@ -226,8 +232,11 @@ for ec in evCats:
         procCtr+=1
         
     tabtex += '\\end{tabular}\n'
-    tabtex += '\\end{center}\n'
+    tabtex += '}n'
     tabtex += '\\end{table}\n'
+    tabtex += '\\end{document}\n'
+
+
 
     #now print systematic variations
     systTabtex=''
@@ -264,16 +273,26 @@ for ec in evCats:
 
 #dump the summary table
 
+bintitle=href.GetXaxis().GetBinLabel(ibinSyst)
 colfmt='l'
 colnames=''
 for ec in evTitles:
     colfmt += 'c' 
     colnames +=' & ' + ec
 
-tabtex =  '\\begin{table}[htp]\n'
-tabtex += '\\begin{center}\n'
-tabtex += '\\caption{}\n'
-tabtex += '\\label{tab:summaryyields}\n'
+
+
+
+tabtex ='\\documentclass[]{beamer}\n'
+tabtex +='\\usepackage[utf8]{inputenc}\n'
+tabtex +='\\begin{document}\n'
+tabtex +='\\begin{table}[htp]\n'
+tabtex +='\\caption{$'+bintitle+'$ summary events for $2165^{-1}$pb}\n'
+tabtex +='\\label{tab:summaryyields}\n'
+tabtex +='\\hspace*{-0.9cm}\n'
+tabtex +='\\scalebox{0.70}{\n'
+
+
 tabtex += '\\begin{tabular}{'+colfmt+'} \\hline\n'
 tabtex += 'Channel '+colnames+'\\\\ \\hline\\hline\n'
 
@@ -294,9 +313,12 @@ for ip in xrange(1,hsummary.GetYaxis().GetNbins()+1):
     tabtex += '\\\\\n'
 tabtex += '\\hline\\hline\n'
 
-tabtex += '\\end{tabular}\n'
-tabtex += '\\end{center}\n'
-tabtex += '\\end{table}\n'
+tabtex +='\\end{tabular}\n'
+tabtex +='}\n'
+tabtex +='\\end{table}\n'
+tabtex +='\\end{document}\n'
+
+
 
 
 #save to file
