@@ -176,7 +176,7 @@ RooSimultaneous *SignalPDFs(TString url="EventSummaries.root",TString chSelector
   typedef std::pair<TString,Float_t> MassPoint_t;
   std::vector<MassPoint_t> MassPointCollection;
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_161v5",161.5) );
-  MassPointCollection.push_back( MassPoint_t("TTJets_mass_163v5",161.5) );
+  MassPointCollection.push_back( MassPoint_t("TTJets_mass_163v5",163.5) );
   //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
   MassPointCollection.push_back( MassPoint_t("TTJets",           172.5) );
