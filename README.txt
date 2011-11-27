@@ -17,10 +17,10 @@ runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t TT
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t DY
 runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t SingleT
-runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t May10
-runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t v4
-runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t Aug05
-runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 5 -s True -d patdir -t v6
+runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 1 -s True -d patdir -t May10
+runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 1 -s True -d patdir -t v4
+runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 1 -s True -d patdir -t Aug05
+runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/test/dileptonAnalysis_cfg.py -castor=${HOME}/scratch0/CMSSW_4_2_4/src/LIP/Top/data" -n 1 -s True -d patdir -t v6
 
 # merge the outputs (hadd)
 ./test/mergeOutputs.sh
@@ -29,7 +29,7 @@ runOverSamples.py -j data/samples-signal.json -p "-cfg=${HOME}/scratch0/CMSSW_4_
 # CREATE CONTROL DISTRIBUTIONS AND EVENT SUMMARIES
 # it will run an executable and store the outputs in root files named after each sample
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.11.11 -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s True
+runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.11.15 -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s True
 
 
 #
@@ -37,6 +37,11 @@ runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/t
 # besides creating the plots it will collect all in a file called plotter.root
 #
 runPlotter --iLumi 1947 --inDir ~/scratch0/top/ --outDir /tmp/psilva/ --json data/samples-signal.json
+
+#
+# RUN KIN RECONSTRUCTION
+#
+runKinOverSamples.py -s True -j data/mass-samples.json -e 20 -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.11.15  -p "-out=/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_2_4/src/LIP/Top/data -run=std" -t 163
 
 
 #

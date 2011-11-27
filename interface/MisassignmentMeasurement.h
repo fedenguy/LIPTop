@@ -74,6 +74,8 @@ class MisassignmentMeasurement
   double getNorm(TString cat="all") { return kNorm[cat]; }
   double getTrueCorrectPairsFraction(TString cat="all") { return fTrueCorrectPairs[cat]; }
 
+  void fitCurrentModelsToData();
+
  private:
   /**
    */

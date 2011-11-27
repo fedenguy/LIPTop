@@ -484,3 +484,45 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 }
 
 
+//
+void MisassignmentMeasurement::fitCurrentModelsToData()
+{
+  
+  TString cats[]={"ee","mumu","emu"};
+  std::vector<Double_t> minll;
+  for(size_t icat=0; icat<sizeof(cats)/sizeof(TString); icat++)
+    {
+      TString ctf=cats[icat];
+
+      TH1F *dataH=(TH1F *)controlHistos.getHisto( "datainclusivemlj",ctf )->Clone("datatmp");
+      dataH->Add( (TH1F *) controlHistos.getHisto("datawrongmodelmlj",ctf) , -1);
+
+      TH1F *mcH=(TH1F *)controlHistos.getHisto( "avgcorrectmlj",ctf )->Clone("tmp");
+      mcH->Scale( dataH->Integral(1,dataH->GetXaxis()->GetNbins()+1,"width")/mcH->Integral(1,dataH->GetXaxis()->GetNbins()+1,"width") ); 
+      
+      double nll(0);
+      for(int ibin=1; ibin<=dataH->GetXaxis()->GetNbins(); ibin++)
+	{
+	  double x=dataH->GetBinContent(ibin);
+	  double y=mcH->GetBinContent(ibin);
+	  double width=dataH->GetBinWidth(ibin);
+	  double prob=TMath::Poisson(x*width,y*width);
+	  //cout << x << " " << y << " " << prob << endl;
+	  if(prob>0) nll += -TMath::Log(prob);
+	}
+      minll.push_back(nll);
+      
+      delete dataH;
+      delete mcH;
+    }
+  
+  Double_t totalMinll(0);
+  cout << "Likelihood results" << endl;
+  for(size_t icat=0; icat<sizeof(cats)/sizeof(TString); icat++)
+    {
+      cout << cats[icat] << " " << minll[icat] << endl;
+      totalMinll += minll[icat];
+    }
+  cout << "Inclusive: " << totalMinll << endl;
+
+}

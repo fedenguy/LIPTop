@@ -1,10 +1,11 @@
 {
     "proc":[
         {
-        "tag":"t#bar{t} 161.5",
+        "tag":"161.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"2",
+        "lcolor":2,
+	"spimpose":1,
 	"data":[
        		{
  	        "dtag":"TTJets_mass_161v5",
@@ -15,10 +16,11 @@
      	   ]
 	},
 	{
-        "tag":"t#bar{t} 163.5",
+        "tag":"163.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"3",
+        "lcolor":3,
+	"spimpose":1,
         "data":[
                 {
  	        "dtag":"TTJets_mass_163v5",
@@ -29,10 +31,11 @@
 	   ]
 	},
 	{
-        "tag":"t#bar{t} 166.5",
+        "tag":"166.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"4",
+        "lcolor":4,
+	"spimpose":1,
         "data":[
 		{
  	        "dtag":"TTJets_mass_166v5",
@@ -42,11 +45,12 @@
                 }
 	]
 	},
-	   {
-        "tag":"t#bar{t} 169.5",
+        {
+        "tag":"169.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"5",
+        "lcolor":5,
+	"spimpose":1,
         "data":[
 		{
  	        "dtag":"TTJets_mass_169v5",
@@ -57,10 +61,33 @@
 	]
 	},
 	{
-        "tag":"t#bar{t} 175.5",
+	 "tag":"172.5",
+         "isdata":false,
+         "color":"1",
+	 "lcolor":1,
+	 "lwidth":2,
+	"spimpose":1,
+         "data":[
+		{
+ 	        "dtag":"TTJets",
+		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
+                "xsec":165
+                },
+		{
+ 	        "dtag":"TTJets_signal",
+		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
+                "xsec":165
+                }
+	  ]
+	},
+	{
+        "tag":"175.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"6",
+        "lcolor":6,
+	"spimpose":1,
         "data":[
 		{
  	        "dtag":"TTJets_mass_175v5",
@@ -71,10 +98,11 @@
 	]
 	},
 	 {
-        "tag":"t#bar{t} 178.5",
+        "tag":"178.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"7",
+        "lcolor":7,
+	"spimpose":1,
         "data":[
 		{
  	        "dtag":"TTJets_mass_178v5",
@@ -85,10 +113,11 @@
 	]
 	},
 	{
-        "tag":"t#bar{t} 181.5",
+        "tag":"181.5",
         "isdata":false,
         "color":"8",
-        "lcolor":1,
+        "lcolor":8,
+	"spimpose":1,
         "data":[
 		{
  	        "dtag":"TTJets_mass181v5",
@@ -99,10 +128,11 @@
 	]
 	},
 	 {
-        "tag":"t#bar{t} 184.5",
+        "tag":"184.5",
         "isdata":false,
-        "color":"8",
-        "lcolor":1,
+        "color":"9",
+        "lcolor":9,
+	"spimpose":1,
         "data":[
 		{
  	        "dtag":"TTJets_mass184v5",

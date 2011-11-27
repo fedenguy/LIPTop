@@ -122,7 +122,7 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
     if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
-
+    if(jets[0].first.Pt()<30 || jets[1].first.Pt()<30) return;
 
     //debug
     cout << "[KinAnalysis][runOn] " << ev.run << " : " << ev.lumi << " : " << ev.event << endl

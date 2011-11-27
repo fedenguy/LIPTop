@@ -15,7 +15,6 @@
   using namespace RooFit;
   using namespace std;
 
-  //  TString baseURL="${CMSSW_BASE}/src/LIP/Top";
   TString baseURL="${HOME}/scratch0/top/";
   gSystem->ExpandPathName(baseURL);
   TString stdUrl=baseURL+"/std_plotter.root";
@@ -23,31 +22,32 @@
   //histograms of interest
 
   //dy->tautau
-//   TString dyReplacementUrl=baseURL+"/syst_plotter.root";
-//   TString title("Z#rightarrow #tau#tau");
-//   TString histCompare[]={"emu_mtsum"};//"emu_leadlepton","emu_subleadlepton","emu_ptsum", "emu_dilmass","emu_met","emu_mtsum"};
-//   int histoFit=0;
-//   bool rebin(false);
-//   Float_t fitmin(0), fitmax(150);
-//   TString replacementHisto("data/emu_mtsum");
+  TString dyReplacementUrl=baseURL+"/syst_plotter.root";
+  TString title("Z#rightarrow #tau#tau");
+  TString histCompare[]={"emu_mtsum"};//"emu_leadlepton","emu_subleadlepton","emu_ptsum", "emu_dilmass","emu_met","emu_mtsum"};
+  int histoFit=0;
+  bool rebin(false);
+  Float_t fitmin(0), fitmax(150);
+  TString replacementHisto("data/emu_mtsum");
+
 
   //dy->ee
-//   TString dyReplacementUrl=baseURL+"/std_plotter.root";
-//   TString title("Z#rightarrow ee");
-//   TString histCompare[]={"ee_dilarccosine","ee_dilarccosinelowmet"};
-//   Float_t fitmin(0.), fitmax(3.3);
-//   bool rebin(false);
-//   int histoFit=0;
-//   TString replacementHisto("data/ee_dilarccosinelowmet");
-
+  //TString dyReplacementUrl=baseURL+"/std_plotter.root";
+  //TString title("Z#rightarrow ee");
+  //TString histCompare[]={"ee_dilarccosine","ee_dilarccosinelowmet"};
+  //Float_t fitmin(0.), fitmax(3.3);
+  //bool rebin(false);
+  //int histoFit=0;
+  //TString replacementHisto("data/ee_lowmetdilarccosine");
+  
   //dy->mumu
-  TString dyReplacementUrl=baseURL+"/std_plotter.root";
-  TString title("Z#rightarrow #mu#mu");
-  TString histCompare[]={"mumu_dilarccosine","mumu_dilarccosinelowmet"};
-  Float_t fitmin(0.), fitmax(3.3);
-  bool rebin(false);
-  int histoFit=0;
-  TString replacementHisto("data/mumu_dilarccosinelowmet");
+  //TString dyReplacementUrl=baseURL+"/std_plotter.root";
+  //TString title("Z#rightarrow #mu#mu");
+  //TString histCompare[]={"mumu_dilarccosine","mumu_dilarccosinelowmet"};
+  //Float_t fitmin(0.), fitmax(3.3);
+  //bool rebin(false);
+  //int histoFit=0;
+  //TString replacementHisto("data/mumu_lowmetdilarccosine");
 
   const size_t nHistos=sizeof(histCompare)/sizeof(TString);
 
@@ -196,10 +196,10 @@
   
   std::cout << " Fitting now ..." << std::endl;
   RooAddPdf shapeModel("shapemodel","signal+background",RooArgList(modelDataTemplate,modelMcTemplate),RooArgList(ndy,nother));
-  RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(other_constraint,shapeModel));
-  model.fitTo(*sumData,Extended(kTRUE), Constrain(nother),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(fitmin,fitmax));
-  //RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(shapeModel));
-  //model.fitTo(*sumData,Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(fitmin,fitmax));
+  //  RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(other_constraint,shapeModel));
+  //  model.fitTo(*sumData,Extended(kTRUE), Constrain(nother),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(fitmin,fitmax));
+  RooProdPdf model("model","(signal+background)*evconstraint*bkgconstraint",RooArgSet(shapeModel));
+  model.fitTo(*sumData,Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(fitmin,fitmax));
   
   RooPlot *genericFrame = x.frame();
   genericFrame->GetXaxis()->SetTitle( kindata->GetXaxis()->GetTitle() );
@@ -242,5 +242,6 @@
   frame2->Draw();
 
   cnv->SaveAs("dydistfit.C");
+  cnv->SaveAs("dydistfit.png");
 
 }

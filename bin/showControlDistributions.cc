@@ -77,6 +77,7 @@ int main(int argc, char* argv[])
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName"); gSystem->ExpandPathName(uncFile);
 
   //pileup reweighter
+  edm::LumiReWeighting LumiWeights(runProcess.getParameter<std::string>("mcpileup"), runProcess.getParameter<std::string>("datapileup"), "pileup","pileup");
   reweight::PoissonMeanShifter PShiftUp(+0.6);
   reweight::PoissonMeanShifter PShiftDown(-0.6);
 
@@ -432,7 +433,13 @@ int main(int argc, char* argv[])
       if(duplicatesChecker.isDuplicate( ev.run, ev.lumi, ev.event)){ 
 	NumberOfDuplicated++; continue; 
       }
-      float puweight = ev.weight/cnorm;    
+
+      float puweight=1;
+      if(isMC)
+	{
+	  //puweight = ev.weight;
+	  puweight = LumiWeights.weight( ev.ngenpu );
+	}
       float normWeight = ev.normWeight;
 
       //get particles from event
@@ -445,9 +452,6 @@ int main(int argc, char* argv[])
       if(ev.cat==EMU)   ch="emu";
       if(ev.cat==ETAU)  ch="etau";
       if(ev.cat==MUTAU) ch="mutau";
-
-      //efficiency correction for MC
-      if(isMC) puweight *= effCorr[ev.cat];
 
       //b-tag analysis
       bcomp.compute(phys.nbjets,phys.nljets);
@@ -486,9 +490,11 @@ int main(int argc, char* argv[])
       for(int ivar=0;ivar<(isMC ? nvarcats : 1); ivar++) 
 	{
 	  float weight=puweight;
+	  if(isMC) weight *= effCorr[ev.cat]/cnorm;
+
 	  //objects to use
 	  LorentzVectorCollection jetColl = jets;
-	  LorentzVector theMET           = phys.met;     
+	  LorentzVector theMET       = phys.met;     
 	  if(cats[ivar]=="jer")      { jetColl=jerVariedJets;      theMET=jerVariedMet;     }
 	  if(cats[ivar]=="jesdown")  { jetColl=jesdownVariedJets;  theMET=jesUpVariedMet;   }
 	  if(cats[ivar]=="jesup" )   { jetColl=jesupVariedJets;    theMET=jesDownVariedMet; }
@@ -835,14 +841,14 @@ int main(int argc, char* argv[])
 			      if(hasBflavor) jetFlavBin=0;
 			      else if(fabs(orderedJetColl[ijet].flavid)==4) jetFlavBin=1;
 			      TString flavCat(( hasBflavor ? "b" : "udscg" ) );
-			      controlHistos.fillHisto("jetflav",ctf,jetFlavBin,puweight);
-			      controlHistos.fillHisto("TCHE"+flavCat, ctf,orderedJetColl[ijet].btag1,puweight);
-			      controlHistos.fillHisto("TCHP"+flavCat,ctf,orderedJetColl[ijet].btag2,puweight);
-			      controlHistos.fillHisto("SSVHE"+flavCat,ctf,orderedJetColl[ijet].btag3,puweight);
-			      controlHistos.fillHisto("JBP"+flavCat,ctf,orderedJetColl[ijet].btag4,puweight);
-			      controlHistos.fillHisto("JP"+flavCat,ctf,orderedJetColl[ijet].btag5,puweight);
-			      controlHistos.fillHisto("SSVHP"+flavCat,ctf,orderedJetColl[ijet].btag6,puweight);
-			      controlHistos.fillHisto("CSV"+flavCat,ctf,orderedJetColl[ijet].btag7,puweight);
+			      controlHistos.fillHisto("jetflav",ctf,jetFlavBin,weight);
+			      controlHistos.fillHisto("TCHE"+flavCat, ctf,orderedJetColl[ijet].btag1,weight);
+			      controlHistos.fillHisto("TCHP"+flavCat,ctf,orderedJetColl[ijet].btag2,weight);
+			      controlHistos.fillHisto("SSVHE"+flavCat,ctf,orderedJetColl[ijet].btag3,weight);
+			      controlHistos.fillHisto("JBP"+flavCat,ctf,orderedJetColl[ijet].btag4,weight);
+			      controlHistos.fillHisto("JP"+flavCat,ctf,orderedJetColl[ijet].btag5,weight);
+			      controlHistos.fillHisto("SSVHP"+flavCat,ctf,orderedJetColl[ijet].btag6,weight);
+			      controlHistos.fillHisto("CSV"+flavCat,ctf,orderedJetColl[ijet].btag7,weight);
 			    }
 			}
 
@@ -873,13 +879,13 @@ int main(int argc, char* argv[])
 		      controlHistos.fillHisto("dphill",ctf,dphill,weight);
 		      for(size_t ijet=0; ijet<orderedJetColl.size(); ijet++)
 			{
-			  controlHistos.fillHisto("TCHE",ctf,orderedJetColl[ijet].btag1,puweight);
-			  controlHistos.fillHisto("TCHP",ctf,orderedJetColl[ijet].btag2,puweight);
-			  controlHistos.fillHisto("SSVHE",ctf,orderedJetColl[ijet].btag3,puweight);
-			  controlHistos.fillHisto("JBP",ctf,orderedJetColl[ijet].btag4,puweight);
-			  controlHistos.fillHisto("JP",ctf,orderedJetColl[ijet].btag5,puweight);
-			  controlHistos.fillHisto("SSVHP",ctf,orderedJetColl[ijet].btag6,puweight);
-			  controlHistos.fillHisto("CSV",ctf,orderedJetColl[ijet].btag7,puweight);
+			  controlHistos.fillHisto("TCHE",ctf,orderedJetColl[ijet].btag1,weight);
+			  controlHistos.fillHisto("TCHP",ctf,orderedJetColl[ijet].btag2,weight);
+			  controlHistos.fillHisto("SSVHE",ctf,orderedJetColl[ijet].btag3,weight);
+			  controlHistos.fillHisto("JBP",ctf,orderedJetColl[ijet].btag4,weight);
+			  controlHistos.fillHisto("JP",ctf,orderedJetColl[ijet].btag5,weight);
+			  controlHistos.fillHisto("SSVHP",ctf,orderedJetColl[ijet].btag6,weight);
+			  controlHistos.fillHisto("CSV",ctf,orderedJetColl[ijet].btag7,weight);
 			}
 		      for(size_t ilj=0; ilj<mljs.size(); ilj++)
 			{

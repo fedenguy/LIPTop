@@ -18,6 +18,8 @@ runProcess = cms.PSet(
     etaResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_EtaResolution_AK5PF.txt"),
     phiResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PhiResolution_AK5PF.txt"),
     jesUncFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_Uncertainty_AK5PF.txt"),
+    mcpileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Summer11Observed.root'),
+    datapileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Pileup2011A.root'),
     useMVA = cms.bool(False),
     tmvaInput =	chargedHiggsStudy
     )

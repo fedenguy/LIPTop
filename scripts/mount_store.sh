@@ -2,10 +2,10 @@ base_storedir="./store"
 #storeremote="pclip11.cern.ch:/localdata/`whoami`/"
 storeremote="pclip11.cern.ch:/localdata/"
 WHOAMI=`whoami`
-if [ "$WHOAMI"="psilva" ];
-    then
-    storeremote="maccms316.cern.ch:/Users/psilva/store/"
-fi
+#if [ "$WHOAMI"="psilva" ];
+#    then
+#    storeremote="maccms316.cern.ch:/Users/psilva/store/"
+#fi
 echo "Mounting ${storeremote} for ${WHOAMI} @ ${base_storedir}"
 
 storedir="${base_storedir}"

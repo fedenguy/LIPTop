@@ -103,16 +103,16 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F("assignmentdecision",";Good decisions",2,0.,2.) );
   
   //MVA analysis
-  controlHistos.addHistogram( new TH1F("kIntegral",";Solutions; Lepton-jet assignments",100,0,5000) );
-  controlHistos.addHistogram( new TH1F("kMPV",";(mpv-median)/median; Lepton-jet assignments",100,-1.5,1.5) );
-  controlHistos.addHistogram( new TH1F("kMean",";(mean-median)/median; Lepton-jet assignments",100,-1.5,1.5) );
-  controlHistos.addHistogram( new TH1F("kRMS",";rms/median; Lepton-jet assignments",100,0,1.) );
-  controlHistos.addHistogram( new TH1F("kSkewness",";skewness/median; Lepton-jet assignments",100,-1.,1.) );
-  controlHistos.addHistogram( new TH1F("kKurtosis",";kurtosis/median; Lepton-jet assignments",100,-1.,1.) );
-  controlHistos.addHistogram( new TH1F("k10p",";(x_{10}-median)/median; Lepton-jet assignments",100,-0.5,0) );
-  controlHistos.addHistogram( new TH1F("k25p",";(x_{25}-median)/median; Lepton-jet assignments",100,-1.0,0) );
-  controlHistos.addHistogram( new TH1F("k75p",";(x_{75}-median)/median; Lepton-jet assignments",100,0,0.5) );
-  controlHistos.addHistogram( new TH1F("k90p",";(x_{90}-median)/median; Lepton-jet assignments",100,0,1.0) );
+//   controlHistos.addHistogram( new TH1F("kIntegral",";Solutions; Lepton-jet assignments",100,0,5000) );
+//   controlHistos.addHistogram( new TH1F("kMPV",";(mpv-median)/median; Lepton-jet assignments",100,-1.5,1.5) );
+//   controlHistos.addHistogram( new TH1F("kMean",";(mean-median)/median; Lepton-jet assignments",100,-1.5,1.5) );
+//   controlHistos.addHistogram( new TH1F("kRMS",";rms/median; Lepton-jet assignments",100,0,1.) );
+//   controlHistos.addHistogram( new TH1F("kSkewness",";skewness/median; Lepton-jet assignments",100,-1.,1.) );
+//   controlHistos.addHistogram( new TH1F("kKurtosis",";kurtosis/median; Lepton-jet assignments",100,-1.,1.) );
+//   controlHistos.addHistogram( new TH1F("k10p",";(x_{10}-median)/median; Lepton-jet assignments",100,-0.5,0) );
+//   controlHistos.addHistogram( new TH1F("k25p",";(x_{25}-median)/median; Lepton-jet assignments",100,-1.0,0) );
+//   controlHistos.addHistogram( new TH1F("k75p",";(x_{75}-median)/median; Lepton-jet assignments",100,0,0.5) );
+//   controlHistos.addHistogram( new TH1F("k90p",";(x_{90}-median)/median; Lepton-jet assignments",100,0,1.0) );
 
   TString cats[]={"ee","mumu","emu"};//,"etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
@@ -542,7 +542,7 @@ int main(int argc, char* argv[])
   float cnorm=1;
   if(isMC && nresults)
     {
-      double scaleFactor=double(selEvents.size())/double(nresults);
+      double scaleFactor=double(nresults)/double(selEvents.size());
       TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/cutflow");
       if(cutflowH)
 	{
