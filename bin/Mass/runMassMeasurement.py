@@ -57,7 +57,7 @@ for o,a in opts:
 # load macros
 import ROOT
 ROOT.gSystem.Load('${CMSSW_BASE}/lib/${SCRAM_ARCH}/libLIPTop.so')
-from ROOT import MassMeasurement, EventSummaryHandler, getNewCanvas, showPlotsAndMCtoDataComparison, setStyle, formatForCmsPublic, formatPlot
+from ROOT import MassMeasurement, eventHandlerFactory, getNewCanvas, showPlotsAndMCtoDataComparison, setStyle, formatForCmsPublic, formatPlot
 
 inF=ROOT.TFile.Open(ifile)
 
@@ -65,7 +65,7 @@ jsonFile = open(samplesDB,'r')
 procList=json.load(jsonFile,encoding='utf-8').items()
 
 #run over sample
-evHandler       = EventSummaryHandler()
+evHandler       = eventHandlerFactory()
 massFitter      = MassMeasurement(fitParsFile)
 
 ensembleInfo = '<big><b>Summary of ensemble tests (data/MC)</b></big>'
