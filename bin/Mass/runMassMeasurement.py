@@ -75,7 +75,7 @@ for ipe in xrange(0,nensemble+1) :
     print '.',
     sys.stdout.flush()
         
-    ensembleHandler = EventSummaryHandler()
+    ensembleHandler = eventHandlerFactory()
     ensembleInfo  += '<table>'
     ensembleInfo += '<tr><th><b>Info for '
     if(ipe==0) : ensembleInfo += 'data'
