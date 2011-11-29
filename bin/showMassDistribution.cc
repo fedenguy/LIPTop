@@ -542,7 +542,7 @@ int main(int argc, char* argv[])
   float cnorm=1;
   if(isMC && nresults)
     {
-      double scaleFactor=double(nresults)/double(selEvents.size());
+      double scaleFactor=double(selEvents.size())/double(nresults);
       TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/cutflow");
       if(cutflowH)
 	{

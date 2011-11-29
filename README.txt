@@ -43,6 +43,8 @@ runPlotter --iLumi 1947 --inDir ~/scratch0/top/ --outDir /tmp/psilva/ --json dat
 #
 runKinOverSamples.py -s True -j data/mass-samples.json -e 20 -d /castor/cern.ch/cms/store/cmst3/user/psilva/Top/ntuples_2011.11.15  -p "-out=/afs/cern.ch/user/a/aalves/scratch0/CMSSW_4_2_4/src/LIP/Top/data -run=std" -t 163
 
+# generate plots for signal templates
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/mass-samples.json -d store/vischia/topMassMeasurement_2165/kinOutputFreeze_21.11.11/ -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
 
 #
 # DY control

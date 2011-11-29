@@ -14,6 +14,8 @@ if ( ! mount | grep ${storeremote} > /dev/null )
 then 
     [[ ! -d ${storedir} ]] && mkdir ${storedir}
     sshfs ${storeremote} ${storedir} -o nonempty
+else
+    echo "Failed to mount"
 fi
 
 
