@@ -125,6 +125,7 @@ int main(int argc, char* argv[])
 
   gSystem->Exec("mkdir -p " + outUrl);
   outUrl += "/";
+  evurl.ReplaceAll(".root","_summary.root");
   outUrl += gSystem->BaseName(evurl);
   TFile *file=TFile::Open(outUrl, "recreate");
 
@@ -188,12 +189,17 @@ int main(int argc, char* argv[])
   //if(!isMC) outf=new ofstream("highmassevents.txt",ios::app);
   
   //process events file
-  gSystem->ExpandPathName(evurl);
+
+  gSystem->ExpandPathName(TString(gSystem->BaseName(evurl)));
+
+  TString baseTag = gSystem->BaseName(evurl);
+  baseTag.ReplaceAll("_summary.root","");
   TFile *evfile = TFile::Open(evurl);
+  //  cout << "evurl: " << evurl << ", baseTag: " << baseTag << endl;
   if(evfile==0) return -1;
   if(evfile->IsZombie()) return -1;
   EventSummaryHandler evSummaryHandler;
-  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(dirname) ) ) 
+  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(baseTag+TString("/")+dirname) ) ) 
     {
       evfile->Close();
       return -1;
@@ -209,7 +215,7 @@ int main(int argc, char* argv[])
       spyEvents = new EventSummaryHandler;
       spyFile = TFile::Open("EventSummaries.root","UPDATE");
       TString evtag=gSystem->BaseName(evurl);
-      evtag.ReplaceAll(".root","");
+      evtag.ReplaceAll("_summary.root","");
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
       TTree *outT = new TTree("data","Event summary");
@@ -218,7 +224,7 @@ int main(int argc, char* argv[])
 
   //process kin file
   TString kinUrl(evurl);
-  kinUrl.ReplaceAll(".root","/"+kindir);
+  kinUrl.ReplaceAll("_summary.root","/"+kindir);
   gSystem->ExpandPathName(kinUrl);
   cout << "Kin results from " << kinUrl << " to be processed with summary from " << evurl << endl;
  
@@ -246,7 +252,7 @@ int main(int argc, char* argv[])
       }
     if(njets<2) continue;
     
-    bool passMet( !isSameFlavor || (phys.met.pt()>30) );
+    bool passMet( (!isSameFlavor && phys.met.pt() > 20) || ( isSameFlavor && phys.met.pt()>40) );
     if(!passMet) continue;
    
 
