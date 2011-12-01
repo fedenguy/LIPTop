@@ -85,6 +85,8 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
       objConfig_[ objs[iobj] ] = cfg.getParameter<edm::ParameterSet>( objs[iobj] );
 
     //monitoring histograms
+    controlHistos_.addHistogram("pileup", ";Pileup (in time); Events", 36, -0.5, 35.5); 
+
     TString selSteps[]={"Reco","2 leptons","M_{ll}","#geq 2 jets","MET>30,0","OS","=0 b-tags","=1 b-tags", "#geq 2 b-tags", "SS"};
     const size_t nselsteps=sizeof(selSteps)/sizeof(TString);
     controlHistos_.addHistogram("cutflow", ";Step; Events",nselsteps,0,nselsteps);
@@ -193,6 +195,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	    else                           npuOOTp1 += it->getPU_NumInteractions();
 	  }
 	summaryHandler_.evSummary_.ngenpu=npuIT;
+	controlHistos_.fillHisto("pileup","all",npuIT);
 	summaryHandler_.evSummary_.ngenootpum1=npuOOTm1;
 	summaryHandler_.evSummary_.ngenootpup1=npuOOTp1;
 	
