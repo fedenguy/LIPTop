@@ -11,7 +11,7 @@
        		{
  	        "dtag":"TTJets_mass_161v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass161_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass161_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
      	   ]
@@ -27,7 +27,7 @@
                 {
  	        "dtag":"TTJets_mass_163v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass163_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass163_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	   ]
@@ -43,7 +43,7 @@
 		{
  	        "dtag":"TTJets_mass_166v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass166_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass166_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -59,7 +59,7 @@
 		{
  	        "dtag":"TTJets_mass_169v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass169_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass169_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -76,7 +76,7 @@
 		{
  	        "dtag":"TTJets",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -92,7 +92,7 @@
 		{
  	        "dtag":"TTJets_mass_175v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass175_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass175_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -108,7 +108,7 @@
 		{
  	        "dtag":"TTJets_mass_178v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass178_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass178_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -124,7 +124,7 @@
 		{
  	        "dtag":"TTJets_mass181v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass181_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass181_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -140,7 +140,7 @@
 		{
  	        "dtag":"TTJets_mass184v5",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass184_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass184_5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	  ]

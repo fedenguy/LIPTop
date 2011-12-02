@@ -12,7 +12,7 @@
 		{
  	        "dtag":"WH_80_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-80_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-80_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -29,7 +29,7 @@
 		{
  	        "dtag":"HH_80_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-80_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-80_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -46,7 +46,7 @@
 		{
  	        "dtag":"WH_90_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-90_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-90_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -63,7 +63,7 @@
 		{
  	        "dtag":"HH_90_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-90_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-90_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -81,7 +81,7 @@
 		{
  	        "dtag":"WH_100_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-100_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-100_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -98,7 +98,7 @@
 		{
  	        "dtag":"HH_100_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-100_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-100_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -116,7 +116,7 @@
 		{
  	        "dtag":"WH_120_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-120_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-120_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -133,7 +133,7 @@
 		{
  	        "dtag":"HH_120_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-120_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-120_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -151,7 +151,7 @@
 		{
  	        "dtag":"WH_140_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-140_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-140_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -168,7 +168,7 @@
 		{
  	        "dtag":"HH_140_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-140_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-140_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -186,7 +186,7 @@
 		{
  	        "dtag":"WH_150_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-150_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-150_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -203,7 +203,7 @@
 		{
  	        "dtag":"HH_150_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-150_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-150_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -221,7 +221,7 @@
 		{
  	        "dtag":"WH_155_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-155_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-155_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -238,7 +238,7 @@
 		{
  	        "dtag":"HH_155_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-155_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-155_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]
@@ -256,7 +256,7 @@
 		{
  	        "dtag":"WH_160_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBWB_M-160_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBWB_M-160_7TeV-pythia6-tauola"],
                 "xsec":165
                 }
 	  ]
@@ -273,7 +273,7 @@
 		{
  	        "dtag":"HH_160_Summer11",
 		"dset":"",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-160_7TeV-pythia6-tauola"],
+                "patdir":["/store/cmst3/user/psilva/Top/TTToHplusBHminusB_M-160_7TeV-pythia6-tauola"],
                 "xsec":165
 	     }
 	  ]

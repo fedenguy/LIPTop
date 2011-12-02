@@ -10,13 +10,13 @@
 	     {
 		"dtag":"SingleT_tWDS",
 	        "dset":"T_TuneZ2_tW-channel-DS_7TeV-powheg-tauola",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/T_TuneZ2_tW-channel-DS_7TeV-powheg-tauola"],
+                "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/T_TuneZ2_tW-channel-DS_7TeV-powheg-tauola"],
                 "xsec":7.87
              },
 	     {
 		"dtag":"SingleTbar_tWDS",
 	        "dset":"Tbar_TuneZ2_tW-channel-DS_7TeV-powheg-tauola",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/Tbar_TuneZ2_tW-channel-DS_7TeV-powheg-tauola"],
+                "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/SingleTop/Tbar_TuneZ2_tW-channel-DS_7TeV-powheg-tauola"],
                 "xsec":7.87
              }
 	   ]
@@ -30,7 +30,7 @@
 		{
  	        "dtag":"TTJets_matchingdown",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingdown_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingdown_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -44,7 +44,7 @@
                 {
  	        "dtag":"TTJets_matchingup",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingup_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingup_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	   ]
@@ -58,7 +58,7 @@
 		{
  	        "dtag":"TTJets_scaledown",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaledown_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaledown_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	   ]
@@ -72,7 +72,7 @@
 		{
  	        "dtag":"TTJets_scaleup",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaleup_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaleup_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
@@ -87,22 +87,22 @@
                {
                   "dtag":"DoubleMu2011AAug5thTauReplacement",
                   "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_Aug5th_TauReplacement"]
+                  "patdir":["/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_Aug5th_TauReplacement"]
                 },
                 {
                   "dtag":"DoubleMu2011AMay10thTauReplacement",
                   "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_May10th_TauReplacement"]
+                  "patdir":["/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_May10th_TauReplacement"]
                 },
                {
                   "dtag":"DoubleMu2011APRv4TauReplacement",
                   "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_PR_v4_TauReplacement"]
+                  "patdir":["/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_PR_v4_TauReplacement"]
                 },
                {
                   "dtag":"DoubleMu2011APRv6TauReplacement",
                   "dset":"",
-                  "patdir":["/castor/cern.ch/cms/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_PR_v6_TauReplacement"]
+                  "patdir":["/store/cmst3/user/psilva/Data/TauReplacement/DoubleMu_2011A_PR_v6_TauReplacement"]
                 }
 	    ]	
 	}

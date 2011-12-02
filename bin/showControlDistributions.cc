@@ -77,7 +77,12 @@ int main(int argc, char* argv[])
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName"); gSystem->ExpandPathName(uncFile);
 
   //pileup reweighter
-  edm::LumiReWeighting LumiWeights(runProcess.getParameter<std::string>("mcpileup"), runProcess.getParameter<std::string>("datapileup"), "pileup","pileup");
+  TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
+  edm::LumiReWeighting *LumiWeights=0;
+  if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"), 
+   						  runProcess.getParameter<std::string>("datapileup"), 
+						  proctag.Data(),"pileup");
+
   reweight::PoissonMeanShifter PShiftUp(+0.6);
   reweight::PoissonMeanShifter PShiftDown(-0.6);
 
@@ -436,11 +441,7 @@ int main(int argc, char* argv[])
       }
 
       float puweight=1;
-      if(isMC)
-	{
-	  //puweight = ev.weight;
-	  puweight = LumiWeights.weight( ev.ngenpu );
-	}
+      if(LumiWeights) puweight = LumiWeights->weight( ev.ngenpu );
       float normWeight = ev.normWeight;
 
       //get particles from event
