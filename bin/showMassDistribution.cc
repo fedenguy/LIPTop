@@ -75,9 +75,9 @@ int main(int argc, char* argv[])
   //pileup reweighter                                                        
   TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
   edm::LumiReWeighting *LumiWeights=0;
-  if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
-                                                  runProcess.getParameter<std::string>("datapileup"),
-                                                  proctag.Data(),"pileup");
+//   if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
+//                                                   runProcess.getParameter<std::string>("datapileup"),
+//                                                   proctag.Data(),"pileup");
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 //   controlHistos.addHistogram( new TH1F("k75p",";(x_{75}-median)/median; Lepton-jet assignments",100,0,0.5) );
 //   controlHistos.addHistogram( new TH1F("k90p",";(x_{90}-median)/median; Lepton-jet assignments",100,0,1.0) );
 
-  TString cats[]={"ee","mumu","emu"};//,"etau","mutau"};
+  TString cats[]={"ee","mumu","emu","etau","mutau"};
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};
   size_t nsubcats=sizeof(subcats)/sizeof(TString);
@@ -134,8 +134,8 @@ int main(int argc, char* argv[])
 
   gSystem->Exec("mkdir -p " + outUrl);
   outUrl += "/";
-  evurl.ReplaceAll(".root","_summary.root");
   outUrl += gSystem->BaseName(evurl);
+  //  outUrl.ReplaceAll(".root","_summary.root");
   TFile *file=TFile::Open(outUrl, "recreate");
 
   //
@@ -202,13 +202,14 @@ int main(int argc, char* argv[])
   gSystem->ExpandPathName(TString(gSystem->BaseName(evurl)));
 
   TString baseTag = gSystem->BaseName(evurl);
-  baseTag.ReplaceAll("_summary.root","");
+  //baseTag.ReplaceAll("_summary.root","");
   TFile *evfile = TFile::Open(evurl);
-  //  cout << "evurl: " << evurl << ", baseTag: " << baseTag << endl;
+  cout << "evurl: " << evurl << ", baseTag: " << baseTag << endl;
   if(evfile==0) return -1;
   if(evfile->IsZombie()) return -1;
   EventSummaryHandler evSummaryHandler;
-  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(baseTag+TString("/")+dirname) ) ) 
+  //  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(baseTag+TString("/")+dirname) ) ) 
+  if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(TString("evAnalyzer/data")) ) ) 
     {
       evfile->Close();
       return -1;
@@ -233,7 +234,8 @@ int main(int argc, char* argv[])
 
   //process kin file
   TString kinUrl(evurl);
-  kinUrl.ReplaceAll("_summary.root","/"+kindir);
+  // kinUrl.ReplaceAll("_summary.root","/"+kindir);
+  kinUrl.ReplaceAll(".root","/"+kindir);
   gSystem->ExpandPathName(kinUrl);
   cout << "Kin results from " << kinUrl << " to be processed with summary from " << evurl << endl;
  
@@ -249,6 +251,7 @@ int main(int argc, char* argv[])
     EventSummary_t &ev = evSummaryHandler.getEvent();
     top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
 
+    /*
     //preselect for KIN level: 2 jets, MET (no OS, no Z-veto)
     bool isSameFlavor(false);
     if(ev.cat==MUMU || ev.cat==EE) isSameFlavor=true;
@@ -263,11 +266,13 @@ int main(int argc, char* argv[])
     
     bool passMet( (!isSameFlavor && phys.met.pt() > 20) || ( isSameFlavor && phys.met.pt()>40) );
     if(!passMet) continue;
-   
+    */
 
     TString key(""); key+= ev.run; key+="-"; key += ev.lumi; key+="-"; key += ev.event;
     selEvents[key]=inum;
   }
+
+  cout << "Selected : " << selEvents.size() << " events - looking for kin results" << endl;
 
   //loop over kin results
   int nresults(0),neventsused(0);
@@ -293,6 +298,8 @@ int main(int argc, char* argv[])
       //fill histos
       float weight = 1.0;
       if(LumiWeights) weight = LumiWeights->weight( ev.ngenpu );
+      else if (isMC)  weight = ev.weight;
+      cout << weight << "  "<< ev.weight << endl;
 
       if(isMC)
 	{
@@ -491,7 +498,6 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("ptttbar",ctf,ptttbar.Pt(),weight);
 		  
 		  controlHistos.fillHisto("mtop",ctf,mtop,weight);
-		  controlHistos.fillHisto("mtop",ctf,mtop,weight);
 		  controlHistos.fillHisto("dilmass",ctf,dilmass,weight);
 		  controlHistos.fill2DHisto("mtopvsdilmass",ctf,mtop,dilmass,weight);
 		  controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj1.mass(),weight);
@@ -578,16 +584,16 @@ int main(int argc, char* argv[])
   outDirs["ee"]=baseOutDir->mkdir("ee");
   outDirs["emu"]=baseOutDir->mkdir("emu");
   outDirs["mumu"]=baseOutDir->mkdir("mumu");
-  //   outDirs["etau"]=baseOutDir->mkdir("etau");
-  //   outDirs["mutau"]=baseOutDir->mkdir("mutau");
+  outDirs["etau"]=baseOutDir->mkdir("etau");
+  outDirs["mutau"]=baseOutDir->mkdir("mutau");
   for(SelectionMonitor::StepMonitor_t::iterator it =mons.begin(); it!= mons.end(); it++)
     {
       TString icat("all");
       if(it->first.BeginsWith("ee")) icat="ee";
       if(it->first.BeginsWith("emu")) icat="emu";
       if(it->first.BeginsWith("mumu")) icat="mumu";
-      //       if(it->first.BeginsWith("etau")) icat="etau";
-      //       if(it->first.BeginsWith("mutau")) icat="mutau";
+      if(it->first.BeginsWith("etau")) icat="etau";
+      if(it->first.BeginsWith("mutau")) icat="mutau";
       outDirs[icat]->cd();
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
         {

@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
   TString labels[]={"2 leptons",
 		    "M>12 #wedge |M-M_{Z}|>15",
 		    "#geq 2 jets",
-		    "E_{T}^{miss}>40/20 (ee,mumu/emu)",
+		    "E_{T}^{miss}>30/0 (ee,mumu/emu)",
 		    "op. sign",
 		    "=0 b-tags",
 		    "=1 b-tag",
@@ -729,8 +729,8 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  //bool passMet( !isSameFlavor || (theMET.pt()>30) );
-	  bool passMet( (!isSameFlavor && theMET.pt()>20) || (isSameFlavor && theMET.pt()>40) );
+	  bool passMet( !isSameFlavor || (theMET.pt()>30) );
+	  //bool passMet( (!isSameFlavor && theMET.pt()>20) || (isSameFlavor && theMET.pt()>40) );
 	  bool isOS(dilcharge<0);
 	  bool passMtCut(mtsum>75);
 	  bool passTightLepton(min(l1.pt(),l2.pt())>40);
@@ -824,11 +824,13 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("btagdownvar",ctf,1,weight*p1weight);
 			  controlHistos.fillHisto("btagdownvar",ctf,2,weight*p2weight);
 			  
-			  controlHistos.fillHisto("btagcenvar",ctf,0,weight);
-			  controlHistos.fillHisto("btagcenvar",ctf,1,weight);
-			  controlHistos.fillHisto("btagcenvar",ctf,2,weight);
+			  p0weight=p0btags;
+			  p1weight=p1btags;
+			  p2weight=p2btags;
+			  controlHistos.fillHisto("btagcenvar",ctf,0,weight*p0weight);
+			  controlHistos.fillHisto("btagcenvar",ctf,1,weight*p1weight);
+			  controlHistos.fillHisto("btagcenvar",ctf,2,weight*p2weight);
 			  
-
 			  //b/mis-tag efficiency mc truth
 			  for(size_t iptbin=0; iptbin<nptbins; iptbin++)	
 			    for(std::map<TString,int>::iterator it = nFlavBtags[iptbin].begin(); it!= nFlavBtags[iptbin].end(); it++)

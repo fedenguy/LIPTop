@@ -348,7 +348,8 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(TTree *data, bool debug)
 	}	
       leg->Draw();
       formatForCmsPublic(p,leg,"CMS preliminary",3);
-	  
+      c->SaveAs("massfitresult.C");
+      c->SaveAs("massfitresult.png");
 
       c = getNewCanvas("incmassfitter","Inclusive Fit Result",false);
       c->cd();
@@ -387,6 +388,9 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(TTree *data, bool debug)
       frame->GetYaxis()->SetTitle("-log(L/L_{max})");
       frame->GetYaxis()->SetTitleOffset(1);
       frame->Draw();
+
+      c->SaveAs("incmassfitresult.C");
+      c->SaveAs("incmassfitresult.png");
     }
       
   //all done!

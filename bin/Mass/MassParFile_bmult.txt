@@ -9,8 +9,8 @@ resbias:0
 resslope:0
 
 [YIELDS]
-#mu_{background}_s0:366.6
-#sigma_{background}_s0:19.15
+#mu_{background}_s0:207
+#sigma_{background}_s0:10.8
 dybckg#alpha_{l}_s0:0.53028
 #mu_{background}_s1:159.6
 #sigma_{background}_s1:12.63
