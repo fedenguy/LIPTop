@@ -44,6 +44,7 @@ using namespace RooFit ;
 
 
 RooSimultaneous *SignalPDFs(TString url="EventSummaries.root",int nbtags=-1);
+void BckgPDFs(TString url="MassPDFs.root",TString var="Mass");
 
 //
 int main(int argc, char* argv[])
@@ -52,138 +53,142 @@ int main(int argc, char* argv[])
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
   
-  TString url=argv[1];
+  TString surl=argv[1];
+  TString burl=argv[2];
   int nbtags(-1);
-  if(argc>2) sscanf(argv[2],"%d",&nbtags);
-  SignalPDFs(url,nbtags);
+  if(argc>3) sscanf(argv[3],"%d",&nbtags);
+  SignalPDFs(surl,nbtags);
+  BckgPDFs(burl,"Mass");
 }
 
 
-//
-// void BckgPDFs(TString url="MassPDFs.root",TString var="Mass")
-// {
-//   //get the histograms and build the sum
-//   typedef std::pair<string,double> proc_t;
-//   typedef std::vector<proc_t> sample_t;
-//   std::map<string,sample_t> bckgSamples;
-//   std::map<string, TH1D *> bckgDists;
 
-//   double lum=36.1;
-//   sample_t ttbar; 
-//   ttbar.push_back(proc_t("otherttbar",1.30) ); 
-//   bckgSamples["t#bar{t} (other)"] = ttbar;
+void BckgPDFs(TString url,TString var)
+{
+  //get the histograms and build the sum
+  typedef std::pair<string,double> proc_t;
+  typedef std::vector<proc_t> sample_t;
+  std::map<string,sample_t> bckgSamples;
+  std::map<string, TH1D *> bckgDists;
+  
+  double lum=36.1;
+  sample_t ttbar; 
+  ttbar.push_back(proc_t("otherttbar",1.30) ); 
+  bckgSamples["t#bar{t} (other)"] = ttbar;
+  
+  sample_t ewk; 
+  double ewk_syst(0.0);
+  //  double ewk_syst(0.3);
+  ewk.push_back(proc_t("wjets",1.23*(1+ewk_syst)));
+  ewk.push_back(proc_t("ww",1.0274*(1+ewk_syst)));
+  ewk.push_back(proc_t("zz",0.09662*(1+ewk_syst)));
+  ewk.push_back(proc_t("wz",0.156257*(1+ewk_syst)));
+  bckgSamples["EWK"]=ewk;
+  
+  sample_t stop; 
+  double stop_syst(0.3);
+  //double stop_syst(0);
+  stop.push_back(proc_t("singletop_tW",2.944*(1+stop_syst)) ); 
+  bckgSamples["Single top"] = stop;
+  
+  //  setTDRStyle();
+  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs");
+  TFile *f = TFile::Open(url);
+  int totalevts=0;
+  for(std::map<string, sample_t>::iterator bckgIt = bckgSamples.begin();
+      bckgIt != bckgSamples.end();
+      bckgIt++)
+    {
+      TH1D *sampleH=0;
+      for(sample_t::iterator pIt = bckgIt->second.begin();
+ 	  pIt != bckgIt->second.end();
+ 	  pIt++)
+ 	{
+ 	  TString tname=pIt->first+"/mass";
+ 	  TTree *t = (TTree *) f->Get(tname);
+	  
+ 	  if(t==0) continue;
+ 	  if(var=="Mass") t->Draw("Mass[0]>>hmass(20,100,500)","IsSignal==0 && Mass[0]>0");
+ 	  else t->Draw("MT2[0]>>hmass(20,100,500)","IsSignal==0 && Mass[0]>0");
+ 	  TH1D *h = (TH1D*)gDirectory->Get("hmass");
+ 	  if(h==0) continue;
+ 	  if(sampleH==0)     
+ 	    {
+ 	      TString newName("hmass_"); newName += pIt->first;
+ 	      sampleH=(TH1D *)h->Clone(newName);
+ 	      sampleH->SetDirectory(0);
+ 	      sampleH->Sumw2();
+ 	      sampleH->SetTitle(TString(bckgIt->first));
+ 	      sampleH->SetLineColor(1);    
+ 	      sampleH->SetMarkerColor(1);  
+ 	      sampleH->SetFillColor(1);
+ 	      sampleH->SetMarkerStyle(24); 
+ 	      sampleH->SetFillStyle(3003); 
+ 	      sampleH->GetYaxis()->SetTitle("Events / (20 GeV/c^{2})");
+ 	      sampleH->GetXaxis()->SetTitle("Reconstructed " + var + " [GeV/c^{2}]");
+ 	      sampleH->Reset("ICE");
+ 	      bckgDists[bckgIt->first]=sampleH;
+ 	    }	  
+ 	  if(h->Integral()==0) continue;
+ 	  totalevts+=h->Integral();
+ 	  sampleH->Add(h,pIt->second/h->Integral());
+ 	}
+    }
+  f->Close();
+  
+  cout << bckgDists["Single Top"]->GetTitle() << endl;
 
-//   sample_t ewk; 
-//   double ewk_syst(0.0);
-//   //  double ewk_syst(0.3);
-//   ewk.push_back(proc_t("wjets",1.23*(1+ewk_syst)));
-//   ewk.push_back(proc_t("ww",1.0274*(1+ewk_syst)));
-//   ewk.push_back(proc_t("zz",0.09662*(1+ewk_syst)));
-//   ewk.push_back(proc_t("wz",0.156257*(1+ewk_syst)));
-//     bckgSamples["EWK"]=ewk;
-
-//   sample_t stop; 
-//   double stop_syst(0.3);
-//   //double stop_syst(0);
-//   stop.push_back(proc_t("singletop_tW",2.944*(1+stop_syst)) ); 
-//   bckgSamples["Single top"] = stop;
-
-//   setTDRStyle();
-//   TCanvas *c = new TCanvas("bckgpdfs","Background PDFs");
-//   TFile *f = TFile::Open(url);
-//   int totalevts=0;
-//   for(std::map<string, sample_t>::iterator bckgIt = bckgSamples.begin();
-//       bckgIt != bckgSamples.end();
-//       bckgIt++)
-//     {
-//       TH1D *sampleH=0;
-//       for(sample_t::iterator pIt = bckgIt->second.begin();
-// 	  pIt != bckgIt->second.end();
-// 	  pIt++)
-// 	{
-// 	  TString tname=pIt->first+"/mass";
-// 	  TTree *t = (TTree *) f->Get(tname);
-
-// 	  if(t==0) continue;
-// 	  if(var=="Mass") t->Draw("Mass[0]>>hmass(20,100,500)","IsSignal==0 && Mass[0]>0");
-// 	  else t->Draw("MT2[0]>>hmass(20,100,500)","IsSignal==0 && Mass[0]>0");
-// 	  TH1D *h = (TH1D*)gDirectory->Get("hmass");
-// 	  if(h==0) continue;
-// 	  if(sampleH==0)     
-// 	    {
-// 	      TString newName("hmass_"); newName += pIt->first;
-// 	      sampleH=(TH1D *)h->Clone(newName);
-// 	      sampleH->SetDirectory(0);
-// 	      sampleH->Sumw2();
-// 	      sampleH->SetTitle(TString(bckgIt->first));
-// 	      sampleH->SetLineColor(1);    
-// 	      sampleH->SetMarkerColor(1);  
-// 	      sampleH->SetFillColor(1);
-// 	      sampleH->SetMarkerStyle(24); 
-// 	      sampleH->SetFillStyle(3003); 
-// 	      sampleH->GetYaxis()->SetTitle("Events / (20 GeV/c^{2})");
-// 	      sampleH->GetXaxis()->SetTitle("Reconstructed " + var + " [GeV/c^{2}]");
-// 	      sampleH->Reset("ICE");
-// 	      bckgDists[bckgIt->first]=sampleH;
-// 	    }	  
-// 	  if(h->Integral()==0) continue;
-// 	  totalevts+=h->Integral();
-// 	  sampleH->Add(h,pIt->second/h->Integral());
-// 	}
-//     }
-//   f->Close();
-
-//   TH1D *sumH= (TH1D* )bckgDists["Single top"]->Clone("totalbckg");
-//   sumH->Reset("ICE");
-//   sumH->SetDirectory(0);
-//   sumH->Add(bckgDists["t#bar{t} (other)"]);
-//   sumH->Add(bckgDists["Single top"]);
-//   sumH->Add(bckgDists["EWK"]);
-//   sumH->Scale(totalevts/sumH->Integral());
-
-//   //prepare the pdfs for the fit in mass
-//   RooRealVar mass("m",var,100,var=="Mass"? 500:300,"GeV/c^{2}");
-//   RooRealVar mpv_l("mpv_{l}","Mpv of landau",100,300);
-//   RooRealVar sigma_l("#sigma_{l}","Sigma of landau",10,30);
-//   RooLandau lan("blandau","Mass component 1",mass,mpv_l,sigma_l);
-//   RooRealVar mean_g("#mu_{g}","Mean of gaus",100,200);
-//   RooRealVar sigma_g("#sigma_{g}","Sigma of gaus",10,30);
-//   RooGaussian gaus("bgauss","Mass component 2",mass,mean_g,sigma_g);   
-//   RooRealVar massfrac("#alpha","Fraction of component 1",0.6,1.);
-//   RooAddPdf massmodel("model","Model",RooArgList(lan,gaus),massfrac);
-//   RooDataHist dh("dh","dh",mass,sumH);       
-//   massmodel.fitTo(dh,Save(kTRUE),Range(100.,500.),SumW2Error(kTRUE));
-//   RooPlot* frame = mass.frame(Title("Combined"));
-//   dh.plotOn(frame,DrawOption("pz"),DataError(RooAbsData::SumW2)); 
-//   massmodel.plotOn(frame,DrawOption("F"),FillColor(kAzure-4),FillStyle(3001),MoveToBack(),Range(100,500)) ;
-
-//   c->Clear();
-//   c->SetWindowSize(1600,400);
-//   c->Divide(4);
-//   int ibckg(0);
-//   for(std::map<std::string, TH1D *>::iterator it = bckgDists.begin();
-//       it != bckgDists.end();
-//       it++,ibckg++)
-//     {
-//       TPad *p = (TPad *) c->cd(ibckg+1);  
-//       p->SetGridx();  p->SetGridy();
-//       it->second->Draw("hist");  
-//       it->second->GetXaxis()->SetTitleOffset(1.0);
-//       it->second->GetYaxis()->SetTitleOffset(1.0);
-//       TPaveText *pt = new TPaveText(0.75,0.85,0.97,0.95,"brNDC");
-//       pt->SetBorderSize(0);
-//       pt->SetFillColor(0);
-//       pt->SetFillStyle(0);
-//       pt->AddText(it->first.c_str());
-//       pt->Draw();
-//     }
-//   c->cd(4);
-//   frame->Draw();
-//   frame->GetYaxis()->SetTitleOffset(1.0);
-//   frame->GetYaxis()->SetTitle("Events (A.U.)");
-//   frame->GetXaxis()->SetTitleOffset(0.8);
-//   frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
-// }
+  TH1D *sumH= (TH1D* )bckgDists["Single top"]->Clone("totalbckg");
+  sumH->Reset("ICE");
+  sumH->SetDirectory(0);
+  sumH->Add(bckgDists["t#bar{t} (other)"]);
+  sumH->Add(bckgDists["Single top"]);
+  sumH->Add(bckgDists["EWK"]);
+  sumH->Scale(totalevts/sumH->Integral());
+  
+  //prepare the pdfs for the fit in mass
+  RooRealVar mass("m",var,100,var=="Mass"? 500:300,"GeV/c^{2}");
+  RooRealVar mpv_l("mpv_{l}","Mpv of landau",100,300);
+  RooRealVar sigma_l("#sigma_{l}","Sigma of landau",10,30);
+  RooLandau lan("blandau","Mass component 1",mass,mpv_l,sigma_l);
+  RooRealVar mean_g("#mu_{g}","Mean of gaus",100,200);
+  RooRealVar sigma_g("#sigma_{g}","Sigma of gaus",10,30);
+  RooGaussian gaus("bgauss","Mass component 2",mass,mean_g,sigma_g);   
+  RooRealVar massfrac("#alpha","Fraction of component 1",0.6,1.);
+  RooAddPdf massmodel("model","Model",RooArgList(lan,gaus),massfrac);
+  RooDataHist dh("dh","dh",mass,sumH);       
+  massmodel.fitTo(dh,Save(kTRUE),Range(100.,500.),SumW2Error(kTRUE));
+  RooPlot* frame = mass.frame(Title("Combined"));
+  dh.plotOn(frame,DrawOption("pz"),DataError(RooAbsData::SumW2)); 
+  massmodel.plotOn(frame,DrawOption("F"),FillColor(kAzure-4),FillStyle(3001),MoveToBack(),Range(100,500)) ;
+  
+  c->Clear();
+  c->SetWindowSize(1600,400);
+  c->Divide(4);
+  int ibckg(0);
+  for(std::map<std::string, TH1D *>::iterator it = bckgDists.begin();
+      it != bckgDists.end();
+      it++,ibckg++)
+    {
+      TPad *p = (TPad *) c->cd(ibckg+1);  
+      p->SetGridx();  p->SetGridy();
+      it->second->Draw("hist");  
+      it->second->GetXaxis()->SetTitleOffset(1.0);
+      it->second->GetYaxis()->SetTitleOffset(1.0);
+      TPaveText *pt = new TPaveText(0.75,0.85,0.97,0.95,"brNDC");
+      pt->SetBorderSize(0);
+      pt->SetFillColor(0);
+      pt->SetFillStyle(0);
+      pt->AddText(it->first.c_str());
+      pt->Draw();
+    }
+  c->cd(4);
+  frame->Draw();
+  frame->GetYaxis()->SetTitleOffset(1.0);
+  frame->GetYaxis()->SetTitle("Events (A.U.)");
+  frame->GetXaxis()->SetTitleOffset(0.8);
+  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
+}
 
 
 //
@@ -196,9 +201,9 @@ RooSimultaneous *SignalPDFs(TString url,int nbtags)
   std::vector<MassPoint_t> MassPointCollection;
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_161v5",161.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_163v5",163.5) );
-  //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
+  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
-  MassPointCollection.push_back( MassPoint_t("TTJets",           172.5) );
+  MassPointCollection.push_back( MassPoint_t("TTJets",    172.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_175v5",175.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_178v5",178.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass181v5", 181.5) );
