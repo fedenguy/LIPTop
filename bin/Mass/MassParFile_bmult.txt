@@ -9,69 +9,50 @@ resbias:0
 resslope:0
 
 [YIELDS]
-#mu_{background}_s0:273.6
-#sigma_{background}_s0:9.0
-dybckg#alpha_{l}_s0:0.742
-#mu_{background}_s1:199.6
-#sigma_{background}_s1:6.0
-dybckg#alpha_{l}_s1:0.4158
-#mu_{background}_s2:86.4
-#sigma_{background}_s2:3.0
-dybckg#alpha_{l}_s2:0.2117
+#mu_{background}_s0:366.6
+#sigma_{background}_s0:19.15
+dybckg#alpha_{l}_s0:0.53028
+#mu_{background}_s1:159.6
+#sigma_{background}_s1:12.63
+dybckg#alpha_{l}_s1:0.4218
+#mu_{background}_s2:51.6
+#sigma_{background}_s2:7.183
+dybckg#alpha_{l}_s2:0.28605
 
-[CATEGORY #1]
-#alpha(intercept):0.533855
-#alpha(slope)0.00000253373
-#mu_{G}(intercept):140.520
-#mu_{G}(slope):0.382990
-#sigma_{G}(intercept):17.7544
-#sigma_{G}(slope):0.0935217
-#sigma_{L}(intercept):15.7290
-#sigma_{L}(slope):0.0921316
-mpv_{L}(intercept):182.538
-mpv_{L}(slope):0.611137
-bckg#alpha_s0:0.800
-bckg#mu_{g}_s0:140.205
-bckg#sigma_{g}_s0:14.280
-bckg#sigma_{l}_s0:16.613
-bckgmpv_{l}_s0:178.322
-dybckg#sigma_{l}_s0:26.00
-dybckgmpv_{l}_s0:177.00
+[Background : inclusive]
+#alpha : 0.6 +/- 347.014
+#mu_{g} : 143.421 +/- 47697.3
+#sigma_{g} : 17.5359 +/- 18687
+#sigma_{l} : 15.5014 +/- 4588.81
+mpv_{l} : 181.488 +/- 82780.8
 
-[CATEGORY #2]
-#alpha(intercept):0.495542
-#alpha(slope):0.0000421633
-#mu_{G}(intercept):146.315
-#mu_{G}(slope):0.395552
-#sigma_{G}(intercept):195.890
-#sigma_{G}(slope):0.0996384
-#sigma_{L}(intercept):16.6712
-#sigma_{L}(slope):0.0758413
-mpv_{L}(intercept):188.357
-mpv_{L}(slope):0.7894
-bckg#alpha_s1:0.800
-bckg#mu_{g}_s1:140.205
-bckg#sigma_{g}_s1:14.280
-bckg#sigma_{l}_s1:16.613
-bckgmpv_{l}_s1:178.322
-dybckg#sigma_{l}_s1:26.00
-dybckgmpv_{l}_s1:177.00
+[Signal : 0 b-tags]
+#alpha(intercept) : 0.538236 +/- 0.0371259
+#alpha(slope) : 0.000300093 +/- 0.000936308
+#mu_{G}(intercept) : 140.786 +/- 1.88055
+#mu_{G}(slope) : 0.351636 +/- 0.0730275
+#sigma_{G}(intercept) : 17.9774 +/- 1.05683
+#sigma_{G}(slope) : 0.0785023 +/- 0.0815448
+#sigma_{L}(intercept) : 15.9173 +/- 0.541641
+mpv_{L}(slope) : 0.629883 +/- 0.108057
 
-[CATEGORY #3]
-#alpha(intercept):0.524971
-#alpha(slope):0.00709416
-#mu_{G}(intercept):148.276
-#mu_{G}(slope):0.0890525
-#sigma_{G}(intercept):19.1444
-#sigma_{G}(slope):0.0436213
-#sigma_{L}(intercept):16.0161
-#sigma_{L}(slope):0.0239631
-mpv_{L}(intercept):188.094
-mpv_{L}(slope):0.0625080
-bckg#alpha_s2:0.800
-bckg#mu_{g}_s2:140.205
-bckg#sigma_{g}_s2:14.280
-bckg#sigma_{l}_s2:16.613
-bckgmpv_{l}_s2:178.322
-dybckg#sigma_{l}_s2:26.00
-dybckgmpv_{l}_s2:177.00
+[Signal : 1 b-tags]
+#alpha(intercept) : 0.490102 +/- 0.015182
+#alpha(slope) : 9.76947e-10 +/- 0.000512889
+#mu_{G}(intercept) : 146.872 +/- 0.690604
+#mu_{G}(slope) : 0.406965 +/- 0.0215514
+#sigma_{G}(intercept) : 19.7213 +/- 0.323495
+#sigma_{G}(slope) : 0.106289 +/- 0.0168566
+#sigma_{L}(intercept) : 16.7842 +/- 0.164761
+mpv_{L}(slope) : 0.826006 +/- 0.0441548
+
+[Signal : 2 b-tags]
+#alpha(intercept) : 0.516014 +/- 0.0107137
+#alpha(slope) : 4.80179e-07 +/- 0.000529993
+#mu_{G}(intercept) : 147.879 +/- 0.494998
+#mu_{G}(slope) : 0.418475 +/- 0.0192161
+#sigma_{G}(intercept) : 19.3657 +/- 0.216049
+#sigma_{G}(slope) : 0.147777 +/- 0.0114949
+#sigma_{L}(intercept) : 16.2911 +/- 0.107935
+mpv_{L}(slope) : 0.766666 +/- 0.0373906
+
