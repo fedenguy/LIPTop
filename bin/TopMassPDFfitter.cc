@@ -178,6 +178,7 @@ FitResults_t BckgPDFs(TString url)
       it != bckgDists.end();
       it++,ibckg++)
     {
+      c->cd(ibckg+1);
       it->second->Rebin();
       it->second->Draw("hist");  
       it->second->GetXaxis()->SetTitleOffset(1.0);
