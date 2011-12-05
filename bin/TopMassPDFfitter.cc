@@ -1,13 +1,3 @@
-/**
-   @short  run me as
-   .L TopMassPDFfitter.C+ 
-   
-   BckgPDFs(file_withmass_trees);
-   SignalPDFs("EventSummary.root"," && evmeasurements[4]==0");
-   SignalPDFs("EventSummary.root"," && evmeasurements[4]==1");
-   SignalPDFs("EventSummary.root"," && evmeasurements[4]>1");
-*/
-
 #ifndef __CINT__
 #include "RooGlobalFunc.h"
 #endif
@@ -36,15 +26,21 @@
 #include "TF1.h"
 #include "TSystem.h"
 
+#include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
+
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 
 #include<vector>
 
+typedef std::pair<float,float> Value_t;
+typedef std::map<std::string,Value_t> FitResults_t;
+
+using namespace std; 
 using namespace RooFit ;
 
 
-RooSimultaneous *SignalPDFs(TString url="EventSummaries.root",int nbtags=-1);
-void BckgPDFs(TString url="MassPDFs.root",TString var="Mass");
+FitResults_t SignalPDFs(TString url="EventSummaries.root",int nbtags=-1);
+FitResults_t BckgPDFs(TString url="MassPDFs.root");
 
 //
 int main(int argc, char* argv[])
@@ -55,99 +51,100 @@ int main(int argc, char* argv[])
   
   TString surl=argv[1];
   TString burl=argv[2];
-  int nbtags(-1);
-  if(argc>3) sscanf(argv[3],"%d",&nbtags);
-  SignalPDFs(surl,nbtags);
-  BckgPDFs(burl,"Mass");
+  
+  //fit the templates
+  std::map<string,FitResults_t> allFitResults;
+  allFitResults["[Signal : 0 b-tags]"]       = SignalPDFs(surl,0);
+  allFitResults["[Signal : 1 b-tags]"]       = SignalPDFs(surl,1);
+  allFitResults["[Signal : 2 b-tags]"]       = SignalPDFs(surl,2);
+  allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
+
+  //display the results
+  cout << " *************** TopMassPDFfitter  *********************** " << endl;
+  for(std::map<string,FitResults_t>::iterator it = allFitResults.begin();
+      it != allFitResults.end();
+      it++)
+    {
+      cout << it->first << endl;
+      for(FitResults_t::iterator itt = it->second.begin();
+	  itt != it->second.end();
+	  itt++)
+	cout << itt->first << " : " << itt->second.first << " +/- " << itt->second.second << endl;
+      cout << endl;
+    }
 }
 
 
-
-void BckgPDFs(TString url,TString var)
+//
+FitResults_t BckgPDFs(TString url)
 {
   //get the histograms and build the sum
-  typedef std::pair<string,double> proc_t;
-  typedef std::vector<proc_t> sample_t;
-  std::map<string,sample_t> bckgSamples;
   std::map<string, TH1D *> bckgDists;
+  std::map<string,std::vector<string> > bckgProcs;
+
+  std::vector<string> topSamples;
+  topSamples.push_back("SingleTbar_tW");
+  topSamples.push_back("SingleT_tW");
+  topSamples.push_back("SingleTbar_t");
+  topSamples.push_back("SingleT_t");
+  topSamples.push_back("SingleTbar_s");
+  topSamples.push_back("SingleT_s");
+  topSamples.push_back("TTJets");
+  bckgProcs["Top"]=topSamples;
   
-  double lum=36.1;
-  sample_t ttbar; 
-  ttbar.push_back(proc_t("otherttbar",1.30) ); 
-  bckgSamples["t#bar{t} (other)"] = ttbar;
-  
-  sample_t ewk; 
-  double ewk_syst(0.0);
-  //  double ewk_syst(0.3);
-  ewk.push_back(proc_t("wjets",1.23*(1+ewk_syst)));
-  ewk.push_back(proc_t("ww",1.0274*(1+ewk_syst)));
-  ewk.push_back(proc_t("zz",0.09662*(1+ewk_syst)));
-  ewk.push_back(proc_t("wz",0.156257*(1+ewk_syst)));
-  bckgSamples["EWK"]=ewk;
-  
-  sample_t stop; 
-  double stop_syst(0.3);
-  //double stop_syst(0);
-  stop.push_back(proc_t("singletop_tW",2.944*(1+stop_syst)) ); 
-  bckgSamples["Single top"] = stop;
-  
-  //  setTDRStyle();
-  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs");
+  std::vector<string> ewkSamples;
+  ewkSamples.push_back("WW");
+  ewkSamples.push_back("ZZ");
+  ewkSamples.push_back("WZ");
+  ewkSamples.push_back("WJetsToLNu");
+  bckgProcs["EWK"]=ewkSamples;
+
+  std::vector<string>dySamples;
+  dySamples.push_back("DYJetsToLL");
+  dySamples.push_back("DYJetsToMuMu_M20to50");
+  dySamples.push_back("DYJetsToEE_M20to50");
+  bckgProcs["DY"]=dySamples;
+
+  //build the mass histograms
+  int ipt(1);
   TFile *f = TFile::Open(url);
-  int totalevts=0;
-  for(std::map<string, sample_t>::iterator bckgIt = bckgSamples.begin();
-      bckgIt != bckgSamples.end();
-      bckgIt++)
+  for(std::map<string,std::vector<string> >::iterator it = bckgProcs.begin(); it != bckgProcs.end(); it++,ipt++)
     {
-      TH1D *sampleH=0;
-      for(sample_t::iterator pIt = bckgIt->second.begin();
- 	  pIt != bckgIt->second.end();
- 	  pIt++)
- 	{
- 	  TString tname=pIt->first+"/mass";
- 	  TTree *t = (TTree *) f->Get(tname);
-	  
- 	  if(t==0) continue;
- 	  if(var=="Mass") t->Draw("Mass[0]>>hmass(20,100,500)","IsSignal==0 && Mass[0]>0");
- 	  else t->Draw("MT2[0]>>hmass(20,100,500)","IsSignal==0 && Mass[0]>0");
- 	  TH1D *h = (TH1D*)gDirectory->Get("hmass");
- 	  if(h==0) continue;
- 	  if(sampleH==0)     
- 	    {
- 	      TString newName("hmass_"); newName += pIt->first;
- 	      sampleH=(TH1D *)h->Clone(newName);
- 	      sampleH->SetDirectory(0);
- 	      sampleH->Sumw2();
- 	      sampleH->SetTitle(TString(bckgIt->first));
- 	      sampleH->SetLineColor(1);    
- 	      sampleH->SetMarkerColor(1);  
- 	      sampleH->SetFillColor(1);
- 	      sampleH->SetMarkerStyle(24); 
- 	      sampleH->SetFillStyle(3003); 
- 	      sampleH->GetYaxis()->SetTitle("Events / (20 GeV/c^{2})");
- 	      sampleH->GetXaxis()->SetTitle("Reconstructed " + var + " [GeV/c^{2}]");
- 	      sampleH->Reset("ICE");
- 	      bckgDists[bckgIt->first]=sampleH;
- 	    }	  
- 	  if(h->Integral()==0) continue;
- 	  totalevts+=h->Integral();
- 	  sampleH->Add(h,pIt->second/h->Integral());
- 	}
-    }
+      TString sName("m"); sName += (ipt+1);      
+      TH1D *h= new TH1D(sName,sName,80,100,500);      
+      h->SetDirectory(0);
+      h->GetYaxis()->SetTitle("Events / (5 GeV/c^{2})");
+      h->GetXaxis()->SetTitle("Mass [GeV/c^{2}]");
+      h->GetXaxis()->SetTitleOffset(0.8);
+      h->GetYaxis()->SetTitleOffset(0.8);
+      h->SetTitle(it->first.c_str());
+      bckgDists[it->first]=h;
+
+      for(std::vector<string>::iterator pit = it->second.begin(); pit != it->second.end(); pit++)
+	{
+      	  TString tname=*pit + "/data";
+	  TTree *t = (TTree *) f->Get(tname);
+	  if(t==0) continue;
+
+	  Float_t evmeasurements[10];
+	  t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
+	  for(Int_t i=0; i<t->GetEntriesFast(); i++)
+	    {
+	      t->GetEntry(i);
+	      if(evmeasurements[0]>0)  h->Fill(evmeasurements[0]);
+	    }
+	}
+    }    
   f->Close();
   
-  cout << bckgDists["Single Top"]->GetTitle() << endl;
-
-  TH1D *sumH= (TH1D* )bckgDists["Single top"]->Clone("totalbckg");
-  sumH->Reset("ICE");
+  //the sum
+  TH1D *sumH= (TH1D* )bckgDists["Top"]->Clone("totalbckg");
   sumH->SetDirectory(0);
-  sumH->Add(bckgDists["t#bar{t} (other)"]);
-  sumH->Add(bckgDists["Single top"]);
   sumH->Add(bckgDists["EWK"]);
-  sumH->Scale(totalevts/sumH->Integral());
+  //  sumH->Add(bckgDists["DY"]);
   
   //prepare the pdfs for the fit in mass
-  RooRealVar mass("m",var,100,var=="Mass"? 500:300,"GeV/c^{2}");
+  RooRealVar mass("m","Mass",100,500,"GeV/c^{2}");
   RooRealVar mpv_l("mpv_{l}","Mpv of landau",100,300);
   RooRealVar sigma_l("#sigma_{l}","Sigma of landau",10,30);
   RooLandau lan("blandau","Mass component 1",mass,mpv_l,sigma_l);
@@ -158,20 +155,30 @@ void BckgPDFs(TString url,TString var)
   RooAddPdf massmodel("model","Model",RooArgList(lan,gaus),massfrac);
   RooDataHist dh("dh","dh",mass,sumH);       
   massmodel.fitTo(dh,Save(kTRUE),Range(100.,500.),SumW2Error(kTRUE));
+
+  //show the results of the fit
+  setStyle();
+  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs");
+  c->SetWindowSize(1600,400);
+  c->Divide(4);
+
+  c->cd(1);
   RooPlot* frame = mass.frame(Title("Combined"));
   dh.plotOn(frame,DrawOption("pz"),DataError(RooAbsData::SumW2)); 
   massmodel.plotOn(frame,DrawOption("F"),FillColor(kAzure-4),FillStyle(3001),MoveToBack(),Range(100,500)) ;
+  frame->Draw();
+  frame->GetYaxis()->SetTitleOffset(1.0);
+  frame->GetYaxis()->SetTitle("Events (A.U.)");
+  frame->GetXaxis()->SetTitleOffset(0.8);
+  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
+
   
-  c->Clear();
-  c->SetWindowSize(1600,400);
-  c->Divide(4);
-  int ibckg(0);
+  int ibckg(1);
   for(std::map<std::string, TH1D *>::iterator it = bckgDists.begin();
       it != bckgDists.end();
       it++,ibckg++)
     {
-      TPad *p = (TPad *) c->cd(ibckg+1);  
-      p->SetGridx();  p->SetGridy();
+      it->second->Rebin();
       it->second->Draw("hist");  
       it->second->GetXaxis()->SetTitleOffset(1.0);
       it->second->GetYaxis()->SetTitleOffset(1.0);
@@ -182,19 +189,24 @@ void BckgPDFs(TString url,TString var)
       pt->AddText(it->first.c_str());
       pt->Draw();
     }
-  c->cd(4);
-  frame->Draw();
-  frame->GetYaxis()->SetTitleOffset(1.0);
-  frame->GetYaxis()->SetTitle("Events (A.U.)");
-  frame->GetXaxis()->SetTitleOffset(0.8);
-  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
+  c->SaveAs("bckg_masstemplate.C");
+  c->SaveAs("bckg_masstemplate.png");
+  
+  //return the result
+  FitResults_t fitPars;
+  fitPars["mpv_{l}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
+  fitPars["#sigma_{l}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
+  fitPars["#mu_{g}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+  fitPars["#sigma_{g}"] = Value_t(sigma_g.getVal(),sigma_g.getError());
+  fitPars["#alpha"]     = Value_t(massfrac.getVal(),massfrac.getError()); 
+  return fitPars;
 }
 
 
+
 //
-RooSimultaneous *SignalPDFs(TString url,int nbtags)
+FitResults_t SignalPDFs(TString url,int nbtags)
 {
-  gStyle->SetOptStat(0);
 
   //the mass points
   typedef std::pair<TString,Float_t> MassPoint_t;
@@ -298,6 +310,7 @@ RooSimultaneous *SignalPDFs(TString url,int nbtags)
   simPdf->fitTo(combData,Range(100.,400.));
  
   //display
+  setStyle();
   TCanvas *c = 0;
   for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
     {
@@ -305,8 +318,9 @@ RooSimultaneous *SignalPDFs(TString url,int nbtags)
 	{
 	  if(c!=0)
 	    {
-	      c->SaveAs( c->GetName() + TString(".C") );
-	      c->SaveAs( c->GetName() + TString(".png") );
+	      TString cname=c->GetName(); cname += "_"; cname += nbtags; cname+="btags"; 
+	      c->SaveAs( cname + TString(".C") );
+	      c->SaveAs( cname + TString(".png") );
 	    }
 	  TString name("SignalPDFs_");  name+=ipt;
 	  c = new TCanvas(name,name);
@@ -348,12 +362,24 @@ RooSimultaneous *SignalPDFs(TString url,int nbtags)
   //save last canvas
   if(c!=0)
     {
-      c->SaveAs( c->GetName() + TString(".C") );
-      c->SaveAs( c->GetName() + TString(".png") );
+      TString cname=c->GetName(); cname += "_"; cname += nbtags; cname+="btags"; 
+      c->SaveAs( cname + TString(".C") );
+      c->SaveAs( cname + TString(".png") );
       delete c;
     }
 
-  return simPdf;
+
+  //return the results
+  FitResults_t fitPars;
+  fitPars["#mu_{G}(slope)"]=Value_t(g_mean_slope.getVal(),g_mean_slope.getError());
+  fitPars["#mu_{G}(intercept)"]=Value_t(g_mean_shift.getVal(),g_mean_shift.getError());
+  fitPars["#sigma_{G}(slope)"]=Value_t(g_sigma_slope.getVal(),g_sigma_slope.getError());
+  fitPars["#sigma_{G}(intercept)"]=Value_t(g_sigma_shift.getVal(),g_sigma_shift.getError());
+  fitPars["mpv_{L}(slope)"]=Value_t(l_mean_slope.getVal(),l_mean_slope.getError());
+  fitPars["#sigma_{L}(intercept)"]=Value_t(l_sigma_shift.getVal(),l_sigma_shift.getError());
+  fitPars["#alpha(slope)"]=Value_t(massfrac_slope.getVal(),massfrac_slope.getError());
+  fitPars["#alpha(intercept)"]=Value_t(massfrac_shift.getVal(),massfrac_shift.getError());
+  return fitPars;
 }
 
 
