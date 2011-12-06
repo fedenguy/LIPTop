@@ -15,6 +15,8 @@
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
+
 #include "TSystem.h"
 #include "TFile.h"
 #include "TChain.h"
@@ -69,6 +71,13 @@ int main(int argc, char* argv[])
   std::vector<std::string> methodList = tmvaInput.getParameter<std::vector<std::string> >("methodList");
   std::vector<std::string> varsList    = tmvaInput.getParameter<std::vector<std::string> >("varsList");
   bool trainMVA                        = tmvaInput.getParameter<bool>("doTrain");
+
+  //pileup reweighter                                                        
+  TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
+  edm::LumiReWeighting *LumiWeights=0;
+  if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
+                                                  runProcess.getParameter<std::string>("datapileup"),
+                                                  proctag.Data(),"pileup");
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
@@ -282,7 +291,8 @@ int main(int argc, char* argv[])
       EventSummary_t &ev = evSummaryHandler.getEvent();
       
       //fill histos
-      float weight = ev.weight;
+      float weight = 1.0;
+      if(LumiWeights) weight = LumiWeights->weight( ev.ngenpu );
 
       if(isMC)
 	{
