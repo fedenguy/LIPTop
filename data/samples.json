@@ -119,7 +119,7 @@
         "lcolor":1,
 	"marker":1,
 	"data":[
-	    {
+           {
                 "dtag":"QCDem30to80",
                 "dset":"QCD_Pt-30to80_EMEnriched_TuneZ2_7TeV-pythia",
                 "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/QCD/QCD_Pt-30to80_EMEnriched_TuneZ2_7TeV-pythia"],
@@ -142,33 +142,32 @@
                 "dset":"QCD_Pt-120to150_MuPt5Enriched_TuneZ2_7TeV-pythia6",
                 "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/QCD/QCD_Pt-120to150_MuPt5Enriched_TuneZ2_7TeV-pythia6"],
                 "xsec":4522.947
-             } 	 	
+             }, 	 	
+	     {
+                "dtag":"QCDPt170to300",
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/QCD_Pt-170to300_TuneZ2_7TeV_pythia6"],
+                "xsec":24300.0
+             },
+ 	     {
+                "dtag":"QCDPt300to470",
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/QCD_Pt-300to470_TuneZ2_7TeV_pythia6"],
+                "xsec":1170.0
+             },
+             {
+                "dtag":"QCDPt470to600",
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/QCD_Pt-470to600_TuneZ2_7TeV_pythia6"],
+                "xsec":70.2
+             }
 	   ]
     	},
 	{
-	 "tag":"other t#bar{t}",
+	 "tag":"t#bar{t}",
          "isdata":false,
-         "color":"8",
+         "color":"614",
 	 "lcolor":1,
-	 "mctruthmode":2,
          "data":[
 		{
  	        "dtag":"TTJets",
-		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
-                "xsec":165
-                }
-	  ]
-	},
-	{
-	 "tag":"t#bar{t} dileptons",
-         "isdata":false,
-         "color":"614",
-	 "mctruthmode":1,
-	 "lcolor":1,
-         "data":[
-		{
- 	        "dtag":"TTJets_signal",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
                 "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/TTJets/TTJets_TuneZ2_7TeV-madgraph-tauola"],
                 "xsec":165
