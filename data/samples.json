@@ -109,6 +109,30 @@
                "dset":"/DYToEE_M-20_TuneZ2_7TeV-pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
                "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToEE_M-20_TuneZ2_7TeV-pythia6"],
                "xsec":1666
+              },
+              {
+               "dtag":"DYJetsToTauTau_M20to50",
+               "dset":"/DYToTauTau_M-20_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
+               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToTauTau_M-20_TuneZ2_7TeV-pythia6-tauola"],
+               "xsec":1666
+              },
+              {
+               "dtag":"DYJetsToEE_M10to20",
+               "dset":"/DYToEE_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia/Summer11-PU_S3_START42_V11-v2/AODSIM",
+               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToEE_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia"],
+               "xsec":2659.0
+              },
+              {
+               "dtag":"DYJetsToMuMu_M10to20",
+               "dset":"/DYToMuMu_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia/Summer11-PU_S3_START42_V11-v2/AODSIM",
+               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToMuMu_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia"],
+               "xsec":2659.0
+              },
+              {
+               "dtag":"DYJetsToTauTau_M10to20",
+               "dset":"/DYToTauTau_M-10To20_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
+               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToTauTau_M-10To20_TuneZ2_7TeV-pythia6-tauola"],
+               "xsec":2659.0
               }
           ]
 	},
@@ -199,7 +223,7 @@
                 {
                   "dtag":"DoubleMuPromptRecov4",
                   "dset":"/DoubleMu/Run2011A-PromptReco-v4/AOD",
-                  "patdir":["/castor/cern.ch//cms/store/cmst3/user/psilva/Data2/DoubleMuon/DoubleMu-PromptReco-v4"]
+                  "patdir":["/store/cmst3/user/psilva/Data2/DoubleMuon/DoubleMu-PromptReco-v4"]
 		},
                 {
                   "dtag":"DoubleElectronPromptRecov4",
