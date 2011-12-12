@@ -95,10 +95,10 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     
     //vertex control
     controlHistos_.addHistogram("ngoodvertex", ";Vertices; Events", 25, 0.,25.); 
-    controlHistos_.addHistogram("vertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.);
-    controlHistos_.addHistogram("othervertex_sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.);
-    controlHistos_.addHistogram("vertex_ndof", ";NDOF; Events", 100, 0.,100.);
-    controlHistos_.addHistogram("othervertex_ndof", ";NDOF; Events", 100, 0.,100.);
+    controlHistos_.addHistogram("vertex-sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("othervertex-sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("vertex-ndof", ";NDOF; Events", 100, 0.,100.);
+    controlHistos_.addHistogram("othervertex-ndof", ";NDOF; Events", 100, 0.,100.);
 
     //lepton control 
     controlHistos_.addHistogram("egammaiso", "; Isolation; Events", 100, 0.,0.5);
@@ -111,9 +111,27 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.addHistogram("mureliso", "; Isolation; Events", 100, 0.,1.);
     
     //dilepton control
-    controlHistos_.addHistogram("dilepton_mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.);
-    controlHistos_.addHistogram("dilepton_sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
-    controlHistos_.addHistogram("dilepton_pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("dilepton-mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("dilepton-sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("dilepton-pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("dilepton-charge",";Electric charge(l,l'); Events", 6, -3, 3);
+    controlHistos_.addHistogram("dilepton-deltaeta",";|#Delta #eta(l,l'); Events", 100, 0., 6.);
+    controlHistos_.addHistogram("otherleptonsmult",";Additional leptons multiplicity; Events",10,0,10);
+    //ss dilepton control
+    controlHistos_.addHistogram("ss-dilepton-mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("ss-dilepton-sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("ss-dilepton-pt", ";|#Sigma #vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
+    controlHistos_.addHistogram("ss-dilepton-charge",";Electric charge(l,l'); Events", 6, -3, 3);
+    controlHistos_.addHistogram("ss-dilepton-deltaeta",";|#Delta #eta(l,l'); Events", 100, 0., 6.);
+    controlHistos_.addHistogram("ss-otherleptonsmult",";Additional leptons multiplicity; Events",10,0,10);
+    controlHistos_.addHistogram("ss-bmultfinal",";b tag multiplicity (TCHEL); Events",4,0,4);
+    controlHistos_.addHistogram("ss-met", ";#slash{E}_{T} [GeV]; Events", 30,  0.,300.);
+    controlHistos_.addHistogram("ss-neutralhadetfrac", ";f_{neutral had} E_{T} [GeV]; Events", 100,  0.,1.);
+    controlHistos_.addHistogram("ss-neutralemetfrac", ";f_{neutral em} E_{T} [GeV]; Events", 100,  0.,1.);
+    controlHistos_.addHistogram("ss-chargedememetfrac", ";f_{charged em} E_{T} [GeV]; Events", 100,  0.,1.);
+    controlHistos_.addHistogram("ss-chargedhadetfrac", ";f_{charged had} E_{T} [GeV]; Events", 100,  0.,1.);
+    controlHistos_.addHistogram("ss-muonetfrac", ";f_{muons} E_{T} [GeV]; Events", 100,  0.,1.);
+    controlHistos_.addHistogram("ss-njets",";Jet multiplicity; Events",4,0,4);
 	
     //jets
     controlHistos_.addHistogram("jetchhadenfrac",";f_{charged hadrons}; Jets",50,0,1);
@@ -151,6 +169,11 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.initMonitorForStep("ee");
     controlHistos_.initMonitorForStep("emu");
     controlHistos_.initMonitorForStep("mumu");
+    
+//    controlHistos_.initMonitorForStep("ss-all");
+//    controlHistos_.initMonitorForStep("ss-ee");
+//    controlHistos_.initMonitorForStep("ss-emu");
+//    controlHistos_.initMonitorForStep("ss-mumu");
 
   }catch(std::exception &e){
   }  
@@ -275,9 +298,9 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	for(size_t ivtx=0; ivtx<selVertices.size(); ivtx++)
 	  {
 	    TString vtype=(ivtx ==0 ? "" : "other");
-	    controlHistos_.fillHisto(vtype+"vertex_ndof",ctf,selVertices[ivtx]->ndof() , weight);
+	    controlHistos_.fillHisto(vtype+"vertex-ndof",ctf,selVertices[ivtx]->ndof() , weight);
 	    try{
-	      controlHistos_.fillHisto(vtype+"vertex_sumpt",ctf,getVertexMomentumFlux(selVertices[ivtx].get()) , weight);
+	      controlHistos_.fillHisto(vtype+"vertex-sumpt",ctf,getVertexMomentumFlux(selVertices[ivtx].get()) , weight);
 	    }catch(std::exception &e){
 	      //tracks might not have been saved
 	    }
@@ -347,6 +370,8 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     float dilsumpt=lepton1P.pt()+lepton2P.pt();
     float dilpt=dileptonP.pt();
     float dilmass=dileptonP.mass();
+    float dilcharge=lepton1->charge() + lepton2->charge();
+    float dildeltaeta=fabs(lepton1P.eta() - lepton2P.eta());
     bool isZCand( ( (selPath==EE || selPath==MUMU) && fabs(dilmass-91)<15) );
     bool isOS(lepton1->charge()*lepton2->charge()<0);
     double minDileptonMass = objConfig_["Dileptons"].getParameter<double>("minDileptonMass");
@@ -361,9 +386,11 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     for(size_t is=0; is<selStreams.size(); is++)
       {
 	TString ctf=selStreams[is];
-	controlHistos_.fillHisto("dilepton_sumpt",ctf,dilsumpt,weight);
-	controlHistos_.fillHisto("dilepton_pt",ctf,dilpt,weight);
-	controlHistos_.fillHisto("dilepton_mass",ctf,dilmass,weight);
+	controlHistos_.fillHisto("dilepton-sumpt",ctf,dilsumpt,weight);
+	controlHistos_.fillHisto("dilepton-pt",ctf,dilpt,weight);
+	controlHistos_.fillHisto("dilepton-mass",ctf,dilmass,weight);
+	controlHistos_.fillHisto("dilepton-charge",ctf,dilcharge,weight);
+	controlHistos_.fillHisto("dilepton-deltaeta",ctf,dildeltaeta,weight);
 
 	if(!isZCand) controlHistos_.fillHisto("cutflow",ctf,2.,weight);
       }
@@ -379,6 +406,8 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	leptons.push_back(*lit);
       }
     
+    size_t otherleptonsmult = leptons.size() - 2;
+
     //
     // JETS
     //
@@ -473,8 +502,25 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	    
 	    if(!passMET) continue;
 	    if(passJets) controlHistos_.fillHisto("cutflow",ctf,4,weight);
+	    
+	    // SS study before proceeding to OS
 	    if(!isOS){ 
 	      if(passJets) controlHistos_.fillHisto("cutflow",ctf,9, weight);
+	      
+	      controlHistos_.fillHisto("ss-dilepton-sumpt",ctf,dilsumpt,weight);
+	      controlHistos_.fillHisto("ss-dilepton-pt",ctf,dilpt,weight);
+	      controlHistos_.fillHisto("ss-dilepton-mass",ctf,dilmass,weight);
+	      controlHistos_.fillHisto("ss-dilepton-charge",ctf,dilcharge,weight);
+	      controlHistos_.fillHisto("ss-dilepton-deltaeta",ctf,dildeltaeta,weight);
+	      controlHistos_.fillHisto("ss-bmultfinal",ctf,nbjets,weight);
+	      controlHistos_.fillHisto("ss-met",ctf,met.pt(),weight);
+	      controlHistos_.fillHisto("ss-neutralhadetfrac",ctf,neutralhadetfrac,weight);
+	      controlHistos_.fillHisto("ss-neutralemetfrac",ctf,neutralemetfrac,weight);
+	      controlHistos_.fillHisto("ss-chargedemetfrac",ctf,chargedemetfrac,weight);
+	      controlHistos_.fillHisto("ss-chargedhadetfrac",ctf,chargedhadetfrac,weight);
+	      controlHistos_.fillHisto("ss-muonetfrac",ctf,muonetfrac,weight);
+	      controlHistos_.fillHisto("ss-njets",ctf,njets,weight);
+	      controlHistos_.fillHisto("ss-otherleptonsmult",ctf,otherleptonsmult,weight);
 	      continue;
 	    }
 	    if(passJets) controlHistos_.fillHisto("cutflow",ctf,5,weight);
