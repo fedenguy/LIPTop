@@ -549,7 +549,7 @@ int main(int argc, char* argv[])
   if(isMC && nresults)
     {
       double scaleFactor=double(selEvents.size())/double(nresults);
-      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/cutflow");
+      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/evtflow");
       if(cutflowH)
 	{
 	  cnorm=cutflowH->GetBinContent(1);
