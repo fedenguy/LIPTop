@@ -377,9 +377,14 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   fitPars["#sigma_{G}(slope)"]=Value_t(g_sigma_slope.getVal(),g_sigma_slope.getError());
   fitPars["#sigma_{G}(intercept)"]=Value_t(g_sigma_shift.getVal(),g_sigma_shift.getError());
   fitPars["mpv_{L}(slope)"]=Value_t(l_mean_slope.getVal(),l_mean_slope.getError());
+  fitPars["mpv_{L}(intercept)"]=Value_t(l_mean_shift.getVal(),l_mean_shift.getError());
+  fitPars["#sigma_{L}(slope)"]=Value_t(l_sigma_slope.getVal(),l_sigma_slope.getError());
   fitPars["#sigma_{L}(intercept)"]=Value_t(l_sigma_shift.getVal(),l_sigma_shift.getError());
   fitPars["#alpha(slope)"]=Value_t(massfrac_slope.getVal(),massfrac_slope.getError());
   fitPars["#alpha(intercept)"]=Value_t(massfrac_shift.getVal(),massfrac_shift.getError());
+
+
+
   return fitPars;
 }
 
