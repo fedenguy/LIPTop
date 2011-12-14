@@ -15,6 +15,8 @@
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
+
 #include "TSystem.h"
 #include "TFile.h"
 #include "TChain.h"
@@ -294,6 +296,8 @@ int main(int argc, char* argv[])
       
       //fill histos
       float weight = ev.weight;
+      if(LumiWeights) weight = LumiWeights->weight( ev.ngenpu );
+
 
       if(isMC)
 	{
