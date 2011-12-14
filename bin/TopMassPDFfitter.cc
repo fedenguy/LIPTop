@@ -158,8 +158,8 @@ FitResults_t BckgPDFs(TString url)
 
   //show the results of the fit
   setStyle();
-  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs");
-  c->SetWindowSize(1600,400);
+  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs",4800,1200);
+  c->SetWindowSize(4800,1200);
   c->Divide(4);
 
   c->cd(1);
@@ -324,11 +324,11 @@ FitResults_t SignalPDFs(TString url,int nbtags)
 	      c->SaveAs( cname + TString(".png") );
 	    }
 	  TString name("SignalPDFs_");  name+=ipt;
-	  c = new TCanvas(name,name);
+	  c = new TCanvas(name,name,5250,1050);
 	  c->SetBorderSize(0);
 	  c->SetFillStyle(0);
 	  c->SetFillColor(0);
-	  c->SetWindowSize(1750,350);
+	  c->SetWindowSize(5250,1050);
 	  c->Clear();
 	  c->Divide(5,1);	  
 	}
