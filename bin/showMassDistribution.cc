@@ -70,6 +70,14 @@ int main(int argc, char* argv[])
   std::vector<std::string> varsList    = tmvaInput.getParameter<std::vector<std::string> >("varsList");
   bool trainMVA                        = tmvaInput.getParameter<bool>("doTrain");
 
+  //pileup reweighter                                                        
+  TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
+  edm::LumiReWeighting *LumiWeights=0;
+  if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
+                                                  runProcess.getParameter<std::string>("datapileup"),
+                                                  proctag.Data(),"pileup");
+
+
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
   controlHistos.addHistogram( new TH1F ("btags", ";b-tag multiplicity;Events", 6, 0.,6.) );
@@ -125,7 +133,7 @@ int main(int argc, char* argv[])
 
   gSystem->Exec("mkdir -p " + outUrl);
   outUrl += "/";
-  evurl.ReplaceAll(".root","_summary.root");
+  //  evurl.ReplaceAll(".root","_summary.root");
   outUrl += gSystem->BaseName(evurl);
   TFile *file=TFile::Open(outUrl, "recreate");
 
@@ -193,7 +201,8 @@ int main(int argc, char* argv[])
   gSystem->ExpandPathName(TString(gSystem->BaseName(evurl)));
 
   TString baseTag = gSystem->BaseName(evurl);
-  baseTag.ReplaceAll("_summary.root","");
+  //  baseTag.ReplaceAll("_summary.root","");
+  baseTag.ReplaceAll(".root","");
   TFile *evfile = TFile::Open(evurl);
   //  cout << "evurl: " << evurl << ", baseTag: " << baseTag << endl;
   if(evfile==0) return -1;
@@ -215,7 +224,8 @@ int main(int argc, char* argv[])
       spyEvents = new EventSummaryHandler;
       spyFile = TFile::Open("EventSummaries.root","UPDATE");
       TString evtag=gSystem->BaseName(evurl);
-      evtag.ReplaceAll("_summary.root","");
+      //      evtag.ReplaceAll("_summary.root","");
+      evtag.ReplaceAll(".root","");
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
       TTree *outT = new TTree("data","Event summary");
@@ -224,7 +234,8 @@ int main(int argc, char* argv[])
 
   //process kin file
   TString kinUrl(evurl);
-  kinUrl.ReplaceAll("_summary.root","/"+kindir);
+  //  kinUrl.ReplaceAll("_summary.root","/"+kindir);
+  kinUrl.ReplaceAll(".root","/"+kindir);
   gSystem->ExpandPathName(kinUrl);
   cout << "Kin results from " << kinUrl << " to be processed with summary from " << evurl << endl;
  
