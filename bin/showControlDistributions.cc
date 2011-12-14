@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
   TString labels[]={"2 leptons",
 		    "M>12 #wedge |M-M_{Z}|>15",
 		    "#geq 2 jets",
-		    "E_{T}^{miss}>30/0 (ee,mumu/emu)",
+		    "E_{T}^{miss}>30/20 (ee,mumu/emu)",
 		    "op. sign",
 		    "=0 b-tags",
 		    "=1 b-tag",
@@ -360,10 +360,11 @@ int main(int argc, char* argv[])
   float cnorm=1.0;
   if(isMC) cnorm=cutflowhistos["all"]->GetBinContent(1);
   //efficiency (trigger,id+isolation) corrections for the different channels
+  // applied to the yields via getDileptonCutflow.py
   std::map<int,float> effCorr;
-  effCorr[MUMU] = isMC ? 0.920 : 1.0;
-  effCorr[EMU]  = isMC ? 0.946 : 1.0;
-  effCorr[EE]   = isMC ? 0.966 : 1.0;
+  effCorr[MUMU] = 1.0;
+  effCorr[EMU]  = 1.0;
+  effCorr[EE]   = 1.0;
   for(std::map<TString, TH1F *>::iterator hit = cutflowhistos.begin(); hit != cutflowhistos.end(); hit++)
     {
       double ieff=1;
@@ -394,11 +395,11 @@ int main(int argc, char* argv[])
   TFile *spyFile=0;
   TDirectory *spyDir=0;
   float summaryWeight(1);
-  if(saveSummaryTree && normEntries>0)
+ if(saveSummaryTree && normEntries>0)
     {
       gSystem->Exec("mkdir -p " + outdir);
       TString summaryName = outdir + "/" + gSystem->BaseName(evurl);
-      summaryName.ReplaceAll(".root","_summary.root");
+      //      summaryName.ReplaceAll(".root","_summary.root");
       gSystem->ExpandPathName(summaryName);
       
       summaryWeight = xsec * float(totalEntries) / (cnorm * float(normEntries) );
@@ -729,8 +730,7 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( !isSameFlavor || (theMET.pt()>30) );
-	  //bool passMet( (!isSameFlavor && theMET.pt()>20) || (isSameFlavor && theMET.pt()>40) );
+	  bool passMet( (!isSameFlavor && theMET.pt()>20) || (isSameFlavor && theMET.pt()>30) );
 	  bool isOS(dilcharge<0);
 	  bool passMtCut(mtsum>75);
 	  bool passTightLepton(min(l1.pt(),l2.pt())>40);
@@ -824,13 +824,11 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("btagdownvar",ctf,1,weight*p1weight);
 			  controlHistos.fillHisto("btagdownvar",ctf,2,weight*p2weight);
 			  
-			  p0weight=p0btags;
-			  p1weight=p1btags;
-			  p2weight=p2btags;
-			  controlHistos.fillHisto("btagcenvar",ctf,0,weight*p0weight);
-			  controlHistos.fillHisto("btagcenvar",ctf,1,weight*p1weight);
-			  controlHistos.fillHisto("btagcenvar",ctf,2,weight*p2weight);
+			  controlHistos.fillHisto("btagcenvar",ctf,0,weight);
+			  controlHistos.fillHisto("btagcenvar",ctf,1,weight);
+			  controlHistos.fillHisto("btagcenvar",ctf,2,weight);
 			  
+
 			  //b/mis-tag efficiency mc truth
 			  for(size_t iptbin=0; iptbin<nptbins; iptbin++)	
 			    for(std::map<TString,int>::iterator it = nFlavBtags[iptbin].begin(); it!= nFlavBtags[iptbin].end(); it++)
@@ -957,6 +955,7 @@ int main(int argc, char* argv[])
   gSystem->Exec("mkdir -p " + outUrl);
   outUrl += "/";
   outUrl += gSystem->BaseName(evurl);
+  outUrl.ReplaceAll(".root","_plots.root");
   TFile *file=TFile::Open(outUrl, "recreate");
   TDirectory *baseOutDir=file->mkdir("localAnalysis");
   SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
