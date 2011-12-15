@@ -179,6 +179,11 @@ int main(int argc, char* argv[])
   {
     evTree->GetEvent(inum);
     EventSummary_t &ev = evSummaryHandler.getEvent();
+    if(isMC)
+      {
+	if(mcTruthMode==1 && !ev.isSignal) continue;
+	if(mcTruthMode==2 && ev.isSignal) continue;
+      }
     if( duplicatesChecker.isDuplicate( ev.run, ev.lumi, ev.event) ) continue;
     top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
 
@@ -234,13 +239,6 @@ int main(int argc, char* argv[])
       float weight = ev.weight;
       if(LumiWeights) weight = LumiWeights->weight( ev.ngenpu );
       //else if (isMC)  weight = ev.weight;
-
-
-      if(isMC)
-	{
-	  if(mcTruthMode==1 && !ev.isSignal) continue;
-	  if(mcTruthMode==2 && ev.isSignal) continue;
-	}
     
       std::vector<TString> categs;
       categs.push_back("all");
