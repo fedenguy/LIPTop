@@ -461,7 +461,7 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( (!isSameFlavor && theMET.pt()>20) || (isSameFlavor && theMET.pt()>30) );
+	  bool passMet( theMET.pt()>30 );
 	  bool isOS(dilcharge<0);
 	  
 	  //fill selection histograms
