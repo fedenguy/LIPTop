@@ -12,7 +12,7 @@ kinProcess = cms.PSet(
 #rum over all events???
     dirName = cms.string("evAnalyzer/data"),
     kinScheme = cms.string("std"),
-    maxTries = cms.int32(10000),
+    maxTries = cms.int32(20000),
 # by deflaut should be 10000, more of x the algorithm solve the equations
     maxJetMult = cms.int32(2),
     mw = cms.double(80.398),

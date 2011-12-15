@@ -211,7 +211,7 @@ namespace top
 	    }
 	    break;
 	  default:
-	    newev.leptons.push_back( PhysicsObject_Lepton(p4,ev.id[ipart],ev.genid[ipart]) );
+	    newev.leptons.push_back( PhysicsObject_Lepton(p4,ev.id[ipart],ev.genid[ipart],ev.info1[ipart],ev.info2[ipart],ev.info3[ipart],ev.info4[ipart],ev.info5[ipart]) );
 	    break;
 	  }
       }

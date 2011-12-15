@@ -33,7 +33,7 @@ except getopt.GetoptError:
     usage()
                                                               
 #open the file which describes the sample
-subToBatch=False
+subToBatch="8nh"
 samplesDB = ''
 evPerJob=-1
 evToRun=-1
@@ -44,7 +44,8 @@ for o,a in opts:
     if o in("-?", "-h"):
         usage()
         sys.exit(0)
-    elif o in('-s'): subToBatch=True
+    elif o in('-s'): subToBatch=a
+    if(subToBatch=="True") : subToBatch="8nh"
     elif o in('-j'): samplesDB = a
     elif o in('-t'): tagSel=a
     elif o in('-e'): evPerJob=int(a)
@@ -74,13 +75,10 @@ for proc in procList :
                 if(dtag.find(tagSel)<0) : continue
                 
             fileName=summaryDir + '/' + dtag + '.root'
-            if(fileName.find('castor/cern.ch') ) :
-                listFileResult = commands.getstatusoutput('rfdir ' + fileName)[0]
-                if(listFileResult!=0) : continue
-                fileName = 'rfio://' + fileName
-            elif(not os.path.isfile(fileName) ): continue
+            if(fileName.find('/castor/cern.ch')==0) : fileName = 'rfio://' + fileName
+            elif(fileName.find('/store/cmst3')==0)  : fileName = commands.getstatusoutput('cmsPfn ' + fileName)[1]
 
-            print "*****"
+            print "***** " + fileName + " ******"
 
             #check number of jobs
             njobs=1
@@ -88,12 +86,12 @@ for proc in procList :
                 fin = ROOT.TFile.Open(fileName)
                 data=fin.Get("evAnalyzer/data")
                 nentries=data.GetEntriesFast()
-                if(evToRun>0) :
-                    nentries=evToRun
+                if(evToRun>0) : nentries=evToRun
                 fin.Close()
                 njobs=nentries/evPerJob+1
-                print "Nentries=" + str(nentries)
+                print "Total entries=" + str(nentries)
 
+            fileName=fileName.replace("&","\&")
             #submit jobs    
             for ijob in range(njobs) :
                 evStart= ijob*evPerJob
@@ -102,4 +100,4 @@ for proc in procList :
                 if(subToBatch==0) :
                     os.system(scriptFile + ' '  + params)
                 else :
-                    os.system('submit2batch.sh ' + scriptFile + ' ' + params)
+                    os.system('submit2batch.sh -q' + subToBatch + ' ' + scriptFile + ' ' + params)

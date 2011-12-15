@@ -9,14 +9,6 @@ process.source = cms.Source("PoolSource",
                             fileNames = inputList
                             )
 
-print inputList    
-#load the analyzer
-process.load('CMGTools.HtoZZ2l2nu.PileupNormalizationProducer_cfi')
-process.puWeights.mc           = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Summer11Observed.root')
-process.puWeights.data         = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Pileup2011A.root')
-process.puWeights.puWeightFile = cms.string('')
-process.puWeights.use3D        = cms.bool(False)
-
 process.load('LIP.Top.DileptonEventAnalysis_cfi')
 process.TFileService = cms.Service("TFileService", fileName = cms.string(outFile) )
 
@@ -33,7 +25,7 @@ if(outFile.find('05AugReReco')>=0):
 
 
 #process the analysis
-process.p = cms.Path(process.puWeights*process.evAnalyzer)
+process.p = cms.Path(process.evAnalyzer)
 
 # message logger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")

@@ -11,6 +11,7 @@
 #include "TH2.h"
 #include "TFile.h"
 #include "TString.h"
+#include "TRandom.h"
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -39,6 +40,8 @@
 #include "CMGTools/HtoZZ2l2nu/interface/TSelectionMonitor.h"
 #include "LIP/Top/interface/GenTopEvent.h"
 
+#include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
+
 #include "Math/LorentzVector.h"
 
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > LorentzVector;
@@ -65,13 +68,17 @@ private:
   EventSummaryHandler summaryHandler_;
   TSelectionMonitor controlHistos_;
   gen::top::Event genEvent_;
+  edm::LumiReWeighting *LumiWeights_;
+  double maxPuWeight_;
 };
 
 using namespace std;
 
 /// default constructor
 TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
-  : controlHistos_("top")
+  : controlHistos_("top"),
+    LumiWeights_(0),
+    maxPuWeight_(999999.)
 {
   try{
 
@@ -175,7 +182,14 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
 //    controlHistos_.initMonitorForStep("ss-emu");
 //    controlHistos_.initMonitorForStep("ss-mumu");
 
+    //pileup  reweighting
+    LumiWeights_ = new edm::LumiReWeighting( objConfig_["Generator"].getParameter<std::string>("mcpileup"),
+					     objConfig_["Generator"].getParameter<std::string>("datapileup"),
+					     "pileup","pileup" );
+    for(int n0=0; n0<=30; n0++) maxPuWeight_ = max( LumiWeights_->weight(n0) , maxPuWeight_);
+
   }catch(std::exception &e){
+    LumiWeights_=0;
   }  
 }
 
@@ -201,14 +215,6 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     summaryHandler_.evSummary_.nmcparticles=0;
     if(!event.isRealData())
       {
-	edm::Handle<float> puWeightHandle;
-	event.getByLabel("puWeights","puWeight",puWeightHandle);
-	if(puWeightHandle.isValid()) weight = *(puWeightHandle.product());
-
-	edm::Handle<float> normPuWeightHandle;
-	event.getByLabel("puWeights","normPuReweight", normPuWeightHandle );
-	if(normPuWeightHandle.isValid()) normWeight = *(normPuWeightHandle.product());
-
 	edm::Handle<std::vector<PileupSummaryInfo> > puInfoH;
 	event.getByType(puInfoH);
 	for(std::vector<PileupSummaryInfo>::const_iterator it = puInfoH->begin(); it != puInfoH->end(); it++)
@@ -221,6 +227,17 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	controlHistos_.fillHisto("pileup","all",npuIT);
 	summaryHandler_.evSummary_.ngenootpum1=npuOOTm1;
 	summaryHandler_.evSummary_.ngenootpup1=npuOOTp1;
+
+	if(LumiWeights_)
+	  {
+	    weight = LumiWeights_->weight( npuIT );
+	    if(maxPuWeight_>0)
+	      {
+		float randWeight=gRandom->Uniform();
+		if(randWeight>weight/maxPuWeight_) normWeight=0;
+	      }
+	  }
+
 	
 	genEvent_.genLabel_ = objConfig_["Generator"].getParameter<edm::InputTag>("source");
 
@@ -258,28 +275,32 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
       }
 
     //
-    //TRIGGER
+    //TRIGGER (only for real data
     //
-    summaryHandler_.evSummary_.hasTrigger=true;
-    if(!event.isRealData())
+    bool hasEETrigger(true),hasMuMuTrigger(true),hasEMuTrigger(true);
+    if(event.isRealData())
       {
 	edm::Handle<edm::TriggerResults> allTriggerBits_;
 	event.getByLabel( objConfig_["Trigger"].getParameter<edm::InputTag>("source"), allTriggerBits_);
 	const edm::TriggerNames &triggerNames = event.triggerNames( *allTriggerBits_);
-	std::vector<std::string> triggerPaths = objConfig_["Trigger"].getParameter<std::vector<std::string> >("triggerPaths"); 
-	summaryHandler_.evSummary_.hasTrigger=false;
+	std::vector<std::string> mumuTriggerPaths = objConfig_["Trigger"].getParameter<std::vector<std::string> >("mumuTriggerPaths"); 
+	std::vector<std::string> emuTriggerPaths = objConfig_["Trigger"].getParameter<std::vector<std::string> >("emuTriggerPaths"); 
+	std::vector<std::string> eeTriggerPaths = objConfig_["Trigger"].getParameter<std::vector<std::string> >("eeTriggerPaths"); 
+	hasEETrigger   = false;
+	hasMuMuTrigger = false;
+	hasEMuTrigger   = false;
 	for (size_t itrig = 0; itrig != allTriggerBits_->size(); ++itrig)
 	  {
 	    std::string trigName = triggerNames.triggerName(itrig);
 	    if( !allTriggerBits_->wasrun(itrig) ) continue;
 	    if( allTriggerBits_->error(itrig) ) continue;
 	    if( !allTriggerBits_->accept(itrig) ) continue;
-	    if( find(triggerPaths.begin(), triggerPaths.end(), trigName) == triggerPaths.end() ) continue;
-	    summaryHandler_.evSummary_.hasTrigger=true;
-	    break;
+	    if( find(eeTriggerPaths.begin(), eeTriggerPaths.end(), trigName)     != eeTriggerPaths.end()   ) hasEETrigger=true; 
+	    if( find(mumuTriggerPaths.begin(), mumuTriggerPaths.end(), trigName) != mumuTriggerPaths.end() ) hasMuMuTrigger=true; 
+	    if( find(emuTriggerPaths.begin(), emuTriggerPaths.end(), trigName)   != emuTriggerPaths.end()  ) hasEMuTrigger=true; 
 	  }
       }
-
+    
     //
     // VERTEX SELECTION
     //
@@ -361,7 +382,12 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     //
     std::vector<CandidatePtr> dilepton = getDileptonCandidate(selLeptons, objConfig_["Dileptons"], iSetup);
     int selPath =  getDileptonId(dilepton);
-    if(selPath==UNKNOWN) return;
+    hasMuMuTrigger = (selPath==MUMU && hasMuMuTrigger);
+    hasEETrigger   = (selPath==EE && hasEETrigger);
+    hasEMuTrigger  = (selPath==EMU && hasEMuTrigger);
+    summaryHandler_.evSummary_.hasTrigger=(hasMuMuTrigger || hasEMuTrigger || hasEETrigger);
+    if(selPath==UNKNOWN || !summaryHandler_.evSummary_.hasTrigger) return;
+
     reco::CandidatePtr lepton1 = dilepton[0];
     reco::CandidatePtr lepton2 = dilepton[1];
     LorentzVector lepton1P = lepton1->p4();
@@ -374,9 +400,6 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
     float dildeltaeta=fabs(lepton1P.eta() - lepton2P.eta());
     bool isZCand( ( (selPath==EE || selPath==MUMU) && fabs(dilmass-91)<15) );
     bool isOS(lepton1->charge()*lepton2->charge()<0);
-    double minDileptonMass = objConfig_["Dileptons"].getParameter<double>("minDileptonMass");
-    double maxDileptonMass = objConfig_["Dileptons"].getParameter<double>("maxDileptonMass");
-    if(dilmass<minDileptonMass || dilmass>maxDileptonMass) return;
 
     selStreams.clear();
     selStreams.push_back("all");
@@ -424,7 +447,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	
 	if(j->pt()>30 && fabs(j->eta())<2.5) njets++;
 	float btag=j->bDiscriminator("trackCountingHighEffBJetTags");
-	if(btag>1.74) nbjets+=1; //loose point
+	if(btag>1.7) nbjets+=1; //loose point
 	
 	//monitor jets
 	if(!isZCand)

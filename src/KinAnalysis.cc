@@ -94,15 +94,23 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 	    mets.push_back( KinCandidate_t(p4,p4.Pt()) );
 	    break;
 	  case 1:
-	    jets.push_back( KinCandidate_t(p4, ev.info1[ipart]) );
-	    jetsp4.push_back(p4);
+	    if(p4.Pt()>30 && fabs(p4.Eta())<2.5)
+	      {
+		//order by CSV
+		jets.push_back( KinCandidate_t(p4, ev.info7[ipart]) );
+		jetsp4.push_back(p4);
+	      }
 	    break;
 	  default:
-	    leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
-	    leptonsp4.push_back(p4);
+	    if(p4.Pt()>20 && fabs(p4.Eta())<2.5)
+	      {
+		leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
+		leptonsp4.push_back(p4);
+	      }
 	    break;
 	  }
       }
+    if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
 
     //random rotation of leptons
     if(scheme_=="randrot") 
@@ -121,8 +129,6 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
     sort(jets.begin(),jets.end(),KinAnalysis::sortKinCandidates);
     sort(mets.begin(),mets.end(),KinAnalysis::sortKinCandidates);
-    if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
-    if(jets[0].first.Pt()<30 || jets[1].first.Pt()<30) return;
 
     //debug
     cout << "[KinAnalysis][runOn] " << ev.run << " : " << ev.lumi << " : " << ev.event << endl

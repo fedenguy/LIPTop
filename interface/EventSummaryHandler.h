@@ -91,10 +91,26 @@ namespace top
   class PhysicsObject_Lepton : public LorentzVector
   {
   public :
-    PhysicsObject_Lepton(LorentzVector vec, Int_t id_,Int_t genid_=0, Float_t ptErr_=0, Float_t iso1_=0, Float_t iso2_=0, Float_t iso3_=0):
-      LorentzVector(vec), id(id_), genid(genid_), ptErr(ptErr_), iso1(iso1_), iso2(iso2_), iso3(iso3_) { }
+    PhysicsObject_Lepton(LorentzVector vec, Int_t id_,Int_t genid_=0, Float_t ptErr_=0, Float_t iso1_=0, Float_t iso2_=0, Float_t iso3_=0,UInt_t lepId_=1):
+      LorentzVector(vec), id(id_), genid(genid_), ptErr(ptErr_), iso1(iso1_), iso2(iso2_), iso3(iso3_), lepId(lepId_) { }
       Int_t id,genid;
       Float_t ptErr, iso1, iso2, iso3;
+      UInt_t lepId;
+
+      enum ElectronId {VBTF70, VBTFB80, VBTF85, VBTF90, VBTF95};
+      bool hasElectronId(unsigned int eleid=VBTF95)
+      {
+	if(fabs(id)!=11) return false;
+	return ((lepId >> eleid) & 0x1); 
+      }
+
+      enum MuonId{GLOBALMUONPROMPTTIGHT, TMLASTSTATIONLOOSE, TMLASTSTATIONTIGHT,TMLASTSTATIONANGTIGHT};
+      bool hasMuonId(unsigned int muonid=GLOBALMUONPROMPTTIGHT)
+      {
+	if(fabs(id)!=13) return false;
+	return ((lepId >> muonid) & 0x1); 
+      } 
+      
   };
 
   class PhysicsObject_Jet : public LorentzVector

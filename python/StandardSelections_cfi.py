@@ -1,16 +1,13 @@
 import FWCore.ParameterSet.Config as cms
 
 # base values for trigger event
-BaseTriggerSelection = cms.PSet( source = cms.InputTag("TriggerResults::HLT"),
-                                 triggerPaths = cms.vstring() )
 from CMGTools.HtoZZ2l2nu.TriggerSequences_cff import getTriggerPaths
 doubleEle, doubleMu, muEG, singleEle, singleMu, mcTrigs = getTriggerPaths()
-BaseTriggerSelection.triggerPaths.extend(doubleEle)
-BaseTriggerSelection.triggerPaths.extend(doubleMu)
-BaseTriggerSelection.triggerPaths.extend(muEG)
-BaseTriggerSelection.triggerPaths.extend(singleMu)
-BaseTriggerSelection.triggerPaths.extend(mcTrigs)
-
+BaseTriggerSelection = cms.PSet( source = cms.InputTag("TriggerResults::HLT"),
+                                 mumuTriggerPaths = cms.vstring(doubleMu),
+                                 emuTriggerPaths  = cms.vstring(muEG),
+                                 eeTriggerPaths   = cms.vstring(doubleEle)
+                                 )
 
 # base values for the vertex selection ------------------------------------------
 BaseGeneratorSelection = cms.PSet( source = cms.InputTag("prunedGen"),
@@ -18,7 +15,9 @@ BaseGeneratorSelection = cms.PSet( source = cms.InputTag("prunedGen"),
                                    genJets=cms.InputTag("ak5GenJets"),
                                    puReweight=cms.InputTag("puWeights:puWeight"),
                                    normPuReweight=cms.InputTag("puWeights:renPuWeight"),
-                                   filterDYmassWindow = cms.bool(False)
+                                   filterDYmassWindow = cms.bool(False),
+                                   mcpileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Summer11MC.root'),
+                                   datapileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Pileup2011A.root')
                                    )
 
 
@@ -34,19 +33,21 @@ BaseVertexSelection = cms.PSet( source = cms.InputTag("offlinePrimaryVertices"),
 BaseMuonsSelection = cms.PSet( source = cms.InputTag("selectedPatMuonsPFlow"),
                                minPt = cms.double(20),
                                maxEta = cms.double(2.4),
+                               requireGlobal = cms.bool(True),
+                               requireTracker = cms.bool(True),
                                maxTrackChi2 = cms.double(10),
                                minValidTrackerHits = cms.int32(11),
                                minValidMuonHits=cms.int32(1),
                                maxDistToBeamSpot=cms.double(0.02),
-                               id = cms.string("GlobalMuonPromptTight"),
-                               maxRelIso = cms.double(0.15),
+                               id = cms.string(""),
+                               maxRelIso = cms.double(0.2),
                                usePFIso = cms.bool(True)
                                )
 
 # base values for loose muon selection ----------------------------------------------
 BaseLooseMuonsSelection = BaseMuonsSelection.clone( minPt = cms.double(5),
                                                     maxTrackChi2 = cms.double(9999.),
-                                                    id = cms.string("TrackerMuonArbitrated"),                               
+                                                    id = cms.string(""),
                                                     maxRelIso = cms.double(0.5),
                                                     minValidMuonHits=cms.int32(0)
                                                     )
@@ -54,13 +55,13 @@ BaseLooseMuonsSelection = BaseMuonsSelection.clone( minPt = cms.double(5),
 # base values for electron selection ----------------------------------------------
 BaseElectronsSelection = cms.PSet( source = cms.InputTag("selectedPatElectronsPFlow"),
                                    minPt = cms.double(20),
-                                   minSuperClusterEt = cms.double(17),
+                                   minSuperClusterEt = cms.double(5),
                                    maxEta = cms.double(2.5),
-                                   vetoTransitionElectrons = cms.bool(True),
+                                   vetoTransitionElectrons = cms.bool(False),
                                    applyConversionVeto = cms.bool(True),
                                    maxDistToBeamSpot=cms.double(0.04),
-                                   maxTrackLostHits = cms.int32(2),
-                                   id = cms.string("eidVBTF80"),
+                                   maxTrackLostHits = cms.int32(1),
+                                   id = cms.string("eidVBTF90"),
                                    maxRelIso = cms.double(0.17),
                                    minDeltaRtoMuons = cms.double(0.1),
                                    usePFIso = cms.bool(True)
@@ -81,13 +82,12 @@ BaseJetSelection = cms.PSet( source = cms.InputTag("selectedPatJetsPFlow"),
                              jetId = cms.PSet( version = cms.string("FIRSTDATA"), quality = cms.string("LOOSE") ),
                              minPt = cms.double(15.),
                              maxEta = cms.double(5.0),
-                             minDeltaRtoLepton = cms.double(0.4)
+                             minDeltaRtoLepton = cms.double(-1)
                              )
 
 # base values for the dilepton selection ------------------------------------------
 BaseDileptonSelection = cms.PSet( minDileptonMass = cms.double(12),
-                                  maxDileptonMass = cms.double(999999),
-                                  maxDz           = cms.double(0.1)
+                                  maxDileptonMass = cms.double(9999999.)
                                   )
 
 # base values for met selection -----------------------------------------------------

@@ -101,11 +101,10 @@ for o,a in opts:
 procs=[
     "Di-bosons",
     "Single top",
-    #"other t#bar{t}",
     "W+jets",
     "Z-#gamma^{*}+jets#rightarrow ll",
     "other t#bar{t}",
-    #"t#bar{t} dileptons",
+    "t#bar{t} dileptons",
     "data"
     ]
 systs     = ['jer', 'jesup','jesdown','puup', 'pudown']

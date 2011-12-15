@@ -95,7 +95,8 @@ int main(int argc, char* argv[])
   //move result to the output
   TString inputDir = gSystem->DirName( url );
   url.ReplaceAll(inputDir,"");
-  url.ReplaceAll(".root","");
+  Ssiz_t pos=url.Index(".root");
+  url.Remove(pos,url.Length());
   url.ReplaceAll("/","");
   TString mkcmd( output.Contains("/castor") ? "rfmkdir -p" : "mkdir -p");
   gSystem->Exec(mkcmd + " " + output);

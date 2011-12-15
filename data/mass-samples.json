@@ -59,7 +59,7 @@
 		{
  	        "dtag":"TTJets_mass_169v5",
 		"dset":"",
-                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass169_5_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneZ2_mass166v5_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]

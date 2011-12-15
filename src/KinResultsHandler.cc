@@ -70,7 +70,9 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
     {
       kinFile_ = TFile::Open(outpath, doWrite ? "RECREATE" : "");
       kinFile_->SetCompressionLevel( 9 );
+      kinFile_->cd();
       kinTree_ = new TTree( "kin","Kinematics analysis of top dilepton events" );
+      kinTree_->SetDirectory(kinFile_);
       kinTree_->SetAutoSave();
       kinTree_->Branch("run",  &iRun_, "run/I");
       kinTree_->Branch("lumi", &iLumi_, "lumi/I");
