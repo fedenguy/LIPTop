@@ -70,8 +70,8 @@ int main(int argc, char* argv[])
   edm::LumiReWeighting *LumiWeights=0;
   if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
                                                   runProcess.getParameter<std::string>("datapileup"),
-                                                  proctag.Data(),"pileup");
-
+						  //      proctag.Data(),"pileup");
+						  "pileup","pileup");
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
