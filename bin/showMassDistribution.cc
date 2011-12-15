@@ -30,7 +30,7 @@ using namespace std;
 using namespace top;
 
 struct bTagSorter{
-  bool operator() (PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag1>b.btag1);  }
+  bool operator() (PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag7>b.btag7);  }
 } sortByBtag;
 
 struct ptSorter{
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
-  controlHistos.addHistogram( new TH1F ("btags", ";b-tag multiplicity;Events", 6, 0.,6.) );
+  controlHistos.addHistogram( new TH1F ("btags", ";b-tag multiplicity (CSVL);Events", 6, 0.,6.) );
   for(int ibin=1; ibin<=controlHistos.getHisto("njets","all")->GetXaxis()->GetNbins(); ibin++)
     {
       TString label(""); label += ibin-1; 
@@ -250,30 +250,34 @@ int main(int argc, char* argv[])
       if(ev.cat==ETAU) categs.push_back("etau");
       if(ev.cat==MUTAU) categs.push_back("mutau");
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-      sort(phys.jets.begin(),phys.jets.end(),sortByBtag);
+      top::PhysicsObjectJetCollection prunedJets;
+      int nbtags(0);
+      for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
+      {
+	if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.5) continue;
+	prunedJets.push_back(phys.jets[ijet]);
+	nbtags += (phys.jets[ijet].btag7>0.244);
+      }
+      sort(prunedJets.begin(),prunedJets.end(),sortByBtag);
       sort(phys.leptons.begin(),phys.leptons.end(),sortByPt);
 
-      int nRecoBs( (fabs(phys.jets[0].flavid)==5) + (fabs(phys.jets[1].flavid)==5) );
+      int nRecoBs( (fabs(prunedJets[0].flavid)==5) + (fabs(prunedJets[1].flavid)==5) );
       if(!ev.isSignal) nRecoBs=0;
       int iCorrectComb=0;
       if(nRecoBs>1)
 	{
 	  //the charge of the generator level matched particles must be opposite
-	  int assignCode=(phys.leptons[0].genid*phys.jets[0].flavid);
+	  int assignCode=(phys.leptons[0].genid*prunedJets[0].flavid);
 	  if(assignCode<0) iCorrectComb=1;
 	  else             iCorrectComb=2;
 	  //  cout << iCorrectComb << " | " 
 	  // 	       << phys.leptons[0].genid << " (" << phys.leptons[0].pt() << ") "
 	  // 	       << phys.leptons[1].genid << " (" << phys.leptons[1].pt() << ") |"
-	  // 	       << phys.jets[0].flavid << " (" << phys.jets[0].btag1 << ") "
-	  // 	       << phys.jets[1].flavid << " (" << phys.jets[1].btag1 << ") |"
+	  // 	       << prunedJets[0].flavid << " (" << prunedJets[0].btag1 << ") "
+	  // 	       << prunedJets[1].flavid << " (" << prunedJets[1].btag1 << ") |"
 	  // 	       << endl;
  	}
       
-      //btag counting
-      int nbtags(0);
-      for(size_t ijet=0; ijet<phys.jets.size(); ijet++) nbtags += (phys.jets[ijet].btag1>1.7);
-     
       //get the combination preferred by KIN
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
       h1->Rebin(2); h2->Rebin(2);
@@ -312,19 +316,19 @@ int main(int argc, char* argv[])
       bool isZcand(fabs(dilmass-91)<15 && (ev.cat==EE || ev.cat==MUMU));
       bool isSS( phys.leptons[0].id*phys.leptons[1].id >0 );
       double ptlep1(max(phys.leptons[0].pt(),phys.leptons[1].pt())), ptlep2(min(phys.leptons[0].pt(),phys.leptons[1].pt()));    
-      LorentzVector dij = phys.jets[0]+phys.jets[1];
+      LorentzVector dij = prunedJets[0]+prunedJets[1];
       float mjj=dij.M();
-      double ptjet1(max(phys.jets[0].pt(),phys.jets[1].pt())), ptjet2(min(phys.jets[0].pt(),phys.jets[1].pt()));
+      double ptjet1(max(prunedJets[0].pt(),prunedJets[1].pt())), ptjet2(min(prunedJets[0].pt(),prunedJets[1].pt()));
       
-      LorentzVector ptttbar=phys.leptons[0]+phys.leptons[1]+phys.jets[0]+phys.jets[1]+phys.met;
+      LorentzVector ptttbar=phys.leptons[0]+phys.leptons[1]+prunedJets[0]+prunedJets[1]+phys.met;
     
       //get the lepton-jet pairs
-      LorentzVector lj1=phys.leptons[0]+phys.jets[icomb==1?0:1];
-      LorentzVector lj2=phys.leptons[1]+phys.jets[icomb==1?1:0];
+      LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
+      LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
       
       //ht
       double ht(0);
-      for(size_t ijet=0; ijet<phys.jets.size(); ijet++) ht += phys.jets[ijet].pt();
+      for(size_t ijet=0; ijet<prunedJets.size(); ijet++) ht += prunedJets[ijet].pt();
       double sumptlep(phys.leptons[0].pt()+phys.leptons[1].pt());
       double st(sumptlep+phys.met.pt());
       double htlep(st+ht);
@@ -346,7 +350,7 @@ int main(int argc, char* argv[])
 	      measurements.push_back(afb);
 	      measurements.push_back(ptttbar.Pt());
 	      measurements.push_back(nbtags);
-	      measurements.push_back(phys.jets.size());
+	      measurements.push_back(prunedJets.size());
 	      measurements.push_back(htlep);
 	      spyEvents->fillTreeWithEvent( ev, measurements );
 	    }
@@ -364,7 +368,7 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("taupt",ctf,tauP4.pt(),weight);
 		  controlHistos.fillHisto("taueta",ctf,fabs(tauP4.eta()),weight);
 
-		  controlHistos.fillHisto("njets",ctf,phys.jets.size(),weight);
+		  controlHistos.fillHisto("njets",ctf,prunedJets.size(),weight);
 		  controlHistos.fillHisto("btags",ctf,nbtags,weight);
 		  controlHistos.fillHisto("leadjet",ctf,ptjet1,weight);
 		  controlHistos.fillHisto("subleadjet",ctf,ptjet2,weight);
@@ -387,8 +391,8 @@ int main(int argc, char* argv[])
 		  controlHistos.fill2DHisto("mtopvsmttbar",ctf,mtop,mttbar,weight);
 		  controlHistos.fill2DHisto("mtopvsafb",ctf,mtop,afb,weight);
 		  controlHistos.fill2DHisto("mttbarvsafb",ctf,mttbar,afb,weight);
-		  controlHistos.fillHisto("afb",ctf,afb);
-		  controlHistos.fillHisto("mttbar",ctf,mttbar);
+		  controlHistos.fillHisto("afb",ctf,afb,weight);
+		  controlHistos.fillHisto("mttbar",ctf,mttbar,weight);
 		}
 	    }
 	}
@@ -417,10 +421,11 @@ int main(int argc, char* argv[])
     }
 
   float cnorm=1;
-  if(isMC && nresults)
+  if(isMC && nresults>0)
     {
       double scaleFactor=double(selEvents.size())/double(nresults);
       TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/evtflow");
+      if(cutflowH==0) cutflowH=(TH1F *) evfile->Get("evAnalyzer/top/cutflow");
       if(cutflowH)
 	{
 	  cnorm=cutflowH->GetBinContent(1);
