@@ -210,6 +210,7 @@ int main(int argc, char* argv[])
 
   //loop over kin results
   int nresults(0),neventsused(0);
+  std::set<TString> usedEvents;
   for (int inum=0; inum < t->GetEntries(); ++inum)
     {
       t->GetEvent(inum);
@@ -220,7 +221,9 @@ int main(int argc, char* argv[])
       
       TString key("");  key+= irun; key+="-"; key += ilumi;  key+="-"; key += ievent;
       if(selEvents.find(key)==selEvents.end())  continue;
-      
+      if(usedEvents.find(key)!=usedEvents.end()) continue;
+      usedEvents.insert(key);
+
       nresults++;
       evTree->GetEntry( selEvents[key] );
 
