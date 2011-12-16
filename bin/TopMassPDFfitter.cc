@@ -220,9 +220,9 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   std::vector<MassPoint_t> MassPointCollection;
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_161v5",161.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_163v5",163.5) );
-  //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
-  //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
-  MassPointCollection.push_back( MassPoint_t("TTJets",    172.5) );
+  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
+  MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
+  MassPointCollection.push_back( MassPoint_t("TTJets_signal",    172.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_175v5",175.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_178v5",178.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass181v5", 181.5) );
