@@ -101,10 +101,16 @@ int main(int argc, char* argv[])
   //pileup reweighter                                                        
   TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
   edm::LumiReWeighting *LumiWeights=0;
-  if(isMC) LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
-                                                  runProcess.getParameter<std::string>("datapileup"),
-						  //      proctag.Data(),"pileup");
-						  "pileup","pileup");
+  double maxPuWeight(-1);
+  if(isMC) 
+    {
+      LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"),
+					     runProcess.getParameter<std::string>("datapileup"),
+					     //      proctag.Data(),"pileup");
+					     "pileup","pileup");
+      for(int n0=0; n0<=30; n0++) maxPuWeight = max( LumiWeights->weight(n0) , maxPuWeight);
+      cout << "Max. weight: " << maxPuWeight << endl;
+    }
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
@@ -195,6 +201,7 @@ int main(int argc, char* argv[])
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
       TTree *outT = new TTree("data","Event summary");
+      outT->SetDirectory(spyDir);
       spyEvents->initTree(outT);
     }
 
@@ -272,7 +279,13 @@ int main(int argc, char* argv[])
       
       //fill histos
       float weight = ev.weight;
-      if(LumiWeights) weight = LumiWeights->weight( ev.ngenpu );
+      int normWeight=1;
+      if(LumiWeights) 
+	{
+	  weight = LumiWeights->weight( ev.ngenpu );
+	  float rnd=gRandom->Uniform();
+	  if(rnd > weight/maxPuWeight) normWeight=1;
+	}
       //else if (isMC)  weight = ev.weight;
     
       std::vector<TString> categs;
@@ -373,7 +386,7 @@ int main(int argc, char* argv[])
 	  else if(nbtags>=2) subcats.push_back("geq2btags");
 
 	  //save for further study
-	  if(mtop>0 && spyEvents && ev.normWeight==1)
+	  if(mtop>0 && spyEvents && normWeight==1)
 	    {
 	      std::vector<float> measurements;
 	      measurements.push_back(mtop);

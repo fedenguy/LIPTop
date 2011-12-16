@@ -571,7 +571,6 @@ int main(int argc, char* argv[])
 		  float rnd=gRandom->Uniform();
 		  if(isMC && maxPuWeight>0 && rnd > puweight/maxPuWeight) ev.weight=0;
 		  else if (isMC)                                          ev.weight=summaryWeight;
-		  cout << ev.weight << endl;
 		  std::vector<float> measurements;
 		  spyEvents->fillTreeWithEvent( ev, measurements );
 		}

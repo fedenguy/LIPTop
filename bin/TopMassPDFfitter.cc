@@ -49,15 +49,17 @@ int main(int argc, char* argv[])
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
   
-  TString surl=argv[1];
-  TString burl=argv[2];
   
   //fit the templates
   std::map<string,FitResults_t> allFitResults;
+
+  TString surl=argv[1];
   allFitResults["[Signal : 0 b-tags]"]       = SignalPDFs(surl,0);
   allFitResults["[Signal : 1 b-tags]"]       = SignalPDFs(surl,1);
   allFitResults["[Signal : 2 b-tags]"]       = SignalPDFs(surl,2);
-  allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
+
+  TString burl=argv[2];
+  //  allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
 
   //display the results
   cout << " *************** TopMassPDFfitter  *********************** " << endl;
@@ -215,7 +217,7 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_161v5",161.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_163v5",163.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
-  MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
+  //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
   MassPointCollection.push_back( MassPoint_t("TTJets",    172.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_175v5",175.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_178v5",178.5) );
