@@ -54,24 +54,26 @@ int main(int argc, char* argv[])
   std::map<string,FitResults_t> allFitResults;
 
   TString surl=argv[1];
-  allFitResults["[Signal : 0 b-tags]"]       = SignalPDFs(surl,0);
-  allFitResults["[Signal : 1 b-tags]"]       = SignalPDFs(surl,1);
-  allFitResults["[Signal : 2 b-tags]"]       = SignalPDFs(surl,2);
+  allFitResults["[CATEGORY #1]"]       = SignalPDFs(surl,0);
+  allFitResults["[CATEGORY #2]"]       = SignalPDFs(surl,1);
+  allFitResults["[CATEGORY #3]"]       = SignalPDFs(surl,2);
 
   TString burl=argv[2];
   allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
 
   //display the results
   cout << " *************** TopMassPDFfitter  *********************** " << endl;
+  int catCtr(0);
   for(std::map<string,FitResults_t>::iterator it = allFitResults.begin();
       it != allFitResults.end();
-      it++)
+      it++,catCtr++)
     {
       cout << it->first << endl;
+      TString catPostFix("_s"); catPostFix += (catCtr-1);
       for(FitResults_t::iterator itt = it->second.begin();
 	  itt != it->second.end();
 	  itt++)
-	cout << itt->first << " : " << itt->second.first << " +/- " << itt->second.second << endl;
+	cout << itt->first << catPostFix << ":" << itt->second.first << endl;
       cout << endl;
     }
 }
@@ -160,11 +162,11 @@ FitResults_t BckgPDFs(TString url)
 
   //show the results of the fit
   setStyle();
-  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs",4800,1200);
-  c->SetWindowSize(4800,1200);
-  c->Divide(4);
+  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs",2400,2400);
+  c->SetWindowSize(2400,2400);
+  c->Divide(2,2);
 
-  c->cd(1);
+  TPad *p=(TPad *)c->cd(1);
   RooPlot* frame = mass.frame(Title("Combined"));
   dh.plotOn(frame,DrawOption("pz"),DataError(RooAbsData::SumW2)); 
   massmodel.plotOn(frame,DrawOption("F"),FillColor(kAzure-4),FillStyle(3001),MoveToBack(),Range(100,500)) ;
@@ -173,7 +175,9 @@ FitResults_t BckgPDFs(TString url)
   frame->GetYaxis()->SetTitle("Events (A.U.)");
   frame->GetXaxis()->SetTitleOffset(0.8);
   frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
-
+  TLegend *leg = p->BuildLegend();
+  formatForCmsPublic(p,leg,"CMS simulation",1);
+  leg->Delete();	  
   
   int ibckg(1);
   for(std::map<std::string, TH1D *>::iterator it = bckgDists.begin();
@@ -185,15 +189,16 @@ FitResults_t BckgPDFs(TString url)
       it->second->Draw("hist");  
       it->second->GetXaxis()->SetTitleOffset(1.0);
       it->second->GetYaxis()->SetTitleOffset(1.0);
-      TPaveText *pt = new TPaveText(0.75,0.85,0.97,0.95,"brNDC");
-      pt->SetBorderSize(0);
-      pt->SetFillColor(0);
-      pt->SetFillStyle(0);
-      pt->AddText(it->first.c_str());
-      pt->Draw();
+      
+      TPaveText *pave = new TPaveText(0.5,0.6,0.8,0.8,"NDC");
+      pave->SetBorderSize(0);
+      pave->SetFillStyle(0);
+      pave->SetTextFont(42);
+      pave->AddText(it->first.c_str());
+      pave->Draw("same");
     }
-  c->SaveAs("bckg_masstemplate.C");
-  c->SaveAs("bckg_masstemplate.png");
+  c->SaveAs("BckgPDF.C");
+  c->SaveAs("BckgPdf.png");
   
   //return the result
   FitResults_t fitPars;
@@ -210,13 +215,12 @@ FitResults_t BckgPDFs(TString url)
 //
 FitResults_t SignalPDFs(TString url,int nbtags)
 {
-
   //the mass points
   typedef std::pair<TString,Float_t> MassPoint_t;
   std::vector<MassPoint_t> MassPointCollection;
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_161v5",161.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_163v5",163.5) );
-  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
+  //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_166v5",166.5) );
   //  MassPointCollection.push_back( MassPoint_t("TTJets_mass_169v5",169.5) ); 
   MassPointCollection.push_back( MassPoint_t("TTJets",    172.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass_175v5",175.5) );
@@ -224,21 +228,30 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   MassPointCollection.push_back( MassPoint_t("TTJets_mass181v5", 181.5) );
   MassPointCollection.push_back( MassPoint_t("TTJets_mass184v5", 184.5) );
 
-  std::map<std::string,TH1*> hmap;
+  //define the fit range and the main variable
+  float rangeMin(100), rangeMax(500);
+  int nRangeBins(80);
+  RooRealVar mass("m","Reconstructed Mass [GeV/c^{2}]", rangeMin,rangeMax);
+
+  //define the dataset categorized per top quark mass point
+  RooCategory massCategory("cat","cat") ;
+  for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
+    {
+      TString cName("m"); cName += (ipt+1);
+      massCategory.defineType(cName.Data());
+    }
+  RooDataSet combData("combData","combData",RooArgSet(mass,massCategory));
   
-  //get pdfs from file
-  RooCategory sample("signal","") ;
+  //fill the dataset
   TFile *f = TFile::Open(url);
   for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
     {
-      TString sName("m"); sName += (ipt+1);      
-
       TString tname=MassPointCollection[ipt].first + "/data";
       TTree *t = (TTree *) f->Get(tname);
       if(t==0) continue;
-
-      //fill the mass histogram
-      TH1D *h= new TH1D(sName,sName,80,100,500);      
+      
+      TString cName("m"); cName += (ipt+1);      
+      massCategory.setLabel(cName.Data());
 
       Float_t evmeasurements[10];
       t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
@@ -248,131 +261,105 @@ FitResults_t SignalPDFs(TString url,int nbtags)
 	  if(nbtags==0 && evmeasurements[4]!=0) continue;
 	  if(nbtags==1 && evmeasurements[4]!=1) continue;
 	  if(nbtags==2 && evmeasurements[4]<1) continue;
-	  h->Fill(evmeasurements[0]);
+	  mass=evmeasurements[0];
+	  combData.add(RooArgSet(mass,massCategory));
 	}
-
-      h->SetDirectory(0);
-      h->GetYaxis()->SetTitle("Events / (5 GeV/c^{2})");
-      h->GetXaxis()->SetTitle("Mass [GeV/c^{2}]");
-      h->GetXaxis()->SetTitleOffset(0.8);
-      h->GetYaxis()->SetTitleOffset(0.8);
-      char titbuf[20];
-      sprintf(titbuf,"m=%3.1f",MassPointCollection[ipt].second);
-      h->SetTitle(titbuf);
-
-      sample.defineType(TString(sName));
-      hmap[sName.Data()] = h;
     }    
   f->Close();
 
-  // divide the binned data in categories according to the generated top quark mass
-  RooRealVar mass("m","Mass", 100, 500);
-  RooDataHist combData("combData", "combined data",mass, sample, hmap );
 
+  //define the combined pdf as function of the top quark mass
+  RooRealVar topmass("mtop","m_{top} [GeV/c^{2}]",rangeMin,rangeMax);  
+  
   //the parameters to fit and the variable
   RooRealVar g_mean_slope("#mu_{G}(slope)","g_mean_slope",0.01,0.,1.);    
   RooRealVar g_mean_shift("#mu_{G}(intercept)","g_mean_shift",162,100,180); 
   RooRealVar g_sigma_slope("#sigma_{G}(slope)","g_sigma_slope",0.01,0.,1.);
   RooRealVar g_sigma_shift("#sigma_{G}(intercept)","g_sigma_shift",10,0.,25);
-  RooRealVar l_mean_slope("mpv_{L}(slope)","l_mean_slope",0.,0.,1.);//1,0,10);
+  RooRealVar l_mean_slope("mpv_{L}(slope)","l_mean_slope",0.,0.,1.);
   RooRealVar l_mean_shift("mpv_{L}(intercept)","l_mean_shift",212,150,250); 
-  RooRealVar l_sigma_slope("#sigma_{L}(slope)","l_sigma_slope",0.,0.,1.);//1,0,10);
+  RooRealVar l_sigma_slope("#sigma_{L}(slope)","l_sigma_slope",0.,0.,1.);
   RooRealVar l_sigma_shift("#sigma_{L}(intercept)","l_sigma_shift",10,0,25);
   RooRealVar massfrac_slope("#alpha(slope)","massfrac_slope",0,0,0.01);
   RooRealVar massfrac_shift("#alpha(intercept)","massfrac_shift",0.38,0.,1.);
 
   //build the prototype pdf
-  RooRealVar    topmass( "mtop","mtop",100,300);
   RooFormulaVar g_mean(  "g_mean",  "(@0-172)*@1+@2",   RooArgSet(topmass,g_mean_slope,g_mean_shift));
-  RooFormulaVar g_sigma( "g_sigma", "(@0-172)*@1+@2", RooArgSet(topmass,g_sigma_slope,g_sigma_shift)); 
+  RooFormulaVar g_sigma( "g_sigma", "(@0-172)*@1+@2",   RooArgSet(topmass,g_sigma_slope,g_sigma_shift)); 
   RooGaussian gaus("gaus", "Mass component 1", mass, g_mean, g_sigma);
   RooFormulaVar l_mean(  "l_mean",  "(@0-172)*@1+@2",   RooArgSet(topmass,l_mean_slope,l_mean_shift));
-  RooFormulaVar l_sigma( "l_sigma", "(@0-172)*@1+@2", RooArgSet(topmass,l_sigma_slope,l_sigma_shift)); 
+  RooFormulaVar l_sigma( "l_sigma", "(@0-172)*@1+@2",   RooArgSet(topmass,l_sigma_slope,l_sigma_shift)); 
   RooLandau lan("lan", "Mass component 2", mass, l_mean, l_sigma);  
   RooFormulaVar massfrac( "#alpha", "(@0-172)*@1+@2", RooArgSet(topmass,massfrac_slope,massfrac_shift)); 
-  RooAddPdf massmodel("model","Model",RooArgList(lan,gaus),massfrac);
-  //RooNumConvPdf massmodel("model","Model",topmass,lan,gaus);
+  RooAddPdf massmodel("model","model",RooArgList(lan,gaus),massfrac);
 
-  //now split per categories
+  //now split per categories with fixed top mass
   RooSimPdfBuilder builder(massmodel) ;
   RooArgSet* config = builder.createProtoBuildConfig() ;
   config->setStringValue("physModels","model");     // Name of the PDF we are going to work with
-  config->setStringValue("splitCats","signal");     // Category used to differentiate sub-datasets
-  config->setStringValue("model","signal : mtop");  // Prescription to taylor PDF parameters mtop for each subset in signal
+  config->setStringValue("splitCats","cat");     // Category used to differentiate sub-datasets
+  config->setStringValue("model","cat : mtop");  // Prescription to taylor PDF parameters mtop for each subset in signal
   RooSimultaneous* simPdf = builder.buildPdf(*config,&combData) ;
   config = simPdf->getParameters(combData);
   for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
     {
-      TString sName("m"); sName+=(ipt+1);
+      TString cName("m"); cName+=(ipt+1);
       Float_t imass=MassPointCollection[ipt].second;
-      (((RooRealVar &)(*config)["mtop_"+sName])).setRange(imass,imass);
-      (((RooRealVar &)(*config)["mtop_"+sName])).setVal(imass);
+      (((RooRealVar &)(*config)["mtop_"+cName])).setRange(imass,imass);
+      (((RooRealVar &)(*config)["mtop_"+cName])).setVal(imass);
     }
-  
+  config->writeToStream(cout,false);
+
   //fit to data
-  simPdf->fitTo(combData,Range(100.,400.));
- 
+  simPdf->fitTo(combData,Range(rangeMin,rangeMax));
+  
   //display
   setStyle();
-  TCanvas *c = 0;
+  int ny=MassPointCollection.size()/4+1;
+  TString cnvName("SignalPDF_"); cnvName += nbtags; cnvName += "btags";
+  TCanvas *c = getNewCanvas(cnvName,cnvName,true);
+  c->SetCanvasSize(2400,ny*600);
+  c->SetWindowSize(2400,ny*600);
+  c->Divide(4,ny);
   for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
     {
-      if(ipt%5==0)
-	{
-	  if(c!=0)
-	    {
-	      TString cname=c->GetName(); cname += "_"; cname += nbtags; cname+="btags"; 
-	      c->SaveAs( cname + TString(".C") );
-	      c->SaveAs( cname + TString(".png") );
-	    }
-	  TString name("SignalPDFs_");  name+=ipt;
-	  c = new TCanvas(name,name,5250,1050);
-	  c->SetBorderSize(0);
-	  c->SetFillStyle(0);
-	  c->SetFillColor(0);
-	  c->SetWindowSize(5250,1050);
-	  c->Clear();
-	  c->Divide(5,1);	  
-	}
+      TString cName("m"); cName += (ipt+1);
       
-      TPad *p = (TPad *)c->cd(ipt%5+1);
-      p->SetGridx();
-      p->SetGridy();
-      TString procName("m"); procName += (ipt+1);
-      char buf[100];
-      sprintf(buf,"m_{t}=%3.1f GeV/c^{2}",MassPointCollection[ipt].second);
-      RooPlot* frame = mass.frame(Title(buf));
-      RooDataSet* dataslice = (RooDataSet *)combData.reduce("signal==signal::"+procName);
+      TPad *p = (TPad *)c->cd(ipt+1);
+      //p->SetGridx();
+      //p->SetGridy();
+      RooPlot* frame = mass.frame(Bins(nRangeBins));
+      RooDataSet* dataslice = (RooDataSet *)combData.reduce("cat==cat::"+cName);
       dataslice->plotOn(frame,DataError(RooAbsData::SumW2));
-      RooCategory newCat(procName,procName);
-      simPdf->plotOn(frame,Slice(newCat),ProjWData(mass,*dataslice));
-      frame->GetYaxis()->SetTitleOffset(1.0);
+
+      RooCategory theCategory(cName,cName);
+      simPdf->plotOn(frame,Slice(theCategory),ProjWData(mass,*dataslice));
+      frame->GetYaxis()->SetTitleOffset(1.3);
       frame->GetYaxis()->SetTitle("Events");
-      frame->GetXaxis()->SetTitleOffset(0.8);
-      frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
+      frame->GetXaxis()->SetTitleOffset(1.0);
       frame->Draw();
-             
-      TPaveText *pt = new TPaveText(0.75,0.85,0.97,0.95,"brNDC");
-      pt->SetBorderSize(0);
-      pt->SetFillColor(0);
-      pt->SetFillStyle(0);
-      char buf2[50];
-      sprintf(buf2,"%3.1f GeV/c^{2}",MassPointCollection[ipt].second);
-      pt->AddText(buf2);
-      pt->Draw();
+
+      TPaveText *pave = new TPaveText(0.5,0.6,0.8,0.8,"NDC");
+      pave->SetBorderSize(0);
+      pave->SetFillStyle(0);
+      pave->SetTextFont(42);
+      char titBuf[50];
+      sprintf(titBuf,"m_{top}=%3.1f GeV/c^{2}",MassPointCollection[ipt].second);
+      pave->AddText(titBuf);
+      pave->Draw("same");
+
+      if(ipt==0)
+	{
+	  TLegend *leg = p->BuildLegend();
+	  formatForCmsPublic(p,leg,"CMS simulation",1);
+	  leg->Delete();	  
+	}
     }
+  
+  c->SaveAs( cnvName + TString(".C") );
+  c->SaveAs( cnvName + TString(".png") );
+  delete c;
 
-  //save last canvas
-  if(c!=0)
-    {
-      TString cname=c->GetName(); cname += "_"; cname += nbtags; cname+="btags"; 
-      c->SaveAs( cname + TString(".C") );
-      c->SaveAs( cname + TString(".png") );
-      delete c;
-    }
-
-
-  //return the results
   FitResults_t fitPars;
   fitPars["#mu_{G}(slope)"]=Value_t(g_mean_slope.getVal(),g_mean_slope.getError());
   fitPars["#mu_{G}(intercept)"]=Value_t(g_mean_shift.getVal(),g_mean_shift.getError());
@@ -384,9 +371,6 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   fitPars["#sigma_{L}(intercept)"]=Value_t(l_sigma_shift.getVal(),l_sigma_shift.getError());
   fitPars["#alpha(slope)"]=Value_t(massfrac_slope.getVal(),massfrac_slope.getError());
   fitPars["#alpha(intercept)"]=Value_t(massfrac_shift.getVal(),massfrac_shift.getError());
-
-
-
   return fitPars;
 }
 
