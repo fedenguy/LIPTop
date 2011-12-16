@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   allFitResults["[Signal : 2 b-tags]"]       = SignalPDFs(surl,2);
 
   TString burl=argv[2];
-  //  allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
+  allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
 
   //display the results
   cout << " *************** TopMassPDFfitter  *********************** " << endl;
