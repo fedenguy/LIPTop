@@ -29,13 +29,46 @@
 using namespace std;
 using namespace top;
 
+//
 struct bTagSorter{
   bool operator() (PhysicsObject_Jet a, PhysicsObject_Jet b)   {   return (a.btag7>b.btag7);  }
 } sortByBtag;
 
+//
 struct ptSorter{
   bool operator() (PhysicsObject_Lepton a, PhysicsObject_Lepton b)   {   return (a.pt()>b.pt());  }
 } sortByPt;
+
+
+//
+int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=25)
+{
+  int prefComb(-1);
+  if(h1==0 || h2==0) return prefComb;
+
+  //assign the preferred combination 
+  // 1 - combinations with larger number of solutions are preferred
+  // 2 - in case of ambiguity (number of solutions differ by <10%) take the combination with the more pronounced peak
+  // 3 - reject combination if number of solutions < minCounts
+  double prefMax[2]    = {h1->GetMaximum(), h2->GetMaximum() };
+  double prefCounts[2] = {h1->Integral(),   h2->Integral()   };
+  if(prefCounts[0]>prefCounts[1]) 
+    {
+      prefComb=1;
+      if(prefCounts[0]<minCounts) prefComb=-1;
+      else if(prefCounts[1]/prefCounts[0]>0.90 && prefMax[1]>prefMax[0] && prefMax[1]>minCounts)  prefComb=2;
+    }           
+  else if(prefCounts[1]>minCounts)
+    {
+      prefComb=2;
+      if(prefCounts[0]/prefCounts[1]>0.90 && prefMax[0]>prefMax[1] && prefMax[0]>minCounts) prefComb=1;
+    }
+  
+  //all done
+  return prefComb;
+}
+
+
 
 //
 int main(int argc, char* argv[])
@@ -97,23 +130,25 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("htlep", "; #sum_{jets,leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",70, 0.,1400.) );
   controlHistos.addHistogram( new TH1F ("mtop", "; m_{Top} [GeV/c^{2}]; Events / (20 GeV/c^{2})", 50, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("ptttbar", "; p_{t#bar{t}} [GeV/c]; Events / (40 GeV/c)", 25, 0.,1000.) );
-  controlHistos.addHistogram( new TH1F ("afb", "; #Delta #eta(t,#bar{t}) ); Events / (0.1)", 100, -5.,5.) );
   controlHistos.addHistogram( new TH1F ("mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (100 GeV/c^{2})", 30, 0.,3000.) );
   controlHistos.addHistogram( new TH2F ("mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsmlj", "; m_{Top} [GeV/c^{2}]; Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
-  controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; #slash{E}_{T} [GeV/c]; Events", 100, 0.,500.,50, 0.,250.) );
   controlHistos.addHistogram( new TH2F ("mtopvsmttbar", "; m_{Top} [GeV/c^{2}]; Mass(t,#bar{t}) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,2000.) );
-  controlHistos.addHistogram( new TH2F ("mtopvsafb", "; m_{Top} [GeV/c^{2}]; #Delta #eta(t,#bar{t}) ); Events", 100, 0.,500.,100, -5.,5.) );
-  controlHistos.addHistogram( new TH2F ("mttbarvsafb", "; Mass(t,#bar{t}) [GeV/c^{2}];#Delta #eta(t,#bar{t}); Events", 100, 0.,2000.,100,-5.,5.) );
+  controlHistos.addHistogram( new TH2F ("mtopvsnvtx", "; m_{Top} [GeV/c^{2}]; Vertices; Events", 100, 0.,500.,30,0,30) );
+  controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
+  controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
   
-  TString cats[]={"ee","mumu","emu","etau","mutau"};
+  TString cats[]={"ee","mumu","emu"};//,"etau","mutau"};
 
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};
   size_t nsubcats=sizeof(subcats)/sizeof(TString);
   for(size_t icat=0; icat<ncats; icat++)
     for(size_t jcat=0; jcat<nsubcats; jcat++)
-      controlHistos.initMonitorForStep(cats[icat]+subcats[jcat]);
+      {
+	controlHistos.initMonitorForStep(cats[icat]+subcats[jcat]);
+	controlHistos.initMonitorForStep("all"+subcats[jcat]);
+      }
   
 
   gSystem->Exec("mkdir -p " + outUrl);
@@ -294,9 +329,10 @@ int main(int argc, char* argv[])
 	}
   
       //
-      // standard solution counting
+      // get preferred combination and the top mass measurement from the MPV fit
       //
-      Int_t icomb=(h1->Integral()< h2->Integral())+1;
+      Int_t icomb=getPreferredCombination(h1,h2);
+      if(icomb<0) continue;
       TH1F *mpref=kinHandler.getHisto("mt",icomb);
       double mtop = kinHandler.getMPVEstimate(mpref) [1];
       TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
@@ -304,33 +340,30 @@ int main(int argc, char* argv[])
       TH1F *afbpref=kinHandler.getHisto("afb",icomb);
       double afb = kinHandler.getMPVEstimate(afbpref)[1];
 
+      //compute basic kinematics for the leptons / dileptons / dijet
       LorentzVector tauP4(0,0,0,0);
       if(fabs(phys.leptons[0].id)==15)  tauP4 = phys.leptons[0];
       if(fabs(phys.leptons[1].id)==15)  tauP4 = phys.leptons[1];
-
-      //Compute dilepton/dijet invariant mass
       LorentzVector dil = phys.leptons[0]+phys.leptons[1];
       float dilmass = dil.mass();
-      bool isZcand(fabs(dilmass-91)<15 && (ev.cat==EE || ev.cat==MUMU));
-      bool isSS( phys.leptons[0].id*phys.leptons[1].id >0 );
-      double ptlep1(max(phys.leptons[0].pt(),phys.leptons[1].pt())), ptlep2(min(phys.leptons[0].pt(),phys.leptons[1].pt()));    
+      LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
+      LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
       LorentzVector dij = prunedJets[0]+prunedJets[1];
       float mjj=dij.M();
       double ptjet1(max(prunedJets[0].pt(),prunedJets[1].pt())), ptjet2(min(prunedJets[0].pt(),prunedJets[1].pt()));
-      
       LorentzVector ptttbar=phys.leptons[0]+phys.leptons[1]+prunedJets[0]+prunedJets[1]+phys.met;
-    
-      //get the lepton-jet pairs
-      LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
-      LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
-      
+      double ptlep1(max(phys.leptons[0].pt(),phys.leptons[1].pt())), ptlep2(min(phys.leptons[0].pt(),phys.leptons[1].pt()));    
+
       //ht
       double ht(0);
       for(size_t ijet=0; ijet<prunedJets.size(); ijet++) ht += prunedJets[ijet].pt();
       double sumptlep(phys.leptons[0].pt()+phys.leptons[1].pt());
       double st(sumptlep+phys.met.pt());
       double htlep(st+ht);
-
+      
+      //event category
+      bool isZcand(fabs(dilmass-91)<15 && (ev.cat==EE || ev.cat==MUMU));
+      bool isSS( phys.leptons[0].id*phys.leptons[1].id >0 );
       std::vector<TString> subcats;
       if(!isZcand && !isSS)
 	{
@@ -355,7 +388,8 @@ int main(int argc, char* argv[])
 	}
       else if(isZcand && !isSS) subcats.push_back("zcands");
       else                      subcats.push_back("ss");
-
+      
+      //now fill the control plots
       for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
 	{
 	  for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
@@ -380,17 +414,36 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("ptttbar",ctf,ptttbar.Pt(),weight);
 		  
 		  controlHistos.fillHisto("mtop",ctf,mtop,weight);
-		  controlHistos.fillHisto("mtop",ctf,mtop,weight);
+		  controlHistos.fillHisto("mttbar",ctf,mttbar,weight);
+
 		  controlHistos.fillHisto("dilmass",ctf,dilmass,weight);
 		  controlHistos.fill2DHisto("mtopvsdilmass",ctf,mtop,dilmass,weight);
 		  controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj1.mass(),weight);
 		  controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj2.mass(),weight);
-		  controlHistos.fill2DHisto("mtopvsmet",ctf,mtop,phys.met.pt(),weight);
 		  controlHistos.fill2DHisto("mtopvsmttbar",ctf,mtop,mttbar,weight);
-		  controlHistos.fill2DHisto("mtopvsafb",ctf,mtop,afb,weight);
-		  controlHistos.fill2DHisto("mttbarvsafb",ctf,mttbar,afb,weight);
-		  controlHistos.fillHisto("afb",ctf,afb,weight);
-		  controlHistos.fillHisto("mttbar",ctf,mttbar,weight);
+
+		  //resolution plots
+		  controlHistos.fill2DHisto("mtopvsnvtx",ctf,mtop,ev.nvtx,weight);
+
+		  TH2F *h= (TH2F *) controlHistos.getHisto("mtopvsmet",ctf);
+		  if(h)
+		    {
+		      for(int ibin=1; ibin<=h->GetYaxis()->GetNbins(); ibin++)
+			{
+			  float metmin=h->GetYaxis()->GetBinLowEdge(ibin);
+			  if(phys.met.pt()>metmin) h->Fill(mtop,metmin,weight);
+			}
+		    }
+		  
+		  h= (TH2F *) controlHistos.getHisto("mtopvsptjet",ctf);
+		  if(h)
+		    {
+		      for(int ibin=1; ibin<=h->GetYaxis()->GetNbins(); ibin++)
+			{
+			  float ptmin=h->GetYaxis()->GetBinLowEdge(ibin);
+			  if(prunedJets[0].pt()>ptmin && prunedJets[1].pt()>ptmin) h->Fill(mtop,ptmin,weight);
+			}
+		    }
 		}
 	    }
 	}
@@ -430,7 +483,6 @@ int main(int argc, char* argv[])
 	  cout << "Will re-scale MC by: " << scaleFactor << "/" << cnorm << endl;
 	  if(cnorm>0) cnorm=scaleFactor/cnorm;
 	}
-      //      for(std::map<TString,TH1 *>::iterator hIt = results.begin(); hIt != results.end(); hIt++) hIt->second->Scale(scaleFactor);
     }
 
 
@@ -442,16 +494,16 @@ int main(int argc, char* argv[])
   outDirs["ee"]=baseOutDir->mkdir("ee");
   outDirs["emu"]=baseOutDir->mkdir("emu");
   outDirs["mumu"]=baseOutDir->mkdir("mumu");
-  //   outDirs["etau"]=baseOutDir->mkdir("etau");
-  //   outDirs["mutau"]=baseOutDir->mkdir("mutau");
+  outDirs["etau"]=baseOutDir->mkdir("etau");
+  outDirs["mutau"]=baseOutDir->mkdir("mutau");
   for(SelectionMonitor::StepMonitor_t::iterator it =mons.begin(); it!= mons.end(); it++)
     {
       TString icat("all");
       if(it->first.BeginsWith("ee")) icat="ee";
       if(it->first.BeginsWith("emu")) icat="emu";
       if(it->first.BeginsWith("mumu")) icat="mumu";
-      //       if(it->first.BeginsWith("etau")) icat="etau";
-      //       if(it->first.BeginsWith("mutau")) icat="mutau";
+      if(it->first.BeginsWith("etau")) icat="etau";
+      if(it->first.BeginsWith("mutau")) icat="mutau";
       outDirs[icat]->cd();
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
         {
@@ -465,7 +517,7 @@ int main(int argc, char* argv[])
     }
   file->Close(); 
 
-
+  //close the spy events
   if(spyEvents)
     {
       spyDir->cd();

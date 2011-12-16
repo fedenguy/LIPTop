@@ -89,7 +89,8 @@ TH1F processSingleEvent(TString url, TString ourl, Int_t event, TString& eventTa
       h->SetFillStyle(0);
       h->DrawClone("hist");
       std::map<TString,Double_t> res=histoAnalyzer.analyzeHistogram(h);
-      cout << "Combination #1: " << h->Integral() << " has solutions" << endl;
+      double mtop = kinHandler.getMPVEstimate(h) [1];
+      cout << "Combination #1: has " << h->Integral() << " solutions and mtop=" << mtop << endl;
       for(std::map<TString, Double_t>::iterator it = res.begin(); it != res.end(); it++) cout << "\t" << it->first << "=" << it->second << endl;
 
       h =kinHandler.getHisto("mt",2);
@@ -100,8 +101,9 @@ TH1F processSingleEvent(TString url, TString ourl, Int_t event, TString& eventTa
       h->SetMarkerStyle(21);
       h->DrawClone("histsame");
       res=histoAnalyzer.analyzeHistogram(h);
-      cout << "Combination #2: " << h->Integral() << " has solutions" << endl;
-      for(std::map<TString, Double_t>::iterator it = res.begin(); it != res.end(); it++) cout << "\t" << it->first << "=" << it->second << endl;
+      mtop = kinHandler.getMPVEstimate(h) [1];
+      cout << "Combination #2: has " << h->Integral() << " solutions and mtop=" << mtop << endl;
+      //      for(std::map<TString, Double_t>::iterator it = res.begin(); it != res.end(); it++) cout << "\t" << it->first << "=" << it->second << endl;
 
       TLegend *leg=c->BuildLegend();
       formatForCmsPublic(c,leg,title,2);
