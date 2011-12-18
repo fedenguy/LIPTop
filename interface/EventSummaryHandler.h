@@ -27,7 +27,7 @@ namespace top
     Int_t cat;
     Bool_t isSignal,hasTrigger;
     Int_t nvtx,ngenpu,ngenootpum1,ngenootpup1;
-    Float_t rho,weight,normWeight;
+    Float_t rho,weight,normWeight, xsecWeight;
     Int_t nparticles,nmcparticles;
     Float_t px[MAXCANDIDATES], py[MAXCANDIDATES], pz[MAXCANDIDATES], en[MAXCANDIDATES];
     Int_t id[MAXCANDIDATES], genid[MAXCANDIDATES], genflav[MAXCANDIDATES];

@@ -179,12 +179,18 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1D("drll",";#Delta R(l^{(1)},l^{(2)});Events",100,0,6) );
 
   //jet control
+  controlHistos.addHistogram( new TH1F ("jet", "; Jet p_{T} [GeV/c]; Events / (10 GeV/c)", 50, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jetafter1btag", "; Jet p_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("mjj", "; M(lead jet,sub-lead jet) [GeV/c^{2}]; Events / (25 GeV/c^{2})", 10, 0.,250.) );
   controlHistos.addHistogram( new TH1F("btagdownvar",";b-tag multiplicity;Events", 3, 0.,3.) );
   controlHistos.addHistogram( new TH1F("btagcenvar",";b-tag multiplicity;Events", 3, 0.,3.) );
   controlHistos.addHistogram( new TH1F("btagupvar",";b-tag multiplicity;Events", 3, 0.,3.) );
+
+  controlHistos.addHistogram( new TH1F("nbtags",";b-tag multiplicity (CSVL);Events", 4, 0.,4.) );
+  controlHistos.addHistogram( new TH1F("csvb",";b-tag discriminator (CSV);Events", 100, -0.2,1.2) );
+  controlHistos.addHistogram( new TH1F("csvlight",";b-tag discriminator (CSV);Events", 100, -0.2,1.2) );
 
   //final control
   controlHistos.addHistogram( new TH1F ("pttbar", "; p_{T} (t#bar{t}) [GeV/c]; Events / (10 GeV/c)", 20, 0.,200.) );
@@ -419,7 +425,8 @@ int main(int argc, char* argv[])
 
 	      float pt=jetColl[ijet].pt();
 	      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
-	      nbtags += (orderedJetColl[ijet].btag1>1.7);
+	      //	      nbtags += (orderedJetColl[ijet].btag1>1.7);
+	      nbtags += (orderedJetColl[ijet].btag7>0.244);
 	      nseljetsLoose ++;
 	      prunedJetColl.push_back(jetColl[ijet]);
 	    }
@@ -503,8 +510,7 @@ int main(int argc, char* argv[])
 	      if(!isZcand)
 		{
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELMET,weight);
-		  if(ivar==0) 
-		    controlHistos.fillHisto("dilcharge",ctf,dilcharge,weight);
+		  if(ivar==0) controlHistos.fillHisto("dilcharge",ctf,dilcharge,weight);
 		}
  
 	      // OS dilepton
@@ -540,14 +546,31 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("btagcenvar",ctf,0,weight*p0btags);
 			  controlHistos.fillHisto("btagcenvar",ctf,1,weight*p1btags);
 			  controlHistos.fillHisto("btagcenvar",ctf,2,weight*p2btags);
+
+			  for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
+			    {
+			      float pt=jetColl[ijet].pt();
+			      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
+			      float btagdisc=orderedJetColl[ijet].btag7;
+			      bool isMatchedToB( fabs(orderedJetColl[ijet].flavid)==5 );
+			      controlHistos.fillHisto( (isMatchedToB ? "csvb" : "csvlight") ,ctf,btagdisc,weight);
+			    }	 
+			}
 			  
-			}			  
+  		      controlHistos.fillHisto("nbtags",ctf,nbtags,weight);
 		      controlHistos.fillHisto("nverticesafteros",ctf,ev.nvtx,weight,true);
 		      controlHistos.fillHisto("pttbar",ctf,ttbar_t.pt(),weight);
 		      controlHistos.fillHisto("mjj",ctf,jetSystem.mass(),weight);
 		      controlHistos.fillHisto("mt", ctf,mt,weight);
 		      controlHistos.fillHisto("mindrlj",ctf,mindrlj,weight,true);
 		      controlHistos.fillHisto("nleptons",ctf,phys.leptons.size()-2,weight);
+		      for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
+			{
+			  float pt=jetColl[ijet].pt();
+			  if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
+			  controlHistos.fillHisto("jet",ctf,pt,weight);
+			  if(nbtags>0) controlHistos.fillHisto("jetafter1btag",ctf,pt,weight);
+			}
 		      controlHistos.fillHisto("leadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),weight);
 		      controlHistos.fillHisto("subleadjet",ctf,min(jetColl[0].pt(),jetColl[1].pt()),weight);
 		      controlHistos.fill2DHisto("leadjetvssubleadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),min(jetColl[0].pt(),jetColl[1].pt()),weight);
@@ -569,8 +592,8 @@ int main(int argc, char* argv[])
 		{
 		  //sample the MC according to the PU in data (generate unweighted sample for pseudo-exp.)
 		  float rnd=gRandom->Uniform();
-		  if(isMC && maxPuWeight>0 && rnd > puweight/maxPuWeight) ev.weight=0;
-		  else if (isMC)                                          ev.weight=summaryWeight;
+		  if(isMC && maxPuWeight>0 && rnd > puweight/maxPuWeight) { ev.normWeight=0; ev.xsecWeight=summaryWeight;}
+		  else if (isMC)                                          { ev.normWeight=1; ev.xsecWeight=summaryWeight;}
 		  std::vector<float> measurements;
 		  spyEvents->fillTreeWithEvent( ev, measurements );
 		}

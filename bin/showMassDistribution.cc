@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <boost/shared_ptr.hpp>
 #include <fstream>
@@ -98,6 +97,7 @@ int main(int argc, char* argv[])
   int mcTruthMode             = runProcess.getParameter<int>("mctruthmode");
   TString dirname             = runProcess.getParameter<std::string>("dirName");
   bool saveSummaryTree        = runProcess.getParameter<bool>("saveSummaryTree");
+  double xsec                 = runProcess.getParameter<double>("xsec");
 
   //pileup reweighter                                                        
   TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
@@ -116,12 +116,14 @@ int main(int argc, char* argv[])
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
   controlHistos.addHistogram( new TH1F ("btags", ";b-tag multiplicity (CSVL);Events", 6, 0.,6.) );
+  controlHistos.addHistogram( new TH1F ("btagsraw", ";b-tag multiplicity (CSVL);Events", 6, 0.,6.) );
   for(int ibin=1; ibin<=controlHistos.getHisto("njets","all")->GetXaxis()->GetNbins(); ibin++)
     {
       TString label(""); label += ibin-1; 
       if(controlHistos.getHisto("njets","all")->GetXaxis()->GetNbins()==ibin) label ="#geq" + label;
       controlHistos.getHisto("njets","all")->GetXaxis()->SetBinLabel(ibin,label + " jets");
       controlHistos.getHisto("btags","all")->GetXaxis()->SetBinLabel(ibin,label + " b-tags");
+      controlHistos.getHisto("btagsraw","all")->GetXaxis()->SetBinLabel(ibin,label + " b-tags");
     }
 
 
@@ -193,10 +195,21 @@ int main(int argc, char* argv[])
     }  
   TTree *evTree=evSummaryHandler.getTree();
 
+  float cnorm=1;
+  if(isMC)
+    {
+      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/evtflow");
+      if(cutflowH==0) cutflowH=(TH1F *) evfile->Get("evAnalyzer/top/cutflow");
+      if(cutflowH)    cnorm=cutflowH->GetBinContent(1);
+    }
+
+
+
   //init event spy
   EventSummaryHandler *spyEvents=0;
   TFile *spyFile=0;
   TDirectory *spyDir=0;  
+  float summaryWeight(1);
   if(saveSummaryTree)
     {
       spyEvents = new EventSummaryHandler;
@@ -209,6 +222,7 @@ int main(int argc, char* argv[])
       TTree *outT = new TTree("data","Event summary");
       outT->SetDirectory(spyDir);
       spyEvents->initTree(outT);
+      summaryWeight = xsec / cnorm;
     }
 
   //process kin file
@@ -224,43 +238,42 @@ int main(int argc, char* argv[])
 
   std::map<TString,int> selEvents;
   for (int inum=0; inum < evTree->GetEntriesFast(); ++inum)
-  {
-    evTree->GetEvent(inum);
-    EventSummary_t &ev = evSummaryHandler.getEvent();
-    if(isMC)
-      {
-	if(mcTruthMode==1 && !ev.isSignal) continue;
-	if(mcTruthMode==2 && ev.isSignal) continue;
-      }
-    if( duplicatesChecker.isDuplicate( ev.run, ev.lumi, ev.event) ) continue;
-    top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+    {
+      evTree->GetEvent(inum);
+      EventSummary_t &ev = evSummaryHandler.getEvent();
+      if(isMC)
+	{
+	  if(mcTruthMode==1 && !ev.isSignal) continue;
+	  if(mcTruthMode==2 && ev.isSignal) continue;
+	}
+      if( duplicatesChecker.isDuplicate( ev.run, ev.lumi, ev.event) ) continue;
+      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
 
-    //preselect for KIN level: 2 jets, MET (no OS, no Z-veto)
-    bool isSameFlavor(false);
-    if(ev.cat==MUMU || ev.cat==EE) isSameFlavor=true;
+      //preselect for KIN level: 2 jets, MET (no OS, no Z-veto)
+      bool isSameFlavor(false);
+      if(ev.cat==MUMU || ev.cat==EE) isSameFlavor=true;
 
-    float minJetPt(30);
-    if(ev.cat==ETAU) minJetPt=35;
+      float minJetPt(30);
+      if(ev.cat==ETAU) minJetPt=35;
     
-    int njets(0),nbjets(0);
-    for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
-      {
-	if(phys.jets[ijet].pt()<minJetPt || fabs(phys.jets[ijet].eta())>2.5) continue;
-	njets++;
-	nbjets += (phys.jets[ijet].btag1>1.7);
-      }
-    if(njets<2 || ((ev.cat==ETAU || ev.cat==MUTAU) && nbjets==0) ) continue;
+      int njets(0),nbjets(0);
+      for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
+	{
+	  if(phys.jets[ijet].pt()<minJetPt || fabs(phys.jets[ijet].eta())>2.5) continue;
+	  njets++;
+	  nbjets += (phys.jets[ijet].btag1>1.7);
+	}
+      if(njets<2 || ((ev.cat==ETAU || ev.cat==MUTAU) && nbjets==0) ) continue;
     
-    bool passMet( phys.met.pt()>30 );//(!isSameFlavor && phys.met.pt() > 30) || ( isSameFlavor && phys.met.pt()>30) );
-    if(!passMet) continue;
+      bool passMet( phys.met.pt()>30 );//(!isSameFlavor && phys.met.pt() > 30) || ( isSameFlavor && phys.met.pt()>30) );
+      if(!passMet) continue;
    
 
-    TString key(""); key+= ev.run; key+="-"; key += ev.lumi; key+="-"; key += ev.event;
-    selEvents[key]=inum;
-  }
+      TString key(""); key+= ev.run; key+="-"; key += ev.lumi; key+="-"; key += ev.event;
+      selEvents[key]=inum;
+    }
   
   cout << "Selected : " << selEvents.size() << " events,  looking for kin results" << endl;
-
 
   //loop over kin results
   int nresults(0),neventsused(0);
@@ -304,13 +317,20 @@ int main(int argc, char* argv[])
       if(ev.cat==MUTAU) categs.push_back("mutau");
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       top::PhysicsObjectJetCollection prunedJets;
-      int nbtags(0);
+      int nbtags(0),nbtagscor(0);
       for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
-      {
-	if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.5) continue;
-	prunedJets.push_back(phys.jets[ijet]);
-	nbtags += (phys.jets[ijet].btag7>0.244);
-      }
+	{
+	  if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.5) continue;
+	  prunedJets.push_back(phys.jets[ijet]);
+	  float btagDisc=phys.jets[ijet].btag7;
+	  nbtags += (btagDisc>0.244);
+	  if(isMC)
+	    {
+	      if(fabs(phys.jets[ijet].flavid)==5) nbtagscor += (btagDisc>0.207);
+	      else                                nbtagscor += (btagDisc>0.233);
+	    }
+	  else nbtagscor += (btagDisc>0.244);
+	}
       sort(prunedJets.begin(),prunedJets.end(),sortByBtag);
       sort(phys.leptons.begin(),phys.leptons.end(),sortByPt);
 
@@ -333,7 +353,6 @@ int main(int argc, char* argv[])
       double st(sumptlep+phys.met.pt());
       double htlep(st+ht);
 
-
       int nRecoBs( (fabs(prunedJets[0].flavid)==5) + (fabs(prunedJets[1].flavid)==5) );
       if(!ev.isSignal) nRecoBs=0;
       int iCorrectComb=0;
@@ -349,7 +368,7 @@ int main(int argc, char* argv[])
 	  // 	       << prunedJets[0].flavid << " (" << prunedJets[0].btag1 << ") "
 	  // 	       << prunedJets[1].flavid << " (" << prunedJets[1].btag1 << ") |"
 	  // 	       << endl;
- 	}
+	}
       
       //define the event category
       bool isZcand(fabs(dilmass-91)<15 && (ev.cat==EE || ev.cat==MUMU));
@@ -397,13 +416,14 @@ int main(int argc, char* argv[])
 	    {
 	      TString ctf=*cIt + *scIt;
 	      controlHistos.fillHisto("evtflow",ctf,1,weight);
-	      controlHistos.fillHisto("evtflow",ctf,2+(nbtags>2?2:nbtags),weight);
+	      controlHistos.fillHisto("evtflow",ctf,2+(nbtagscor>2?2:nbtagscor),weight);
 	      
 	      controlHistos.fillHisto("taupt",ctf,tauP4.pt(),weight);
 	      controlHistos.fillHisto("taueta",ctf,fabs(tauP4.eta()),weight);
 	      
 	      controlHistos.fillHisto("njets",ctf,prunedJets.size(),weight);
-	      controlHistos.fillHisto("btags",ctf,nbtags,weight);
+	      controlHistos.fillHisto("btags",ctf,nbtagscor,weight);
+	      controlHistos.fillHisto("btagsraw",ctf,nbtags,weight);
 	      controlHistos.fillHisto("leadjet",ctf,ptjet1,weight);
 	      controlHistos.fillHisto("subleadjet",ctf,ptjet2,weight);
 	      controlHistos.fillHisto("leadlepton",ctf,ptlep1,weight);
@@ -451,16 +471,18 @@ int main(int argc, char* argv[])
       neventsused++;
       
       //save for further study if required
-      if(!isZcand && !isSS && spyEvents && normWeight==1)
+      if(!isZcand && !isSS && spyEvents)
 	{
+	  if(normWeight==0) { ev.normWeight=0; ev.xsecWeight=summaryWeight; }
+	  else              { ev.normWeight=1; ev.xsecWeight=summaryWeight; }
 	  std::vector<float> measurements;
 	  measurements.push_back(mtop);
 	  measurements.push_back(mttbar);
 	  measurements.push_back(afb);
 	  measurements.push_back(ptttbar.Pt());
 	  measurements.push_back(nbtags);
+	  measurements.push_back(nbtagscor);
 	  measurements.push_back(prunedJets.size());
-	  measurements.push_back(htlep);
 	  spyEvents->fillTreeWithEvent( ev, measurements );
 	}
 
@@ -473,30 +495,26 @@ int main(int argc, char* argv[])
 	      << " | " << ptlep1 << ";" << ptlep2  << " | " << dilmass
 	      << " | " << ptjet1 << ";" << ptjet2  << " | " << mjj
 	      << " | " << phys.met.pt() << " | " << htlep << endl; 
-      
+	  
     }
-kinHandler.end();
-
-//if MC: rescale to number of selected events and to units of pb
-cout << "From " << selEvents.size() << "original events found " << nresults << " kin results - used " << neventsused << endl; 
-
+  kinHandler.end();
+  
+  //if MC: rescale to number of selected events and to units of pb
+  cout << "From " << selEvents.size() << "original events found " << nresults << " kin results - used " << neventsused << endl; 
+  
   if(!isMC && outf!=0) 
     {
       outf->close(); 
       delete outf;
     }
 
-  float cnorm=1;
   if(isMC && nresults>0)
     {
       double scaleFactor=double(selEvents.size())/double(nresults);
-      TH1F *cutflowH = (TH1F *) evfile->Get("evAnalyzer/top/evtflow");
-      if(cutflowH==0) cutflowH=(TH1F *) evfile->Get("evAnalyzer/top/cutflow");
-      if(cutflowH)
+      if(cnorm>0) 
 	{
-	  cnorm=cutflowH->GetBinContent(1);
 	  cout << "Will re-scale MC by: " << scaleFactor << "/" << cnorm << endl;
-	  if(cnorm>0) cnorm=scaleFactor/cnorm;
+	  cnorm=scaleFactor/cnorm;
 	}
     }
 
@@ -521,14 +539,14 @@ cout << "From " << selEvents.size() << "original events found " << nresults << "
       if(it->first.BeginsWith("mutau")) icat="mutau";
       outDirs[icat]->cd();
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
-        {
+	{
 	  if(isMC && cnorm>0) hit->second->Scale(cnorm);
 	  if( !((TClass*)hit->second->IsA())->InheritsFrom("TH2")
 	      && !((TClass*)hit->second->IsA())->InheritsFrom("TGraph") )
 	    fixExtremities(hit->second,true,true);
 	  hit->second->Write();
 
-        }
+	}
     }
   file->Close(); 
 

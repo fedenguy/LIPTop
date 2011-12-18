@@ -31,6 +31,7 @@ namespace top
     t_->Branch("rho",        &evSummary_.rho,    "rho/F");
     t_->Branch("weight",     &evSummary_.weight,   "weight/F");
     t_->Branch("normWeight",     &evSummary_.normWeight,   "normWeight/F");
+    t_->Branch("xsecWeight",     &evSummary_.xsecWeight,   "xsecWeight/F");
     t_->Branch("nparticles", &evSummary_.nparticles, "nparticles/I");
     t_->Branch("px",         evSummary_.px,          "px[nparticles]/F");
     t_->Branch("py",         evSummary_.py,          "py[nparticles]/F");
@@ -82,6 +83,7 @@ namespace top
     if(t_->GetBranch("rho"))    t_->GetBranch("rho")->SetAddress(&evSummary_.rho);
     t_->GetBranch("weight")->SetAddress(&evSummary_.weight);
     if(t_->GetBranch("normWeight") ) t_->GetBranch("normWeight")->SetAddress(&evSummary_.normWeight);
+    if(t_->GetBranch("xsecWeight") ) t_->GetBranch("xsecWeight")->SetAddress(&evSummary_.xsecWeight);
     t_->GetBranch("nparticles")->SetAddress(&evSummary_.nparticles);
     t_->GetBranch("px")->SetAddress(evSummary_.px);
     t_->GetBranch("py")->SetAddress(evSummary_.py);
@@ -144,6 +146,7 @@ namespace top
     evSummary_.isSignal = ev.isSignal;
     evSummary_.weight = ev.weight;
     evSummary_.normWeight = ev.normWeight;
+    evSummary_.xsecWeight = ev.xsecWeight;
 
     evSummary_.nparticles=0;
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
