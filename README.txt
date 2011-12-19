@@ -46,7 +46,9 @@ runPlotter --iLumi 2165 --inDir ~/scratch0/top/ --outDir /tmp/psilva/ --json dat
 runKinOverSamples.py -j data/samples.json -e 500 -d /store/cmst3/user/psilva/Top_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=std" -s 8nh
 
 # generate plots for signal templates
-runLocalAnalysisOverSamples.py -e showMassDistribution -j data/samples-signal.json -d store/Top/ntuples -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/samples-signal.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/mass-samples.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/syst-samples.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
 
 #
 # DY control

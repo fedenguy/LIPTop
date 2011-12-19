@@ -258,9 +258,9 @@ FitResults_t SignalPDFs(TString url,int nbtags)
       for(Int_t i=0; i<t->GetEntriesFast(); i++)
 	{
 	  t->GetEntry(i);
-	  if(nbtags==0 && evmeasurements[4]!=0) continue;
-	  if(nbtags==1 && evmeasurements[4]!=1) continue;
-	  if(nbtags==2 && evmeasurements[4]<1) continue;
+	  if(nbtags==0 && evmeasurements[5]!=0) continue;
+	  if(nbtags==1 && evmeasurements[5]!=1) continue;
+	  if(nbtags==2 && evmeasurements[5]<1) continue;
 	  mass=evmeasurements[0];
 	  combData.add(RooArgSet(mass,massCategory));
 	}
