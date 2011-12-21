@@ -63,6 +63,7 @@ except getopt.GetoptError:
     sys.exit(1)
 
 inputFile='plotter.root'
+evCats   = ['emu','mumu','ee']
 mode='std'
 countHisto='cutflow'
 ibinSummary=5
@@ -78,10 +79,10 @@ for o,a in opts:
     elif o in('-b'): ibinSummary = int(a)
     elif o in('-s'):
         sfactors=a.split('/')
-        for i in xrange(0,len(sfactors)) : dySfactors[evCats[i+1]]=float(i)
+        for i in xrange(0,len(sfactors)-1) : dySfactors[evCats[i+1]]=float(i)
     elif o in ('-o'):
         treffs=a.split('/')
-        for i in xrange(0,len(treffs)) : trigEffs[evCats[i+1]]=float(i)
+        for i in xrange(0,len(treffs)-1) : trigEffs[evCats[i+1]]=float(i)
 
 #analysis specific configuration
 procs=[]
@@ -105,7 +106,7 @@ if(len(procs)==0) :
 #now get plots from file
 f    = ROOT.TFile.Open(inputFile)
 href = f.Get(procs[0]+'/'+countHisto)
-evCats   = ['emu','mumu','ee']
+
 evTitles = ['$e\\mu$','$\\mu\\mu$','$ee$']
 hsummary = ROOT.TH2F("summaryyields","summaryyields",len(evCats),0,len(evCats),len(procs),0,len(procs))
 
