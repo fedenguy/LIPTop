@@ -206,7 +206,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
   for(size_t ill=0; ill<allLL.size(); ill++)    delete allLL[ill];       allLL.clear();
   for(size_t id=0; id<allData.size(); id++)     delete allData[id];      allData.clear();
   for(size_t ic=0; ic<allCaptions.size(); ic++) delete allCaptions[ic];  allCaptions.clear();
-  
+
   for(int icat=0; icat<ncategs; icat++)
     {
       TString sName("s"); sName += icat;
@@ -248,7 +248,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
 	  //model->fitTo(*sData,Extended(kTRUE),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false),Range(tmin,tmax));	  
 	  result.iTmass[icat]     = topMass->getVal();
 	  result.iTmassErr[icat] = topMass->getError();
-
+	  
 	  //prepare label
 	  TPaveText *pave = new TPaveText(0.65,0.75,0.9,0.92,"NDC");
 	  pave->SetTextFont(42);
@@ -339,6 +339,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
 	{
 	  TString sName("s"); sName += icat;
 	  c->cd(icat+1);
+	  topMass->setVal(result.iTmass[icat]);
 	  RooPlot* frame = recoMass->frame(Title(sName));
 	  allData[icat]->plotOn(frame,Binning(10),DrawOption("pz"));
 	  allPdfs[icat]->plotOn(frame,Components("bckgmodel*"),DrawOption("lf"),FillStyle(1001),FillColor(kGray),LineColor(kGray),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
@@ -356,6 +357,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       delete c;
 
       //likelihoods
+      topMass->setVal(result.tMass);
       float minForLL=topMass->getVal()-5*topMass->getError();
       float maxForLL=topMass->getVal()+5*topMass->getError();
       c = new TCanvas("massfitterll","Fit likelihood",600,600);
