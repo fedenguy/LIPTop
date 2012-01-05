@@ -4,8 +4,8 @@ storeremote="pclip11.cern.ch:/localdata/"
 WHOAMI=`whoami`
 if [ "$WHOAMI"="psilva" ];
     then
-    #storeremote="maccms316.cern.ch:/Users/psilva/store/"
-    storeremote="cmsphys03.cern.ch:/data/psilva/"
+    storeremote="maccms316.cern.ch:/Users/psilva/store/"
+    #storeremote="cmsphys03.cern.ch:/data/psilva/"
 fi
 echo "Mounting ${storeremote} for ${WHOAMI} @ ${base_storedir}"
 

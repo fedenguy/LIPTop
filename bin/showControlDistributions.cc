@@ -135,11 +135,15 @@ int main(int argc, char* argv[])
   double maxPuWeight(-1);
   if(isMC)
     {
+      TString mcpileupName(proctag.Data());
+      TFile *pufile=TFile::Open(runProcess.getParameter<std::string>("mcpileup").c_str());
+      if(pufile->Get(mcpileupName)==0) mcpileupName="pileup";
+      pufile->Close();
       LumiWeights = new edm::LumiReWeighting(runProcess.getParameter<std::string>("mcpileup"), 
 					     runProcess.getParameter<std::string>("datapileup"), 
-					     proctag.Data(),"pileup");
+					     mcpileupName.Data(),"pileup");
       for(int n0=0; n0<=30; n0++) maxPuWeight = max( LumiWeights->weight(n0) , maxPuWeight);
-      cout << "Max. weight: " << maxPuWeight << endl;
+      cout << "Input pileup from: " << mcpileupName << " has max. weight: " << maxPuWeight << endl;
     }
 
   reweight::PoissonMeanShifter PShiftUp(+0.6);
@@ -600,9 +604,14 @@ int main(int argc, char* argv[])
 	      if(ictf==0 && ivar==0 && spyEvents)
 		{
 		  //sample the MC according to the PU in data (generate unweighted sample for pseudo-exp.)
-		  float rnd=gRandom->Uniform();
-		  if(isMC && maxPuWeight>0 && rnd > puweight/maxPuWeight) { ev.normWeight=0; ev.xsecWeight=summaryWeight;}
-		  else if (isMC)                                          { ev.normWeight=1; ev.xsecWeight=summaryWeight;}
+		  int normWeight=0;
+		  if(isMC && maxPuWeight>0)
+		    {
+		      float rnd=gRandom->Uniform();
+		      if( rnd > puweight/maxPuWeight) normWeight=1;
+		    }
+		  ev.normWeight=normWeight; 
+		  ev.xsecWeight=summaryWeight;
 		  std::vector<float> measurements;
 		  spyEvents->fillTreeWithEvent( ev, measurements );
 		}
