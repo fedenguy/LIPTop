@@ -231,20 +231,31 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
   //delete c;
   
   //pulls
+  TGraphErrors *avgPull = new TGraphErrors;   avgPull->SetMarkerStyle(20);
+  TGraphErrors *sigmaPull = new TGraphErrors; sigmaPull->SetMarkerStyle(20);
   c=new TCanvas("pullsc","pullsc",1600,(pullResults.GetEntriesFast()/4+1)*400);
   c->SetWindowSize(1600,(pullResults.GetEntriesFast()/4+1)*400);
   c->Divide(4,pullResults.GetEntriesFast()/4+1);
   for(int i=0; i<pullResults.GetEntriesFast(); i++)
     {
       TPad *p=(TPad *)c->cd(i+1);
-      pullResults.At(i)->Draw("e1");
+      TH1 *pullH=(TH1 *)pullResults.At(i);
+      pullH->Draw("e1");
+
+      Float_t trueMass=mpts[i].Atof();
+      TF1 *gaus=pullH->GetFunction("gaus");
+      avgPull->SetPoint(i,trueMass,gaus->GetParameter(1));
+      avgPull->SetPointError(i,0,gaus->GetParError(1));
+      sigmaPull->SetPoint(i,trueMass,gaus->GetParameter(2));
+      sigmaPull->SetPointError(i,0,gaus->GetParError(2));
+
       if(i==0)
 	{
 	  leg = p->BuildLegend();
 	  formatForCmsPublic(p,leg,"CMS simulation",3);
 	  leg->Delete();
 	}
-
+      
       TPaveText *pave = new TPaveText(0.2,0.8,0.35,0.88,"NDC");
       pave->SetTextFont(42);
       pave->SetFillStyle(0);
@@ -259,4 +270,32 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
   c->SaveAs(outDir+"/TopMassCalibrationPulls.png");
   c->SaveAs(outDir+"/TopMassCalibrationPulls.pdf");
   //delete c;
+
+  //pull momenta
+  c=new TCanvas("pullsmomc","pullsmomc",600,600);
+  c->SetWindowSize(600,600);
+  c->Divide(1,2);
+  p=(TPad *)c->cd(1);
+  avgPull->Draw("ap");
+  avgPull->GetYaxis()->SetRangeUser(-3,3);
+  avgPull->GetXaxis()->SetTitle("Generated m_{top} [GeV/c^{2}]");
+  avgPull->GetYaxis()->SetTitle("Average pull");
+  leg = p->BuildLegend();
+  formatForCmsPublic(p,leg,"CMS simulation",3);
+  leg->Delete();
+  c->cd(2);
+  sigmaPull->GetYaxis()->SetRangeUser(0.9,1.2);
+  sigmaPull->Draw("ap");
+  sigmaPull->GetXaxis()->SetTitle("Generated m_{top} [GeV/c^{2}]");
+  sigmaPull->GetYaxis()->SetTitle("Pull width");
+  c->Modified();
+  c->Update();
+  c->SaveAs(outDir+"/TopMassCalibrationPullsMomenta.C");
+  c->SaveAs(outDir+"/TopMassCalibrationPullsMomenta.png");
+  c->SaveAs(outDir+"/TopMassCalibrationPullsMomenta.pdf");
+  //delete c;
+
+
+
+
 }

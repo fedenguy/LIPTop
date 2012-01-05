@@ -19,17 +19,15 @@ def getByLabel(desc,key,defaultVal=None) :
 def usage() :
     print ' '
     print 'runMassMeasurement.py [options]'
-    print '  -l : luminosity (pb)'
     print '  -j : json file containing the samples'
     print '  -i : event summary file'
-    print '  -n : number of ensembles to test'
     print '  -p : fit parameters file'
     exit(-1)
 
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "l:j:i:n:p:h?"
+    shortopts  = "j:i:p:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -38,26 +36,22 @@ except getopt.GetoptError:
     sys.exit(1)
 
 #configure
-lumi=200
 samplesDB=''
 ifile=''
-nensemble=1
-fitParsFile='MassParFile_bmult.txt'
+fitParsFile='MassParFile_exclusive.txt'
 for o,a in opts:
     if o in("-?", "-h"):
         usage()
         sys.exit(0)
-    elif o in('-l'): lumi=float(a)
     elif o in('-j'): samplesDB = a
     elif o in('-i'): ifile=a
-    elif o in('-n'): nensemble=int(a)
     elif o in('-p'): fitParsFile=a
 
     
 # load macros
 import ROOT
 ROOT.gSystem.Load('${CMSSW_BASE}/lib/${SCRAM_ARCH}/libLIPTop.so')
-from ROOT import MassMeasurement, eventHandlerFactory, getNewCanvas, showPlotsAndMCtoDataComparison, setStyle, formatForCmsPublic, formatPlot
+from ROOT import MassMeasurement, EnsembleMeasurement_t, eventHandlerFactory
 
 inF=ROOT.TFile.Open(ifile)
 
@@ -66,104 +60,47 @@ procList=json.load(jsonFile,encoding='utf-8').items()
 
 #run over sample
 evHandler       = eventHandlerFactory()
-massFitter      = MassMeasurement(fitParsFile)
+massFitter      = MassMeasurement(fitParsFile,'data')
+ensemble=EnsembleMeasurement_t()
+ensemble.nEvents=0
+ensemble.status=False
+ensemble.mass=0
+ensemble.err=0
+evtCtr=0
+for proc in procList :
+    for desc in proc[1] :
+        isdata = getByLabel(desc,'isdata',False)
+        if(not isdata): continue
+        data = desc['data']
+        for d in data :
 
-ensembleInfo = '<big><b>Summary of ensemble tests (data/MC)</b></big>'
-for ipe in xrange(0,nensemble+1) :
-        
-    #progress bar
-    print '.',
-    sys.stdout.flush()
-        
-    ensembleHandler = eventHandlerFactory()
-    ensembleInfo  += '<table>'
-    ensembleInfo += '<tr><th><b>Info for '
-    if(ipe==0) : ensembleInfo += 'data'
-    else       : ensembleInfo += ' ensemble #' + str(ipe)
-    ensembleInfo += '</b></th></tr>'
-        
-    for proc in procList :
-
-        #run over processes
-        id=0
-        for desc in proc[1] :
-            isdata = getByLabel(desc,'isdata',False)
-                
-            if(ipe>0 and isdata) : continue
-            if(ipe==0 and not isdata) : continue
+            tag = getByLabel(d,'dtag','')
+            t=inF.Get(tag+'/data')
+            try :
+                t.GetEntriesFast()
+            except:
+                continue
             
-            #run over items in process
-            data = desc['data']
-            for d in data :
-                tag = getByLabel(d,'dtag','')
- 
-                #get tree of events from file
-                t=inF.Get(tag+'/data')
+            attResult=evHandler.attachToTree(t)
+            nevtsSel = evHandler.getEntries()
+            if(attResult is False) : continue
                     
-                try :
-                    t.GetEntriesFast()
-                except:
-                    continue
-            
-                attResult=evHandler.attachToTree(t)
-                nevtsSel = evHandler.getEntries()
-                if(attResult is False) : continue
-                    
-                #clone (will use the same address as the original tree)
-                id=id+1
-                if(id==1):
-                    ROOT.gROOT.cd()
-                    ensembleHandler.initTree(t.CloneTree(0), False)
-                    ensembleHandler.getTree().SetDirectory(0)
-                    
-
-                #generate number of events for ensemble    
-                nevts=nevtsSel
-                nevtsExpected=nevts
-                if(ipe>0):
-                    evHandler.getEntry(0)
-                    nevtsExpected=lumi*(evHandler.evSummary_.weight)*nevtsSel
-                    nevts = int(ROOT.gRandom.Poisson( nevtsExpected ))
-
-                genEvts=[]
-                for ievt in xrange(0,nevts) :
-                    rndEvt=ievt
-                    if(ipe>0):
-                        rndEvt = int(ROOT.gRandom.Uniform(0,nevtsSel))
-                        if( rndEvt in genEvts ) : continue
-                    evHandler.getEntry(rndEvt)
-                    ensembleHandler.fillTree()
-                    genEvts.append(rndEvt)
-
-                ensembleInfo += '<tr><td><b>' + tag + '<b></td></tr>'
-                if(ipe>0) :
-                    ensembleInfo += '<tr><td>&lt;N<sub>expected</sub>&gt;=' + str(nevtsExpected) + '</td></tr>'
-                    ensembleInfo += '<tr><td>&lt;N<sub>generated</sub>&gt;=' + str(nevts) + '</td></tr>'
-                else :
-                    ensembleInfo += '<tr><td>N<sub>events</sub>=' + str(nevtsExpected) + '</td></tr>'
-                
-        #take control of the filled tree now
-        print ensembleHandler.getTree().GetEntriesFast()
-        ensembleHandler.attachToTree( ensembleHandler.getTree() )
-        ensembleMeasurement = massFitter.DoMassFit(ensembleHandler,True)
-
-        raw_input('any key to continue')
-        #save ensemble info
-        #ensembleInfo += '<tr><td><i>' + cat + ' events</i></td></tr>'
-        #ensembleInfo += '<tr><td>k-factor=' + str(kNorm) + '</td></tr>'
-        #ensembleInfo += '<tr><td>f<sub>correct</sub>=' + str(fcorrect) + "+/-" + str(fcorrectErr)
-        #if(ipe>0) : ensembleInfo += ' (MC truth=' + str(fcorrectTrue)+ ')'
-        #ensembleInfo += '</td><tr>'
-        #ensembleInfo += '<tr><td></td></tr>'
-
-        ensembleHandler.getTree().Delete("all")
-        
-
-
-#save ensemble info to file
-fout = open('ensemble_info.html', 'w')
-fout.write(ensembleInfo)
-fout.close()
-                
+            for ievt in xrange(0,nevtsSel) :
+                evHandler.getEntry(ievt)
+                mtop=evHandler.evSummary_.evmeasurements[0]
+                if(mtop==0) : continue
+                nbtags=evHandler.evSummary_.evmeasurements[5]
+                if(nbtags==0) : continue
+                if(nbtags>2) : nbtags=2
+                isZcand=evHandler.evSummary_.evmeasurements[2]
+                if(isZcand) : continue
+                catToFill=nbtags-1
+                if(evHandler.evSummary_.cat==3) : catToFill+=2
+                ensemble.evMasses.__setitem__(evtCtr,mtop)
+                ensemble.evCategories.__setitem__(evtCtr,catToFill)
+                evtCtr+=1                                                     
+ensemble.nEvents=evtCtr
+ensembleMeasurement = massFitter.DoMassFit(ensemble,True)
+sys.exit(-1)
 
 
