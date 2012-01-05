@@ -101,6 +101,6 @@ for proc in procList :
                 evtCtr+=1                                                     
 ensemble.nEvents=evtCtr
 ensembleMeasurement = massFitter.DoMassFit(ensemble,True)
-sys.exit(-1)
+raw_input('any key to continue')
 
 

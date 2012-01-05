@@ -341,7 +341,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
 	  c->cd(icat+1);
 	  topMass->setVal(result.iTmass[icat]);
 	  RooPlot* frame = recoMass->frame(Title(sName));
-	  allData[icat]->plotOn(frame,Binning(10),DrawOption("pz"));
+	  allData[icat]->plotOn(frame,Binning(20),DrawOption("pz"));
 	  allPdfs[icat]->plotOn(frame,Components("bckgmodel*"),DrawOption("lf"),FillStyle(1001),FillColor(kGray),LineColor(kGray),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
 	  allPdfs[icat]->plotOn(frame,Components("bckgmodel*,signalmodel*"),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
 	  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
@@ -363,10 +363,11 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       c = new TCanvas("massfitterll","Fit likelihood",600,600);
       c->SetWindowSize(600,600);
       RooPlot *frame = topMass->frame(Bins(100),Range(minForLL,maxForLL),Title("Likelihood")) ;    
+      Int_t catColors[]={831,809,590,824};
       for(int icat=0; icat<ncategs; icat++) 
 	{
-	  TString catTag("cat"); catTag += icat;
-	  allLL[icat]->plotOn(frame,ShiftToZero(),FillStyle(0),LineColor(kGreen+4-2*icat),LineWidth(2),Name(catTag));
+	  TString catTag("cat"); catTag += icat; catTag+=tag_;
+	  allLL[icat]->plotOn(frame,Name(catTag),ShiftToZero(),FillStyle(0), LineColor(catColors[icat]), LineStyle(icat%2==0 ? 9 : 1), LineWidth(2),Name(catTag));
 	}
       combll->plotOn(frame,ShiftToZero(),FillStyle(0),LineWidth(3),Name("comb"+tag_));
       frame->GetXaxis()->SetTitle("Top Mass [GeV/c^{2}]");
@@ -377,7 +378,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       frame->Draw();
 
       TLegend *leg = new TLegend(0.6,0.65,0.9,0.9,NULL,"brNDC");
-      formatForCmsPublic(c,leg,"CMS preliminary",3);
+      formatForCmsPublic(c,leg,"",3);
       leg->AddEntry("comb"+tag_,"Combined","l");
       for(int icat=0; icat<ncategs; icat++) 
 	{
@@ -387,6 +388,25 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       leg->SetFillColor(0);
       leg->SetFillStyle(3001);
       leg->Draw();
+
+      //prepare label     
+      TPaveText *pave = new TPaveText(0.15,0.96,0.51,0.99,"NDC");
+      pave->SetBorderSize(0);
+      pave->SetFillStyle(0);
+      pave->SetTextAlign(12);
+      pave->SetTextFont(42);
+      pave->AddText("CMS preliminary");
+      pave->Draw();
+      
+      pave = new TPaveText(0.5,0.96,0.94,0.99,"NDC");
+      pave->SetFillStyle(0);
+      pave->SetBorderSize(0);
+      pave->SetTextAlign(32);
+      pave->SetTextFont(42);
+      char buf[100];
+      sprintf(buf,"m_{top}=%3.2f^{+%3.2f}_{%3.2f}",topMass->getVal(),topMass->getAsymErrorHi(),topMass->getAsymErrorLo());
+      pave->AddText(buf);
+      pave->Draw();
 
       c->Modified();
       c->Update();
@@ -414,12 +434,11 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       frame->Draw();
 
       leg = c->BuildLegend();
-      char buf[100];
       sprintf(buf,"m_{top}=%3.1f #pm %3.1f GeV/c^{2}",topMass->getVal(),topMass->getError());
       formatForCmsPublic(c,leg,buf,1);
       leg->Delete();
 
-      TPaveText *pave = new TPaveText(0.15,0.96,0.51,0.99,"NDC");
+      pave = new TPaveText(0.15,0.96,0.51,0.99,"NDC");
       pave->SetBorderSize(0);
       pave->SetFillStyle(0);
       pave->SetTextAlign(12);
