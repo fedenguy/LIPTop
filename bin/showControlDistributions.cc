@@ -179,8 +179,10 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1D("drll",";#Delta R(l^{(1)},l^{(2)});Events",100,0,6) );
 
   //jet control
-  controlHistos.addHistogram( new TH1F ("jet", "; Jet p_{T} [GeV/c]; Events / (10 GeV/c)", 50, 0.,500.) );
-  controlHistos.addHistogram( new TH1F ("jetafter1btag", "; Jet p_{T} [GeV/c]; Events / (10 GeV/c)", 40, 0.,400.) );
+  controlHistos.addHistogram( new TH1F ("jet", "; Jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jetafter1btag", "; Jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jetafter1btagtchel", "; Jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jetafter1btagcsvm", "; Jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("mjj", "; M(lead jet,sub-lead jet) [GeV/c^{2}]; Events / (25 GeV/c^{2})", 10, 0.,250.) );
@@ -420,16 +422,19 @@ int main(int argc, char* argv[])
 	  //kinematics with propagated variations
 	  int nseljetsLoose(0),nbtags(0);
 	  LorentzVectorCollection prunedJetColl;
+	  top::PhysicsObjectJetCollection ptOrderedJets;
 	  for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
 	    {
 
 	      float pt=jetColl[ijet].pt();
 	      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
-	      //	      nbtags += (orderedJetColl[ijet].btag1>1.7);
+	      ptOrderedJets.push_back( orderedJetColl[ijet] );
 	      nbtags += (orderedJetColl[ijet].btag7>0.244);
 	      nseljetsLoose ++;
 	      prunedJetColl.push_back(jetColl[ijet]);
 	    }
+	  sort(ptOrderedJets.begin(),ptOrderedJets.end(),sortJetsByPt);
+
 	  jetColl=prunedJetColl;
 	  int btagbin(nbtags);
 	  if(btagbin>2) btagbin=2;
@@ -564,13 +569,17 @@ int main(int argc, char* argv[])
 		      controlHistos.fillHisto("mt", ctf,mt,weight);
 		      controlHistos.fillHisto("mindrlj",ctf,mindrlj,weight,true);
 		      controlHistos.fillHisto("nleptons",ctf,phys.leptons.size()-2,weight);
-		      for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
+
+		      //just for the leading pT jets
+		      int nbtagstchel = ((ptOrderedJets[0].btag1>1.7) + (ptOrderedJets[1].btag1>1.7));
+		      int nbtagscsvm  = ((ptOrderedJets[0].btag7>0.679) + (ptOrderedJets[1].btag7>0.679));
+		      for(size_t ijet=0; ijet<2; ijet++)
 			{
-			  float pt=jetColl[ijet].pt();
-			  if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
-			  controlHistos.fillHisto("jet",ctf,pt,weight);
-			  if(nbtags>0) controlHistos.fillHisto("jetafter1btag",ctf,pt,weight);
+			  controlHistos.fillHisto("jet",ctf,ptOrderedJets[ijet].pt(),weight);
+			  if(nbtagstchel>0) controlHistos.fillHisto("jetafter1btagtchel",ctf,ptOrderedJets[ijet].pt(),weight);
+			  if(nbtagscsvm>0)  controlHistos.fillHisto("jetafter1btagcsvm",ctf,ptOrderedJets[ijet].pt(),weight);
 			}
+
 		      controlHistos.fillHisto("leadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),weight);
 		      controlHistos.fillHisto("subleadjet",ctf,min(jetColl[0].pt(),jetColl[1].pt()),weight);
 		      controlHistos.fill2DHisto("leadjetvssubleadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),min(jetColl[0].pt(),jetColl[1].pt()),weight);

@@ -1,4 +1,3 @@
-
 #ifndef _mass_measurement_hh_
 #define _mass_measurement_hh_
 
@@ -27,6 +26,8 @@
 #include "RooSimPdfBuilder.h"
 #include "RooSimultaneous.h"
 #include "RooDataHist.h"
+#include "RooAddition.h"
+#include "RooNLLVar.h"
 
 #include "TCanvas.h"
 #include "TGraphAsymmErrors.h"
@@ -49,24 +50,26 @@
 #include "TList.h"
 #include "TKey.h"
 #include "TDirectory.h"
+#include "TPaveText.h"
 
 #include "LIP/Top/interface/EventSummaryHandler.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
 
-
+#include <string.h>
 #include <set>
 
 #endif
 
-#define MAXEVENTS 10000
+#define MAXEVENTS 50000
+#define MAXFITCATEGORIES 12
 
 // a measurement of the mass for a set of events
 struct EnsembleMeasurement_t
 {
   Bool_t status;
   Int_t nEvents;
-  Float_t mass, err, errLo, errHigh, evMasses[MAXEVENTS], evSample[MAXEVENTS];
+  Float_t mass, err, evMasses[MAXEVENTS], evCategories[MAXEVENTS];
 };
 
 //a summary of the measurements from the unbinned likelihood fits
@@ -75,6 +78,7 @@ struct MassFitResults_t
   Bool_t status;
   Float_t npoints,ll;
   Float_t tMass, tMassErrHigh, tMassErrLo, tMassErr;
+  Float_t iTmass[MAXFITCATEGORIES],iTmassErr[MAXFITCATEGORIES];
   Float_t nSig,  nSigErrHigh,  nSigErrLo,  nSigErr;
   Float_t nBckg, nBckgErrHigh, nBckgErrLo, nBckgErr;
   Float_t jes, lltmass, lltmassLo, lltmassHigh;
@@ -85,32 +89,51 @@ class MassMeasurement
 {
  public:
 
-  MassMeasurement(TString parfileURL)
-    {
-      fitPars_ = ParseParametersFrom(parfileURL);
-    }
+  TString tag_;  
+  MassMeasurement(TString parfileURL,TString tag);
+
+  enum CategoryMode {INCLUSIVE,EXCLUSIVE};
+  enum InclusiveCategories {EQ1BTAGS=0,GEQ2BTAGS};
+  enum ExclusiveCategories {SF_EQ1BTAGS=0,SF_GEQ2BTAGS,OF_EQ1BTAGS,OF_GEQ2BTAGS};
+  inline int getCategorizationMode() { return (int) fitPars_["cattype"]; }
+  inline int getNumberOfCategories() { return (int) fitPars_["ncategs"]; }
   
   /**
      @short performs the standard unbinned likelihood fit to a set of mass measurements
   */
   EnsembleMeasurement_t DoMassFit(top::EventSummaryHandler &evHandler, bool debug=false);
-
+  
   /**
      @short fits the mass to an ensemble
   */
   MassFitResults_t DoMassFit(EnsembleMeasurement_t &em, bool debug=false);
 
  private:
-      
+
+  /**
+     @short start the model
+   */
+  void InitModel();
+  RooDataSet *inclusiveData;
+  RooRealVar *recoMass,*category,*topMass;
+  std::vector<RooDataSet * > allData;
+  std::vector<RooAbsPdf * > allPdfs;
+  RooArgSet bckgpdfset,signalpdfset;
+  std::vector<TPaveText * > allCaptions;
+  std::vector<RooNLLVar *> allLL;
+  RooArgSet constrParams,sigYieldParams;
+
+
   /**
      @short the Roofit interface to the template fit
   */
-  MassFitResults_t CombinedMassFitter(TTree *data, bool debug=false);
+  MassFitResults_t CombinedMassFitter(bool debug=false);
   
   /**
      @short parses a file with fit parameters
   */
   std::map<TString, Double_t> fitPars_;
+  std::map<int,TString> catTitles_;
   std::map<TString,Double_t> ParseParametersFrom(TString parfileURL);
 };
 

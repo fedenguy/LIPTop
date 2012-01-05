@@ -6,6 +6,7 @@
   <bin name="showMassDistribution"     file="showMassDistribution.cc"></bin> 
   <bin name="runKinematicsAnalysis"    file="runKinematicsAnalysis.cc"></bin>
   <bin name="TopMassPDFfitter"         file="TopMassPDFfitter.cc"></bin>
+  <bin name="TopMassCalibration"       file="TopMassCalibration.cc"></bin>
   <bin name="fitDYcontribution"        file="fitDYcontribution.cc"></bin>
 </environment>
 <Flags CXXFLAGS="-g"/>

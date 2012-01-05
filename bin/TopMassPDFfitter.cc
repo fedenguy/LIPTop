@@ -7,12 +7,19 @@
 #include "RooGaussian.h"
 #include "RooLandau.h"
 #include "RooAddPdf.h"
+#include "RooFFTConvPdf.h"
 #include "RooPlot.h"
 #include "RooSimPdfBuilder.h"
 #include "RooCategory.h"
 #include "RooSimultaneous.h"
 #include "RooMinuit.h"
 #include "RooFitResult.h"
+#include "RooChi2Var.h"
+#include "RooNovosibirsk.h"
+#include "RooGamma.h"
+#include "RooLognormal.h"
+#include "RooExponential.h"
+#include "RooProdPdf.h"
 
 #include "TList.h"
 #include "TStyle.h"
@@ -25,8 +32,10 @@
 #include "TGraphAsymmErrors.h"
 #include "TF1.h"
 #include "TSystem.h"
+#include "TProfile.h"
 
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 
@@ -38,49 +47,69 @@ typedef std::map<std::string,Value_t> FitResults_t;
 using namespace std; 
 using namespace RooFit ;
 
-
-FitResults_t SignalPDFs(TString url="EventSummaries.root",int nbtags=-1);
-FitResults_t BckgPDFs(TString url="MassPDFs.root");
+enum Channel{INCLUSIVE,SAMEFLAVOR,OPFLAVOR};
+FitResults_t SignalPDFs(TString url="EventSummaries.root",int nbtags=-1,int channel=INCLUSIVE);
+FitResults_t BckgPDFs(TString url="MassPDFs.root",int channel=INCLUSIVE);
+FitResults_t DYBckgPDFs(TString url,int channel=INCLUSIVE);
 
 //
 int main(int argc, char* argv[])
 {
+  stringstream report;
+
   // load framework libraries                                                                                                                                                            
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
+
+  TString url=argv[1];
   
   
   //fit the templates
-  std::map<string,FitResults_t> allFitResults;
+  int ch[]={INCLUSIVE,SAMEFLAVOR,OPFLAVOR};
+  TString chName[]={"inclusive","same flavor","op. flavor"};
 
-  TString surl=argv[1];
-  allFitResults["[CATEGORY #1]"]       = SignalPDFs(surl,0);
-  allFitResults["[CATEGORY #2]"]       = SignalPDFs(surl,1);
-  allFitResults["[CATEGORY #3]"]       = SignalPDFs(surl,2);
-
-  TString burl=argv[2];
-  allFitResults["[Background : inclusive]"]  = BckgPDFs(burl);
-
-  //display the results
-  cout << " *************** TopMassPDFfitter  *********************** " << endl;
-  int catCtr(0);
-  for(std::map<string,FitResults_t>::iterator it = allFitResults.begin();
-      it != allFitResults.end();
-      it++,catCtr++)
+  //signal fit
+  for(size_t i=0; i<3;i++)
     {
-      cout << it->first << endl;
-      TString catPostFix("_s"); catPostFix += (catCtr-1);
-      for(FitResults_t::iterator itt = it->second.begin();
-	  itt != it->second.end();
-	  itt++)
-	cout << itt->first << catPostFix << ":" << itt->second.first << endl;
-      cout << endl;
+      std::map<string,FitResults_t> sigFitResults;
+      sigFitResults["[CATEGORY #1]"]       = SignalPDFs(url,1,ch[i]);
+      sigFitResults["[CATEGORY #2]"]       = SignalPDFs(url,2,ch[i]);
+      
+      //display the results
+      report << " *************** TopMassPDFfitter signal results for " << chName[i] << " channel *********************** " << endl;
+      int catCtr(0);
+      for(std::map<string,FitResults_t>::iterator it = sigFitResults.begin(); it != sigFitResults.end(); it++,catCtr++)
+	{
+	  report << it->first << endl;
+	  TString catPostFix("_s"); catPostFix += catCtr;
+	  for(FitResults_t::iterator itt = it->second.begin(); itt != it->second.end(); itt++)
+	    report << itt->first << catPostFix << ":" << itt->second.first  << "\t +/-" << itt->second.second << endl;
+	}
     }
+  
+
+  //background fits
+  for(size_t i=0; i<3;i++)
+    {
+      std::map<string,FitResults_t> bckgFitResults;
+      bckgFitResults["[NON DY]"] = BckgPDFs(url,ch[i]);      
+      bckgFitResults["[DY    ]"] = DYBckgPDFs(url,ch[i]);      
+      report << " *************** TopMassPDFfitter bckg results for " << chName[i] << " channel *********************** " << endl;
+      for(std::map<string,FitResults_t>::iterator it = bckgFitResults.begin(); it != bckgFitResults.end(); it++)
+	{ 
+	  for(FitResults_t::iterator itt = it->second.begin(); itt!= it->second.end(); itt++)
+	    report << itt->first << ":" << itt->second.first << "\t +/-" << itt->second.second << endl;
+	}
+      report << endl;
+    }
+  
+  cout << report.str() << endl;
+
 }
 
 
 //
-FitResults_t BckgPDFs(TString url)
+FitResults_t BckgPDFs(TString url,int channel)
 {
   //get the histograms and build the sum
   std::map<string, TH1D *> bckgDists;
@@ -100,24 +129,23 @@ FitResults_t BckgPDFs(TString url)
   ewkSamples.push_back("WW");
   ewkSamples.push_back("ZZ");
   ewkSamples.push_back("WZ");
-  ewkSamples.push_back("WJetsToLNu");
+  //  ewkSamples.push_back("WJetsToLNu");
   bckgProcs["EWK"]=ewkSamples;
 
-  std::vector<string>dySamples;
-  dySamples.push_back("DYJetsToLL");
-  dySamples.push_back("DYJetsToMuMu_M20to50");
-  dySamples.push_back("DYJetsToEE_M20to50");
-  bckgProcs["DY"]=dySamples;
-
-  //build the mass histograms
+  //build the mass histograms and the weighted dataset for the non DY background
   int ipt(1);
   TFile *f = TFile::Open(url);
+
+  RooRealVar mass("m","Mass",100,300,"GeV/c^{2}");
+  mass.setBins(40);
+  RooRealVar eventWeight("weight","weight",1,0,100);
+  RooDataSet dh("dh","dh",RooArgSet(mass,eventWeight),"weight");       
   for(std::map<string,std::vector<string> >::iterator it = bckgProcs.begin(); it != bckgProcs.end(); it++,ipt++)
     {
       TString sName("m"); sName += (ipt+1);      
       TH1D *h= new TH1D(sName,sName,80,100,500);      
       h->SetDirectory(0);
-      h->GetYaxis()->SetTitle("Events / (5 GeV/c^{2})");
+      h->GetYaxis()->SetTitle("Events / (10 GeV/c^{2})");
       h->GetXaxis()->SetTitle("Mass [GeV/c^{2}]");
       h->GetXaxis()->SetTitleOffset(0.8);
       h->GetYaxis()->SetTitleOffset(0.8);
@@ -130,12 +158,25 @@ FitResults_t BckgPDFs(TString url)
 	  TTree *t = (TTree *) f->Get(tname);
 	  if(t==0) continue;
 
+	  Int_t cat;
+	  Float_t weight,xsecWeight;
 	  Float_t evmeasurements[10];
+	  t->GetBranch("cat")->SetAddress(&cat);
+	  t->GetBranch("weight")->SetAddress(&weight);
+	  t->GetBranch("xsecWeight")->SetAddress(&xsecWeight);
 	  t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
 	  for(Int_t i=0; i<t->GetEntriesFast(); i++)
 	    {
 	      t->GetEntry(i);
-	      if(evmeasurements[0]>0)  h->Fill(evmeasurements[0]);
+	      if(channel==SAMEFLAVOR && cat!=EE && cat!=MUMU) continue;
+	      if(channel==OPFLAVOR && cat!= EMU) continue;
+	      if(evmeasurements[0]>0) 
+		{
+		  h->Fill(evmeasurements[0],weight*xsecWeight);
+		  mass=evmeasurements[0];
+		  eventWeight=weight*xsecWeight;
+		  dh.add(RooArgSet(mass,eventWeight),weight*xsecWeight,0.);
+		}
 	    }
 	}
     }    
@@ -145,33 +186,41 @@ FitResults_t BckgPDFs(TString url)
   TH1D *sumH= (TH1D* )bckgDists["Top"]->Clone("totalbckg");
   sumH->SetDirectory(0);
   sumH->Add(bckgDists["EWK"]);
-  //  sumH->Add(bckgDists["DY"]);
   
   //prepare the pdfs for the fit in mass
-  RooRealVar mass("m","Mass",100,500,"GeV/c^{2}");
-  RooRealVar mpv_l("mpv_{l}","Mpv of landau",100,300);
-  RooRealVar sigma_l("#sigma_{l}","Sigma of landau",10,30);
+  RooRealVar mpv_l("mpv_{l}","Mpv of landau",140,100,165);
+  RooRealVar sigma_l("#sigma_{l}","Sigma of landau",20,10,25);
   RooLandau lan("blandau","Mass component 1",mass,mpv_l,sigma_l);
-  RooRealVar mean_g("#mu_{g}","Mean of gaus",100,200);
-  RooRealVar sigma_g("#sigma_{g}","Sigma of gaus",10,30);
+  RooRealVar mean_g("#mu_{g}","Mean of gaus",180,160,200);
+  RooRealVar sigma_g("#sigma_{g}","Sigma of gaus",20,10,25);
   RooGaussian gaus("bgauss","Mass component 2",mass,mean_g,sigma_g);   
-  RooRealVar massfrac("#alpha","Fraction of component 1",0.6,1.);
-  RooAddPdf massmodel("model","Model",RooArgList(lan,gaus),massfrac);
-  RooDataHist dh("dh","dh",mass,sumH);       
-  massmodel.fitTo(dh,Save(kTRUE),Range(100.,500.),SumW2Error(kTRUE));
+  RooRealVar massfrac("#alpha","Fraction of component 1",0.1,0.0,0.2);
+  RooAddPdf massmodel("model","Model",RooArgList(gaus,lan),massfrac);
+  //  RooNumConvPdf massmodel("model","Model",mass,lan,gaus);
+  massmodel.fitTo(dh,Save(kTRUE),Range(100.,300.),SumW2Error(kTRUE));
+  RooDataHist binnedData("binnedData","binned version of dh",RooArgSet(mass),dh);
+  RooChi2Var chi2("chi2","chi2",massmodel,binnedData,DataError(RooAbsData::SumW2)) ;
+  RooMinuit m(chi2) ;
+  m.migrad() ;
+  m.hesse() ;
 
   //show the results of the fit
   setStyle();
-  TCanvas *c = new TCanvas("bckgpdfs","Background PDFs",2400,2400);
-  c->SetWindowSize(2400,2400);
-  c->Divide(2,2);
+  TString chName("");
+  if(channel==OPFLAVOR) chName += "_of";
+  if(channel==SAMEFLAVOR) chName += "_sf";
+  TString cnvName("NonDYPDF"); cnvName += chName; 
+  TCanvas *c = new TCanvas(cnvName,cnvName,1800,600);
+  c->SetWindowSize(1600,800);
+  c->Divide(2,1);
 
   TPad *p=(TPad *)c->cd(1);
   RooPlot* frame = mass.frame(Title("Combined"));
   dh.plotOn(frame,DrawOption("pz"),DataError(RooAbsData::SumW2)); 
-  massmodel.plotOn(frame,DrawOption("F"),FillColor(kAzure-4),FillStyle(3001),MoveToBack(),Range(100,500)) ;
+  massmodel.plotOn(frame,Components(lan),LineColor(kGray));
+  massmodel.plotOn(frame);
   frame->Draw();
-  frame->GetYaxis()->SetTitleOffset(1.0);
+  frame->GetYaxis()->SetTitleOffset(1.2);
   frame->GetYaxis()->SetTitle("Events (A.U.)");
   frame->GetXaxis()->SetTitleOffset(0.8);
   frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
@@ -179,41 +228,280 @@ FitResults_t BckgPDFs(TString url)
   formatForCmsPublic(p,leg,"CMS simulation",1);
   leg->Delete();	  
   
+  p=(TPad *)c->cd(2);
+  p->Divide(1,2);
   int ibckg(1);
   for(std::map<std::string, TH1D *>::iterator it = bckgDists.begin();
       it != bckgDists.end();
       it++,ibckg++)
     {
-      c->cd(ibckg+1);
+      p->cd(ibckg);
       it->second->Rebin();
       it->second->Draw("hist");  
       it->second->GetXaxis()->SetTitleOffset(1.0);
       it->second->GetYaxis()->SetTitleOffset(1.0);
       
-      TPaveText *pave = new TPaveText(0.5,0.6,0.8,0.8,"NDC");
+      TPaveText *pave = new TPaveText(0.6,0.7,0.8,0.8,"NDC");
       pave->SetBorderSize(0);
       pave->SetFillStyle(0);
       pave->SetTextFont(42);
       pave->AddText(it->first.c_str());
       pave->Draw("same");
     }
-  c->SaveAs("BckgPDF.C");
-  c->SaveAs("BckgPdf.png");
+
+  c->Modified();
+  c->Update();
+  c->SaveAs(cnvName+".C");
+  c->SaveAs(cnvName+".pdf");
+  c->SaveAs(cnvName+".png");
   
   //return the result
   FitResults_t fitPars;
-  fitPars["mpv_{l}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
-  fitPars["#sigma_{l}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
-  fitPars["#mu_{g}"]    = Value_t(mean_g.getVal(),mean_g.getError());
-  fitPars["#sigma_{g}"] = Value_t(sigma_g.getVal(),sigma_g.getError());
-  fitPars["#alpha"]     = Value_t(massfrac.getVal(),massfrac.getError()); 
+  fitPars["bckgmpv_{l}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
+  fitPars["bckg#sigma_{l}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
+  fitPars["bckg#mu_{g}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+  fitPars["bckg#sigma_{g}"] = Value_t(sigma_g.getVal(),sigma_g.getError());
+  fitPars["bckg#alpha"]     = Value_t(massfrac.getVal(),massfrac.getError()); 
+  return fitPars;
+}
+
+//
+FitResults_t DYBckgPDFs(TString url,int channel)
+{
+  FitResults_t fitPars; 
+  if(channel==INCLUSIVE) return fitPars;
+
+  //build the datasets for DY backgrounds
+  std::map<string,std::vector<string> > bckgProcs;
+
+  std::vector<string>dyLLSamples;
+ 
+  //MC
+  dyLLSamples.push_back("DYJetsToLL");
+  //   dyLLSamples.push_back("DYJetsToMuMu_M20to50");
+  //   dyLLSamples.push_back("DYJetsToEE_M20to50");
+  bckgProcs["DYLLMC"]=dyLLSamples;
+
+  //DATA-DRIVEN
+  if(channel!=OPFLAVOR)
+    {
+      dyLLSamples.clear();
+      dyLLSamples.push_back("DoubleMuMay10ReReco");
+      dyLLSamples.push_back("DoubleElectronMay10ReReco");
+      dyLLSamples.push_back("MuEGMay10ReReco");
+      dyLLSamples.push_back("DoubleMuPromptRecov4");
+      dyLLSamples.push_back("DoubleElectronPromptRecov4");
+      dyLLSamples.push_back("MuEGPromptRecov4");
+      dyLLSamples.push_back("DoubleMu05AugReReco");
+      dyLLSamples.push_back("DoubleElectron05AugReReco");
+      dyLLSamples.push_back("MuEG05AugReReco");
+      dyLLSamples.push_back("DoubleMuPromptRecov6");
+      dyLLSamples.push_back("DoubleElectronPromptRecov6");
+      dyLLSamples.push_back("MuEGPromptRecov6");
+      bckgProcs["DYLLData"]=dyLLSamples;
+    }
+  if(channel==OPFLAVOR)
+    {
+      dyLLSamples.clear();
+      dyLLSamples.push_back("DoubleMu2011AAug5thTauReplacement");
+      dyLLSamples.push_back("DoubleMu2011AMay10thTauReplacement");
+      dyLLSamples.push_back("DoubleMu2011APRv4TauReplacement");
+      dyLLSamples.push_back("DoubleMu2011APRv6TauReplacement");
+      bckgProcs["DYLLData"]=dyLLSamples;
+    }
+  //build the mass datasets
+  RooRealVar mass("m","Mass",100,300,"GeV/c^{2}");
+  RooRealVar eventWeight("weight","weight",1,0,100);
+  RooDataSet mch("mch","mch",RooArgSet(mass,eventWeight),"weight");
+  RooDataSet ctrlmch("ctrlmch","ctrlmch",RooArgSet(mass,eventWeight),"weight");
+  RooDataSet dh("dh","dh",RooArgSet(mass,eventWeight),"weight");
+  
+  int ipt(1);
+  TFile *f = TFile::Open(url);
+  for(std::map<string,std::vector<string> >::iterator it = bckgProcs.begin(); it != bckgProcs.end(); it++,ipt++)
+    {
+      bool isData(true);
+      if(it->first.find("MC")!=std::string::npos) isData=false;
+      for(std::vector<string>::iterator pit = it->second.begin(); pit != it->second.end(); pit++)
+	{
+      	  TString tname=*pit + "/data";
+	  TTree *t = (TTree *) f->Get(tname);
+	  if(t==0) continue;
+	  if(t->GetEntriesFast()==0) continue;
+	  
+	  Int_t cat;
+	  Float_t weight,xsecWeight;
+	  Float_t evmeasurements[10];
+	  t->GetBranch("cat")->SetAddress(&cat);
+	  t->GetBranch("weight")->SetAddress(&weight);
+	  t->GetBranch("xsecWeight")->SetAddress(&xsecWeight);
+	  t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
+	  for(Int_t i=0; i<t->GetEntriesFast(); i++)
+	    {
+	      t->GetEntry(i);
+	      bool isZcand(false);
+	      isZcand=bool(evmeasurements[2]); 
+	      int nbtags=evmeasurements[5];
+	      if(channel==SAMEFLAVOR)
+		{
+		  if(cat!=EE && cat!=MUMU) continue;
+		  
+		  //for data look only at Z like events
+		  if(isData && !isZcand) continue;
+
+		  //for Z like events we only care about 0 b-tags
+		  if(isZcand && nbtags>0) continue;
+		}
+	      if(channel==OPFLAVOR)
+		{
+		  if(cat!= EMU) continue;
+		}
+	      
+	      if(evmeasurements[0]>0) 
+		{
+		  mass=evmeasurements[0];
+                  if(isData)
+		    {
+		      eventWeight=1;
+		      dh.add(RooArgSet(mass,eventWeight),1.0,0.);
+		    }
+		  else
+		    {
+		      eventWeight=weight*xsecWeight;
+		      if(!isZcand) mch.add(RooArgSet(mass,eventWeight),weight*xsecWeight,0.);
+		      else         ctrlmch.add(RooArgSet(mass,eventWeight),weight*xsecWeight,0.);
+		    }
+		}
+	    }
+	}
+    }
+  f->Close();
+
+  mass.setBins(20);
+
+  //fit the MC template
+  RooRealVar mpv_l("mpv_{l}^{MC}","Mpv of landau",140,100,165);
+  RooRealVar sigma_l("#sigma_{l}^{MC}","Sigma of landau",20,15,25);
+  RooLandau mclan("mclan","Landau component",mass,mpv_l,sigma_l);
+
+  RooRealVar mean_g("mpv_{g}^{MC}","Mean of gauss",180,160,200);
+  RooRealVar sigma_g("#sigma_{g}^{MC}","Sigma of gauss",20,15,25);
+  RooGaussian mcgauss("mcgaus","Gaussian component",mass,mean_g,sigma_g);
+
+  RooRealVar frac("frac","Model fraction",0.6,0,1.);
+  RooAddPdf mcmodel("mcmodel","Mass model",RooArgList(mcgauss,mclan),frac);
+ 
+  if(channel==SAMEFLAVOR)
+    {
+      RooDataHist binnedMC("binnedMC","binned version of mch",RooArgSet(mass),ctrlmch);
+      RooChi2Var chi2("chi2","chi2",mcmodel,binnedMC,DataError(RooAbsData::SumW2)) ;
+      RooMinuit m(chi2) ;
+      m.migrad() ;
+      m.hesse() ;
+      fitPars["dybckgmpv_{l}^{ctrl MC}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
+      fitPars["dybckg#sigma_{l}^{ctrl MC}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
+      fitPars["dybckmean_{g}^{ctrl MC}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+      fitPars["dybckg#sigma_{g}^{ctrl MC}"] = Value_t(sigma_g.getVal(),sigma_g.getError()); 
+      fitPars["dybckgfrac^{ctrl MC}"]       = Value_t(frac.getVal(),frac.getError());
+    }
+  
+  RooDataHist binnedMC("binnedMC","binned version of mch",RooArgSet(mass),mch);
+  RooChi2Var chi2("chi2","chi2",mcmodel,binnedMC,DataError(RooAbsData::SumW2)) ;
+  RooMinuit m(chi2) ;
+  m.migrad() ;
+  m.hesse() ;
+  fitPars["dybckgmpv_{l}^{MC}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
+  fitPars["dybckg#sigma_{l}^{MC}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
+  fitPars["dybckmean_{g}^{MC}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+  fitPars["dybckg#sigma_{g}^{MC}"] = Value_t(sigma_g.getVal(),sigma_g.getError()); 
+  fitPars["dybckgfrac^{MC}"]       = Value_t(frac.getVal(),frac.getError());
+
+  //fit the data-driven template
+  RooRealVar dmpv_l("mpv_{l}","Mpv of landau",140,100,165);
+  RooRealVar dsigma_l("#sigma_{l}","Sigma of landau",20,10,25);
+  RooLandau dlan("dlan","Landau component",mass,dmpv_l,dsigma_l);  
+//   RooRealVar dtail_l("tail_{l}","Tail",1.0,-20.,20.);
+//   RooExponential dexp("dexp","Mass model",mass,dtail_l);
+//   RooRealVar gamma("gamma","gamma",170,100,300);
+//   RooRealVar beta("beta","beta",1,0,10);
+//   RooRealVar mu("mu","mu",0,0,1);
+//   RooGamma dgam("dgam","Gamma component",mass,gamma,beta,mu); 
+
+  RooRealVar dmean_g("mpv_{g}","Mean of gauss",180,160,200);
+  RooRealVar dsigma_g("#sigma_{g}","Sigma of gauss",20,10,25);
+  RooGaussian dgauss("dgauss","Gauss component",mass,dmean_g,dsigma_g);
+    
+  //RooLandau datamodel("datamodel","Mass model",mass,dmpv_l,dsigma_l);
+  //RooFFTConvPdf datamodel("datamodel","Mass model",mass,dlan,dgauss);
+
+  RooRealVar dfrac("frac","Model fraction",0.1,0.0,0.2);
+  RooAddPdf datamodel("datamodel","Mass model",RooArgList(dgauss,dlan),dfrac);
+   
+  datamodel.fitTo(dh,Save(kTRUE),Range(100.,300.));
+  //   RooDataHist binnedData("binnedData","binned version of dh",RooArgSet(mass),dh);
+  //   RooChi2Var chi2data("chi2data","chi2data",datamodel,binnedData);
+  //   RooMinuit mindata(chi2data) ;
+  //   mindata.migrad() ;
+  //   mindata.hesse() ;
+  
+  fitPars["dybckgmpv_{l}"]         = Value_t(dmpv_l.getVal(),dmpv_l.getError());
+  fitPars["dybckg#sigma_{l}"]      = Value_t(dsigma_l.getVal(),dsigma_l.getError());
+  fitPars["dybckmean_{g}"]         = Value_t(dmean_g.getVal(),dmean_g.getError());
+  fitPars["dybckg#sigma_{g}"]      = Value_t(dsigma_g.getVal(),dsigma_g.getError());
+  fitPars["dybckgfrac"]            = Value_t(dfrac.getVal(),dfrac.getError());
+
+  //show the results of the fit
+  setStyle();
+  TString chName("");
+  if(channel==OPFLAVOR) chName += "_of";
+  if(channel==SAMEFLAVOR) chName += "_sf";
+  TString cnvName("DYPDF"); cnvName += chName; 
+  TCanvas *c = new TCanvas(cnvName,cnvName,800,800);
+  c->SetWindowSize(800,800);
+  c->Divide(1,2);
+  
+  TPad *p=(TPad *) c->cd(1);
+  RooPlot* frame = mass.frame(Title("MC Result"),Bins(20));
+  mch.plotOn(frame,DataError(RooAbsData::SumW2));
+  mcmodel.plotOn(frame,Components(mclan),RooFit::LineColor(kGray));
+  mcmodel.plotOn(frame);
+  frame->Draw();
+  frame->GetYaxis()->SetTitleOffset(1.2);
+  frame->GetYaxis()->SetTitle("Events (A.U.)");
+  frame->GetXaxis()->SetTitleOffset(0.8);
+  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
+  TLegend *leg = p->BuildLegend();
+  formatForCmsPublic(p,leg,"CMS simulation",1);
+  leg->Delete();	  
+  
+  p=(TPad *) c->cd(2);
+  RooPlot* frame2 = mass.frame(Title("Data Result"),Bins(20));
+  dh.plotOn(frame2);
+  datamodel.plotOn(frame2,Components(dlan),RooFit::LineColor(kGray));
+  datamodel.plotOn(frame2);
+  frame2->Draw();
+  frame2->GetYaxis()->SetTitleOffset(1.2);
+  frame2->GetYaxis()->SetTitle("Events");
+  frame2->GetXaxis()->SetTitleOffset(0.8);
+  frame2->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
+  leg = p->BuildLegend();
+  formatForCmsPublic(p,leg,"CMS preliminary",1);
+  leg->Delete();	  
+
+  c->Modified();
+  c->Update();
+  c->SaveAs(cnvName+".C");
+  c->SaveAs(cnvName+".pdf");
+  c->SaveAs(cnvName+".png");
+  
+  //return the result
   return fitPars;
 }
 
 
 
 //
-FitResults_t SignalPDFs(TString url,int nbtags)
+FitResults_t SignalPDFs(TString url,int nbtags,int channel)
 {
   //the mass points
   typedef std::pair<TString,Float_t> MassPoint_t;
@@ -230,7 +518,6 @@ FitResults_t SignalPDFs(TString url,int nbtags)
 
   //define the fit range and the main variable
   float rangeMin(100), rangeMax(500);
-  int nRangeBins(80);
   RooRealVar mass("m","Reconstructed Mass [GeV/c^{2}]", rangeMin,rangeMax);
 
   //define the dataset categorized per top quark mass point
@@ -244,6 +531,9 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   
   //fill the dataset
   TFile *f = TFile::Open(url);
+  TProfile *massProfile = new TProfile("massprof",";Top quark mass [GeV/c^{2}];<Reconstructed mass> [GeV/c^{2}]",MassPointCollection.size(),0,MassPointCollection.size(),0,1000);
+  massProfile->SetDirectory(0);
+
   for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
     {
       TString tname=MassPointCollection[ipt].first + "/data";
@@ -252,17 +542,27 @@ FitResults_t SignalPDFs(TString url,int nbtags)
       
       TString cName("m"); cName += (ipt+1);      
       massCategory.setLabel(cName.Data());
-
+      char buf[20];
+      sprintf(buf,"%3.1f",MassPointCollection[ipt].second);
+      massProfile->GetXaxis()->SetBinLabel(ipt+1,buf);
+      Int_t cat;
+      Float_t normWeight;
       Float_t evmeasurements[10];
+      t->GetBranch("cat")->SetAddress(&cat);
+      t->GetBranch("normWeight")->SetAddress(&normWeight);
       t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
       for(Int_t i=0; i<t->GetEntriesFast(); i++)
 	{
 	  t->GetEntry(i);
+	  if(channel==SAMEFLAVOR && cat!=EE && cat!=MUMU) continue;
+	  if(channel==OPFLAVOR && cat!= EMU) continue;
 	  if(nbtags==0 && evmeasurements[5]!=0) continue;
 	  if(nbtags==1 && evmeasurements[5]!=1) continue;
 	  if(nbtags==2 && evmeasurements[5]<1) continue;
+	  if(normWeight!=1) continue;
 	  mass=evmeasurements[0];
 	  combData.add(RooArgSet(mass,massCategory));
+	  massProfile->Fill(ipt,mass.getVal());
 	}
     }    
   f->Close();
@@ -316,7 +616,10 @@ FitResults_t SignalPDFs(TString url,int nbtags)
   //display
   setStyle();
   int ny=MassPointCollection.size()/4+1;
-  TString cnvName("SignalPDF_"); cnvName += nbtags; cnvName += "btags";
+  TString chName("");
+  if(channel==OPFLAVOR) chName += "of";
+  if(channel==SAMEFLAVOR) chName += "sf";
+  TString cnvName("SignalPDF_"); cnvName += chName; cnvName +="_"; cnvName += nbtags; cnvName += "btags";
   TCanvas *c = getNewCanvas(cnvName,cnvName,true);
   c->SetCanvasSize(2400,ny*600);
   c->SetWindowSize(2400,ny*600);
@@ -328,18 +631,19 @@ FitResults_t SignalPDFs(TString url,int nbtags)
       TPad *p = (TPad *)c->cd(ipt+1);
       //p->SetGridx();
       //p->SetGridy();
-      RooPlot* frame = mass.frame(Bins(nRangeBins));
+      RooPlot* frame = mass.frame(Range(100,300),Bins(40));
       RooDataSet* dataslice = (RooDataSet *)combData.reduce("cat==cat::"+cName);
       dataslice->plotOn(frame,DataError(RooAbsData::SumW2));
 
       RooCategory theCategory(cName,cName);
+      //simPdf->plotOn(frame,Slice(theCategory),ProjWData(mass,*dataslice),Components("lan"),LineColor(kGray));
       simPdf->plotOn(frame,Slice(theCategory),ProjWData(mass,*dataslice));
       frame->GetYaxis()->SetTitleOffset(1.3);
       frame->GetYaxis()->SetTitle("Events");
       frame->GetXaxis()->SetTitleOffset(1.0);
       frame->Draw();
 
-      TPaveText *pave = new TPaveText(0.5,0.6,0.8,0.8,"NDC");
+      TPaveText *pave = new TPaveText(0.55,0.65,0.85,0.8,"NDC");
       pave->SetBorderSize(0);
       pave->SetFillStyle(0);
       pave->SetTextFont(42);
@@ -354,10 +658,23 @@ FitResults_t SignalPDFs(TString url,int nbtags)
 	  formatForCmsPublic(p,leg,"CMS simulation",1);
 	  leg->Delete();	  
 	}
+
+      //superimpose the average of the gaussian fit
+      TLine *l=new TLine(MassPointCollection[ipt].second,0,MassPointCollection[ipt].second,frame->GetMaximum());
+      l->SetLineWidth(2);
+      l->SetLineColor(kGray);
+      l->SetLineStyle(2);
+      l->Draw();
     }
+
+  c->cd(MassPointCollection.size()+1);
+  massProfile->Draw("e1");
   
+  c->Modified();
+  c->Update();
   c->SaveAs( cnvName + TString(".C") );
   c->SaveAs( cnvName + TString(".png") );
+  c->SaveAs( cnvName + TString(".pdf") );
   delete c;
 
   FitResults_t fitPars;
@@ -376,3 +693,5 @@ FitResults_t SignalPDFs(TString url,int nbtags)
 
 
 
+
+//  LocalWords:  hGexpmodel

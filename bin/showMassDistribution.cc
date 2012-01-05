@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
       
       //fill histos
       float weight = ev.weight;
-      int normWeight=1;
+      int normWeight=0;
       if(LumiWeights) 
 	{
 	  weight = LumiWeights->weight( ev.ngenpu );
@@ -377,9 +377,9 @@ int main(int argc, char* argv[])
       if(!isZcand && !isSS)
 	{
 	  subcats.push_back("");
-	  if(nbtags==0) subcats.push_back("eq0btags");
-	  else if(nbtags==1) subcats.push_back("eq1btags");
-	  else if(nbtags>=2) subcats.push_back("geq2btags");
+	  if(nbtagscor==0) subcats.push_back("eq0btags");
+	  else if(nbtagscor==1) subcats.push_back("eq1btags");
+	  else if(nbtagscor>=2) subcats.push_back("geq2btags");
 	}
       else if(isZcand && !isSS) subcats.push_back("zcands");
       else                      subcats.push_back("ss");
@@ -471,14 +471,13 @@ int main(int argc, char* argv[])
       neventsused++;
       
       //save for further study if required
-      if(!isZcand && !isSS && spyEvents)
+      if(!isSS && spyEvents)
 	{
-	  if(normWeight==0) { ev.normWeight=0; ev.xsecWeight=summaryWeight; }
-	  else              { ev.normWeight=1; ev.xsecWeight=summaryWeight; }
+	  ev.normWeight=normWeight; ev.xsecWeight=summaryWeight;
 	  std::vector<float> measurements;
 	  measurements.push_back(mtop);
 	  measurements.push_back(mttbar);
-	  measurements.push_back(afb);
+	  measurements.push_back(isZcand);
 	  measurements.push_back(ptttbar.Pt());
 	  measurements.push_back(nbtags);
 	  measurements.push_back(nbtagscor);
