@@ -30,8 +30,8 @@ runOverSamples.py -j data/samples.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src
 # CREATE CONTROL DISTRIBUTIONS AND EVENT SUMMARIES
 # it will run an executable and store the outputs in root files named after each sample
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s True
-runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-nosyst -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -s True
+runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s 2nd
+runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-nosyst -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ  -p "@saveSummaryTree=True" -s 8nh
 
 
 #
@@ -44,6 +44,9 @@ runPlotter --iLumi 2165 --inDir ~/scratch0/top/ --outDir /tmp/psilva/ --json dat
 # RUN KIN RECONSTRUCTION
 #
 runKinOverSamples.py -j data/samples.json -e 500 -d /store/cmst3/user/psilva/Top_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=std" -s 8nh
+runKinOverSamples.py -j data/samples.json -e 500 -d /store/cmst3/user/psilva/Top_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=jesup" -s 2nd -t TT
+runKinOverSamples.py -j data/samples.json -e 500 -d /store/cmst3/user/psilva/Top_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=jesdown" -s 2nd -t TT
+runKinOverSamples.py -j data/samples.json -e 500 -d /store/cmst3/user/psilva/Top_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=jer" -s 2nd -t TT
 
 # generate plots for signal templates
 runLocalAnalysisOverSamples.py -e showMassDistribution -j data/samples-signal.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"

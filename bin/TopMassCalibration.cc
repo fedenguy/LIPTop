@@ -264,7 +264,7 @@ TObjArray calibrate(TString mpoint)
       h->SetMarkerStyle(20);
       pullH.Add(h);
 
-      h = new TH1D("statunc"+postfix,";#sigma_{stat};Pseudo-experiments",200,0,10);
+      h = new TH1D("statunc"+postfix,";#sigma_{stat};Pseudo-experiments",400,0,8);
       h->SetDirectory(0);
       h->SetMarkerStyle(20);
       statUncH.Add(h);

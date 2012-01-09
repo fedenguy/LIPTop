@@ -5,10 +5,10 @@ ncategs:2
 cattype:0
 
 [CALIBRATION]
-resbias_s0:1.8427
-resslope_s0:0.985823
-resbias_s1:-22.5616
-resslope_s1:1.13626
+resbias_s0:-15.0876
+resslope_s0:1.10169
+resbias_s1:-20.8725
+resslope_s1:1.13176
 
 [YIELDS]
 #mu_{background}_s0:359.94
@@ -21,16 +21,16 @@ sfdybckg#alpha_{l}_s1:0.37
 ofdybckg#alpha_{l}_s1:0.03
 
 [CATEGORY #1]
-#alpha(intercept)_s0:0.50913
-#alpha(slope)_s0:0.0041937
-#mu_{G}(intercept)_s0:151.288
-#mu_{G}(slope)_s0:0.206507
-#sigma_{G}(intercept)_s0:20.093
-#sigma_{G}(slope)_s0:0.00101053
-#sigma_{L}(intercept)_s0:17.4786
-#sigma_{L}(slope)_s0:0.00000431132
-mpv_{L}(intercept)_s0:195.826
-mpv_{L}(slope)_s0:0.0752863
+#alpha(intercept)_s0:0.507725
+#alpha(slope)_s0:0.00156114
+#mu_{G}(intercept)_s0:151.524
+#mu_{G}(slope)_s0:0.318566
+#sigma_{G}(intercept)_s0:19.9399
+#sigma_{G}(slope)_s0:0.103168
+#sigma_{L}(intercept)_s0:17.0902
+#sigma_{L}(slope)_s0:0.0801535
+mpv_{L}(intercept)_s0:195.461
+mpv_{L}(slope)_s0:0.5181
 nondybckg#sigma_{l}_s0:23.2307
 nondybckgmpv_{l}_s0:162.132
 sfdybckg#sigma_{l}_s0:25
@@ -39,16 +39,16 @@ ofdybckg#sigma_{l}_s0:22.7777
 ofdybckgmpv_{l}_s0:165
 
 [CATEGORY #2]
-#alpha(intercept)_s1:0.541796
-#alpha(slope)_s1:0.0000282433
-#mu_{G}(intercept)_s1:149.273
-#mu_{G}(slope)_s1:0.433815
-#sigma_{G}(intercept)_s1:18.7373
-#sigma_{G}(slope)_s1:0.11815
-#sigma_{L}(intercept)_s1:15.7042
-#sigma_{L}(slope)_s1:0.057723
-mpv_{L}(intercept)_s1:188.236
-mpv_{L}(slope)_s1:0.666935
+#alpha(intercept)_s1:0.520345
+#alpha(slope)_s1:0.00400497
+#mu_{G}(intercept)_s1:150.235
+#mu_{G}(slope)_s1:0.253521
+#sigma_{G}(intercept)_s1:19.0623
+#sigma_{G}(slope)_s1:0.0692445
+#sigma_{L}(intercept)_s1:15.9832
+#sigma_{L}(slope)_s1:0.0807589
+mpv_{L}(intercept)_s1:190.188
+mpv_{L}(slope)_s1:0.362068
 nondybckg#sigma_{l}_s1:23.2307
 nondybckgmpv_{l}_s1:162.132
 sfdybckg#sigma_{l}_s1:25

@@ -26,9 +26,17 @@ class MisassignmentMeasurement
 {
  public:
   
+  /**
+     @short CTOR
+   */
   MisassignmentMeasurement() : nMeasurements(0)  { bookMonitoringHistograms();  }
     
     void initJetUncertainties(TString uncFileName,  TString ptFileName, TString etaFileName,  TString phiFileName);
+
+  
+  /**
+     @short DTOR
+   */
 
   ~MisassignmentMeasurement()  { }
 
@@ -40,8 +48,20 @@ class MisassignmentMeasurement
   */
   void bookMonitoringHistograms();
 
-  //
+  /**
+     @short fixes extremities, averages quantities, fits the bias and pulls
+   */
+  void finishMonitoringHistograms();
+
+  /**
+     @short dumps current version of the histograms to file
+   */
   void saveMonitoringHistograms();
+
+  /**
+     @short resets the histogram contents
+   */
+  void resetHistograms(bool fullReset=false);
 
   /**
      @short returns a collection of randomly rotated leptons
@@ -72,18 +92,22 @@ class MisassignmentMeasurement
     }
   void setBiasCorrections(TString cat,double val) {bias[cat]=val; }
   double getNorm(TString cat="all") { return kNorm[cat]; }
-  double getTrueCorrectPairsFraction(TString cat="all") { return fTrueCorrectPairs[cat]; }
+  std::vector<double> getTrueCorrectPairsFraction(TString cat="all") 
+    {
+      std::vector<double> res(2,0);
+      TH1 *h=controlHistos.getHisto("truefcorr",cat);
+      res[0]=h->GetMean();
+      res[1]=h->GetMeanError();
+      return res;
+   }
 
   void fitCurrentModelsToData();
 
  private:
-  /**
-   */
-  void resetHistograms();
 
   int nMeasurements;
   std::map<TString,double> kNorm;
-  std::map<TString,double> fTrueCorrectPairs, fCorrectPairsEst, fCorrectPairsEstErr;
+  std::map<TString,double> fCorrectPairsEst, fCorrectPairsEstErr;
   std::map<TString,double> alphaEst,alphaEstErr;
 
   std::map<TString,double> bias;

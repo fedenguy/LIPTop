@@ -559,7 +559,7 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
 	  if(nbtags==0 && evmeasurements[5]!=0) continue;
 	  if(nbtags==1 && evmeasurements[5]!=1) continue;
 	  if(nbtags==2 && evmeasurements[5]<1) continue;
-	  if(normWeight!=1) continue;
+	  if(normWeight!=0) continue;
 	  mass=evmeasurements[0];
 	  combData.add(RooArgSet(mass,massCategory));
 	  massProfile->Fill(ipt,mass.getVal());
@@ -575,9 +575,9 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
   RooRealVar g_mean_slope("#mu_{G}(slope)","g_mean_slope",0.01,0.,1.);    
   RooRealVar g_mean_shift("#mu_{G}(intercept)","g_mean_shift",162,100,180); 
   RooRealVar g_sigma_slope("#sigma_{G}(slope)","g_sigma_slope",0.01,0.,1.);
-  RooRealVar g_sigma_shift("#sigma_{G}(intercept)","g_sigma_shift",10,0.,25);
+  RooRealVar g_sigma_shift("#sigma_{G}(intercept)","g_sigma_shift",10,0.,30);//25);
   RooRealVar l_mean_slope("mpv_{L}(slope)","l_mean_slope",0.,0.,1.);
-  RooRealVar l_mean_shift("mpv_{L}(intercept)","l_mean_shift",212,150,250); 
+  RooRealVar l_mean_shift("mpv_{L}(intercept)","l_mean_shift",140,100,250);//0212,150,250); 
   RooRealVar l_sigma_slope("#sigma_{L}(slope)","l_sigma_slope",0.,0.,1.);
   RooRealVar l_sigma_shift("#sigma_{L}(intercept)","l_sigma_shift",10,0,25);
   RooRealVar massfrac_slope("#alpha(slope)","massfrac_slope",0,0,0.01);

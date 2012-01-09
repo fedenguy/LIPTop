@@ -195,12 +195,20 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F("btagupvar",";b-tag multiplicity;Events", 3, 0.,3.) );
 
   controlHistos.addHistogram( new TH1F("nbtags",";b-tag multiplicity (CSVL);Events", 4, 0.,4.) );
+  controlHistos.addHistogram( new TH1F("csv",";b-tag discriminator (CSV);Events", 100, -0.2,1.2) );
   controlHistos.addHistogram( new TH1F("csvb",";b-tag discriminator (CSV);Events", 100, -0.2,1.2) );
   controlHistos.addHistogram( new TH1F("csvlight",";b-tag discriminator (CSV);Events", 100, -0.2,1.2) );
 
+  controlHistos.addHistogram( new TH1F("nbtagstche",";b-tag multiplicity (TCHEL);Events", 4, 0.,4.) );
+  controlHistos.addHistogram( new TH1F("tche",";b-tag discriminator (TCHE);Events", 100, -5,25) );
+  controlHistos.addHistogram( new TH1F("tcheb",";b-tag discriminator (TCHE);Events", 100, -5,25) );
+  controlHistos.addHistogram( new TH1F("tchelight",";b-tag discriminator (TCHE);Events", 100, -5,25) );
+
+
   //final control
   controlHistos.addHistogram( new TH1F ("pttbar", "; p_{T} (t#bar{t}) [GeV/c]; Events / (10 GeV/c)", 20, 0.,200.) );
-  double massAxis[]={0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,250,300,400,500,1000,2000};
+  //double massAxis[]={0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,250,300,400,500,1000,2000};
+  double massAxis[]={10,20,30,40,50,60,70,80,90,100,115,130,145,160,185,200,250,300,400,500,1000,2000};
   int nMassBins=sizeof(massAxis)/sizeof(double)-1;
   controlHistos.addHistogram( new TH1D("mlj","Lepton-jet spectrum;Invariant Mass(l,j) [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );
   controlHistos.addHistogram( new TH1D("drlj","Lepton-jet spectrum;#Delta R(l,j);Lepton-jet pairs",50,0,6) );
@@ -213,7 +221,7 @@ int main(int argc, char* argv[])
   TString labels[]={"2 leptons",
 		    "M>12 #wedge |M-M_{Z}|>15",
 		    "#geq 2 jets",
-		    "E_{T}^{miss}>30/20 (ee,mumu/emu)",
+		    "E_{T}^{miss}>30/0",
 		    "op. sign",
 		    "=0 b-tags",
 		    "=1 b-tag",
@@ -231,6 +239,7 @@ int main(int argc, char* argv[])
       TH1D *cutflowH=new TH1D("evtflow"+cats[ivar],";Cutflow;Events",nsteps,0,nsteps);
       for(int ibin=0; ibin<nsteps; ibin++) cutflowH->GetXaxis()->SetBinLabel(ibin+1,labels[ibin]);
       controlHistos.addHistogram( cutflowH );
+      controlHistos.addHistogram(new TH1F ("osjetbins"+cats[ivar], "; Jet bin after OS; Events", 4, 0.,4.) );
       controlHistos.addHistogram( new TH1D("dilmassctr"+cats[ivar],";Region;Events",2,0,2) );
       controlHistos.addHistogram( new TH1D("mtsum"+cats[ivar],";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
       controlHistos.addHistogram( new TH1D("ptsum"+cats[ivar],";p_{T}(l^{(1)})+p_{T}(l^{(2)});Events",100,0,500) );
@@ -320,9 +329,10 @@ int main(int argc, char* argv[])
       TString evtag=proctag;
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
-      TTree *outT = evTree->CloneTree(0);
+      //TTree *outT = evTree->CloneTree(0);
+      TTree *outT = new TTree("data","Event summary");
       outT->SetDirectory(spyDir);
-      spyEvents->initTree(outT,false);
+      spyEvents->initTree(outT);
       cout << "Creating event summary file:" << summaryName << endl;
     }
   
@@ -424,7 +434,7 @@ int main(int argc, char* argv[])
 	  const size_t nCatsToFill=catsToFill.size();
 	  
 	  //kinematics with propagated variations
-	  int nseljetsLoose(0),nbtags(0);
+	  int nseljetsLoose(0),nbtags(0),nbtagstche(0);
 	  LorentzVectorCollection prunedJetColl;
 	  top::PhysicsObjectJetCollection ptOrderedJets;
 	  for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
@@ -434,6 +444,7 @@ int main(int argc, char* argv[])
 	      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
 	      ptOrderedJets.push_back( orderedJetColl[ijet] );
 	      nbtags += (orderedJetColl[ijet].btag7>0.244);
+	      nbtagstche += (orderedJetColl[ijet].btag1>1.7);
 	      nseljetsLoose ++;
 	      prunedJetColl.push_back(jetColl[ijet]);
 	    }
@@ -477,7 +488,7 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( theMET.pt()>30 );
+	  bool passMet( !isSameFlavor || theMET.pt()>30 );
 	  bool isOS(dilcharge<0);
 	  
 	  //fill selection histograms
@@ -530,6 +541,7 @@ int main(int argc, char* argv[])
 		{
 		  if(ictf==0 && ivar==0) selEvents+=weight;
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELOS,weight);
+		  controlHistos.fillHisto("osjetbins"+cats[ivar],ctf,nseljetsLoose-2,weight);
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SEL0BTAGS+btagbin,weight);
 		  controlHistos.fillHisto("mtsum"+cats[ivar],ctf,mtsum,weight);
 		  controlHistos.fillHisto("ptsum"+cats[ivar],ctf,ptsum,weight);
@@ -561,12 +573,15 @@ int main(int argc, char* argv[])
 			      float pt=jetColl[ijet].pt();
 			      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
 			      float btagdisc=orderedJetColl[ijet].btag7;
+			      float btagdisctche=orderedJetColl[ijet].btag1;
 			      bool isMatchedToB( fabs(orderedJetColl[ijet].flavid)==5 );
 			      controlHistos.fillHisto( (isMatchedToB ? "csvb" : "csvlight") ,ctf,btagdisc,weight);
+			      controlHistos.fillHisto( (isMatchedToB ? "tcheb" : "tchelight") ,ctf,btagdisctche,weight);
 			    }	 
 			}
 			  
   		      controlHistos.fillHisto("nbtags",ctf,nbtags,weight);
+  		      controlHistos.fillHisto("nbtagstche",ctf,nbtags,weight);
 		      controlHistos.fillHisto("nverticesafteros",ctf,ev.nvtx,weight,true);
 		      controlHistos.fillHisto("pttbar",ctf,ttbar_t.pt(),weight);
 		      controlHistos.fillHisto("mjj",ctf,jetSystem.mass(),weight);
@@ -574,14 +589,20 @@ int main(int argc, char* argv[])
 		      controlHistos.fillHisto("mindrlj",ctf,mindrlj,weight,true);
 		      controlHistos.fillHisto("nleptons",ctf,phys.leptons.size()-2,weight);
 
-		      //just for the leading pT jets
 		      int nbtagstchel = ((ptOrderedJets[0].btag1>1.7) + (ptOrderedJets[1].btag1>1.7));
 		      int nbtagscsvm  = ((ptOrderedJets[0].btag7>0.679) + (ptOrderedJets[1].btag7>0.679));
-		      for(size_t ijet=0; ijet<2; ijet++)
+		      for(size_t ijet=0; ijet<ptOrderedJets.size(); ijet++)
 			{
-			  controlHistos.fillHisto("jet",ctf,ptOrderedJets[ijet].pt(),weight);
-			  if(nbtagstchel>0) controlHistos.fillHisto("jetafter1btagtchel",ctf,ptOrderedJets[ijet].pt(),weight);
-			  if(nbtagscsvm>0)  controlHistos.fillHisto("jetafter1btagcsvm",ctf,ptOrderedJets[ijet].pt(),weight);
+			  controlHistos.fillHisto("csv" ,ctf,ptOrderedJets[0].btag7,weight);
+			  controlHistos.fillHisto("tche" ,ctf,ptOrderedJets[0].btag1,weight);
+
+			  //just for the leading pT jets
+			  if(ijet<2)
+			    {
+			      controlHistos.fillHisto("jet",ctf,ptOrderedJets[ijet].pt(),weight);
+			      if(nbtagstchel>0) controlHistos.fillHisto("jetafter1btagtchel",ctf,ptOrderedJets[ijet].pt(),weight);
+			      if(nbtagscsvm>0)  controlHistos.fillHisto("jetafter1btagcsvm",ctf,ptOrderedJets[ijet].pt(),weight);
+			    }
 			}
 
 		      controlHistos.fillHisto("leadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),weight);

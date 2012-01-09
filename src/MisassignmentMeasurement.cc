@@ -12,17 +12,13 @@ using namespace top;
 void MisassignmentMeasurement::bookMonitoringHistograms()
 {
   //m_lj plots
-  double massAxis[]={0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,250,300,400,500,1000,2000};
+  //  double massAxis[]={10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,250,300,400,500,1000,2000};
+  double massAxis[]={10,20,30,40,50,60,70,80,90,100,115,130,145,160,185,200,250,300,400,500,1000,2000};
 
   int nMassBins=sizeof(massAxis)/sizeof(double)-1;
   TString spec[]={"","avg","data"};
   for(size_t is=0; is<3; is++)
     {
-      TH1D *h=new TH1D(spec[is]+"jetflavor","Jet flavor;Jet flavor;Jets",3,0,3);
-      h->GetXaxis()->SetBinLabel(1,"udsg");
-      h->GetXaxis()->SetBinLabel(2,"c");
-      h->GetXaxis()->SetBinLabel(3,"b");
-      controlHistos.addHistogram( h );
       controlHistos.addHistogram( new TH1D(spec[is]+"inclusivemlj","Lepton-jet spectrum;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );
       controlHistos.addHistogram( new TH1D(spec[is]+"correctmlj","Correct assignments;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );     
       controlHistos.addHistogram( new TH1D(spec[is]+"wrongmlj","Misassignments;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) );          
@@ -31,7 +27,12 @@ void MisassignmentMeasurement::bookMonitoringHistograms()
       controlHistos.addHistogram( new TH1D(spec[is]+"wrongmodelmlj","Missassignment model;Invariant Mass [GeV/c^{2}];Lepton-jet pairs/#Delta M",nMassBins,massAxis) ); 
     }
  
-  //pull plots
+  //averaged plots only
+  TH1D *h=new TH1D("jetflavor","Jet flavor;Jet flavor;Jets",3,0,3);
+  h->GetXaxis()->SetBinLabel(1,"udsg");
+  h->GetXaxis()->SetBinLabel(2,"c");
+  h->GetXaxis()->SetBinLabel(3,"b");
+  controlHistos.addHistogram( h );
   controlHistos.addHistogram( new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",25,-0.52,0.48) );
   controlHistos.addHistogram( new TH1D("pull",";pull=#Delta f_{correct assignments} / #sigma_{stat};Pseudo-experiments",25,-5.2,4.8) );
   controlHistos.addHistogram( new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",50,0,1) );
@@ -62,21 +63,49 @@ void MisassignmentMeasurement::initJetUncertainties(TString uncFileName,  TStrin
 }
 
 //
-void MisassignmentMeasurement::resetHistograms()
+void MisassignmentMeasurement::resetHistograms(bool fullReset)
 {
-  TString cats[]={"all","ee","mumu","emu","ll"};
-  for(size_t icat=0; icat<sizeof(cats)/sizeof(TString); icat++)
-    {
-      controlHistos.getHisto("jetflavor",cats[icat])->Reset("ICE");
-      controlHistos.getHisto("inclusivemlj",cats[icat])->Reset("ICE");
-      controlHistos.getHisto("correctmlj",cats[icat])->Reset("ICE");
-      controlHistos.getHisto("wrongmlj",cats[icat])->Reset("ICE");
-      controlHistos.getHisto("rotmlj",cats[icat])->Reset("ICE");
-      controlHistos.getHisto("swapmlj",cats[icat])->Reset("ICE");
-      controlHistos.getHisto("wrongmodelmlj",cats[icat])->Reset("ICE");
-    }
+  if(fullReset) nMeasurements=0;
+  SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
+  for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
+    for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
+      {
+	TString hname=hit->second->GetName();
+	if(!fullReset)
+	  {
+	    if(hname.Contains("avg")) continue; 
+	    if(hname.Contains("pull")) continue; 
+	    if(hname.Contains("bias")) continue; 
+	    if(hname.Contains("staterr")) continue; 
+	    if(hname.Contains("fcorr")) continue; 
+	    if(hname.Contains("truefcorr")) continue; 
+	    if(hname.Contains("jetflavor")) continue;
+	    if(hname.Contains("knorm")) continue;
+	  }
+	hit->second->Reset("ICE");
+      }
 }
 
+//
+void MisassignmentMeasurement::finishMonitoringHistograms()
+{
+  SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
+  for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
+    {
+      for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
+	{
+	  fixExtremities(hit->second,true,true);
+	  TString hname=hit->second->GetName();
+	  bool doAverage( (hname.Contains("jetflavor")  || hname.Contains("knorm") 
+			   || hname.Contains("fcorr")   || hname.Contains("avg") 
+			   || hname.Contains("staterr") || hname.Contains("bias") 
+			   || hname.Contains("pull")) && nMeasurements>0);  
+	  bool doGausFit(hname.Contains("bias") || hname.Contains("pull"));
+	  if(doAverage)  hit->second->Scale(1./nMeasurements); 
+	  if(doGausFit)  hit->second->Fit("gaus","Q");
+        }
+    }
+}
 
 //
 void MisassignmentMeasurement::saveMonitoringHistograms()
@@ -92,18 +121,7 @@ void MisassignmentMeasurement::saveMonitoringHistograms()
       TDirectory *dir=baseOutDir->mkdir(it->first);
       dir->cd();
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
-	{
-	  fixExtremities(hit->second,true,true);
-	  
-	  TString hname=hit->second->GetName();
-	  if(hname.Contains("bias") || hname.Contains("pull"))
-	    {
-	      if(nMeasurements>0) hit->second->Scale(1./nMeasurements);
-	      hit->second->Fit("gaus","Q");
-	    }
-	  if( (hname.Contains("jetflavor") || hname.Contains("knorm") || hname.Contains("fcorr") || hname.Contains("avg") || hname.Contains("staterr")) && nMeasurements>0)  hit->second->Scale(1./nMeasurements); 
-          hit->second->Write();
-        }
+	hit->second->Write();
     }
   
   //close file
@@ -183,9 +201,11 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 
 	  EventSummary_t &ev = evHandler.getEvent();
 	  int evcat=ev.cat;
+	  bool hasSignal( ev.evmeasurements[0]>0 );
 
 	  //save local event
 	  PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+
 	  PhysicsObjectLeptonCollection ileptons = phys.leptons;
 
 	  LorentzVectorCollection jetColl;
@@ -234,16 +254,17 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	    if(j==i) continue;
 	    imixtry++;
 	    
-	    if(imixtry>50) { 
-	      cout << "Failed to mix 1 event" << endl;
-	      cout << imixtry << " " << j << " " << i << " " << itrial << endl;
-	      continue; 
-	    }
+	    if(imixtry>50) 
+	      { 
+		cout << "Failed to mix 1 event" << endl;
+		cout << imixtry << " " << j << " " << i << " " << itrial << endl;
+		continue; 
+	      }
 
 	    evTree->GetEntry(j);
 	    EventSummary_t &mixev = evHandler.getEvent();
-	    if(evcat!= mixev.cat) continue;
-
+	    //if(evcat!= mixev.cat) continue;
+	    
 	    //get the jets
 	    PhysicsEvent_t mixphys = getPhysicsEventFrom(mixev);
 	    LorentzVectorCollection mixjetColl;
@@ -327,21 +348,13 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 		      int partonMatch=phys.jets[ origJetsIdx[ijet] ].genid;
 		      int flavorMatch=phys.jets[ origJetsIdx[ijet] ].flavid;
 		      int assignCode=(lit->genid*partonMatch);
-		      bool isCorrect( (assignCode<0) && fabs(flavorMatch)==5 );
-		  
+		      bool isCorrect( (assignCode<0) && hasSignal && fabs(flavorMatch)==5 );
 		      for(size_t icateg=0; icateg<categs.size(); icateg++)
 			{
 			  TString ctf=categs[icateg];
-			  if(nCorrectAssignments.find(ctf)==nCorrectAssignments.end())
-			    {
-			      nCorrectAssignments[ctf]=0;
-			    }
-			  if(mlj>minMlj) 
-			    {
-			      nCorrectAssignments[ctf] += isCorrect;
-			    }
+			  if(nCorrectAssignments.find(ctf)==nCorrectAssignments.end())  nCorrectAssignments[ctf]=0;
+			  if(mlj>minMlj)  			                        nCorrectAssignments[ctf] += isCorrect;
 			  nCorrectAssignmentsFullSpectrum[ctf] += isCorrect;
-			
 		      
 			  controlHistos.fillHisto("inclusivemlj",ctf,mlj,1,true);
 			  controlHistos.fillHisto(isCorrect ? "correctmlj" : "wrongmlj",ctf,mlj,1,true);
@@ -455,8 +468,6 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       // fCorrectPairsEstErr[ctf] = nCorrectPairsEstErr/nPairsTotal;
       fCorrectPairsEst[ctf]    = 1.-nPairsAboveCut/nPairsModelAboveCut-bias[ctf];
       fCorrectPairsEstErr[ctf] = sqrt(pow(nPairsAboveCut*nPairsModelAboveCutErr,2)+pow(nPairsModelAboveCut*nPairsBelowCutErr,2))/pow(nPairsModelAboveCut,2);
-      fTrueCorrectPairs[ctf]   = double(nCorrectAssignments[ctf])/double(nPairsTotal);
-      //      fTrueCorrectPairsFullSpectrum[ctf]   = double(nCorrectAssignmentsFullSpectrum[ctf])/double(nPairsTotal);
       double sfmc              = double(nCorrectAssignmentsFullSpectrum[ctf])/double(nCorrectAssignments[ctf]);
       
       //average models for posterity
@@ -471,13 +482,13 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       //estimate monitoring distributions
       if(!isData)
 	{
-	  controlHistos.getHisto( "avgjetflavor", ctf )->Add( controlHistos.getHisto("jetflavor",ctf) );
-	  controlHistos.fillHisto("truefcorr", ctf, fTrueCorrectPairs[ctf]);
+	  double fCorrectMCTruth=double(nCorrectAssignments[ctf])/double(nPairsTotal);
+	  controlHistos.fillHisto("truefcorr", ctf, fCorrectMCTruth);
 	  controlHistos.fillHisto("fcorrsf", ctf, sfmc);
 	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst[ctf]);
 	  controlHistos.fillHisto("knorm",ctf,kNorm[ctf]);
-	  controlHistos.fillHisto("bias",ctf, fCorrectPairsEst[ctf]-fTrueCorrectPairs[ctf]);
-	  controlHistos.fillHisto("pull",ctf, (fCorrectPairsEst[ctf]-fTrueCorrectPairs[ctf])/fCorrectPairsEstErr[ctf]);
+	  controlHistos.fillHisto("bias",ctf, fCorrectPairsEst[ctf]-fCorrectMCTruth);
+	  controlHistos.fillHisto("pull",ctf, (fCorrectPairsEst[ctf]-fCorrectMCTruth)/fCorrectPairsEstErr[ctf]);
 	  controlHistos.fillHisto("staterr",ctf, fCorrectPairsEstErr[ctf]/fCorrectPairsEst[ctf]);
 	}
     }

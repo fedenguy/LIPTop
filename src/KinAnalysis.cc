@@ -151,78 +151,77 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 	  {
 	    if(ijet==jjet) continue;
 	    nComb++;
-		  
-// 	    for(int ivar=0; ivar<3; ivar++)
-// 	      {
-// 		if(ivar>0)
-// 		  {
-// 		    jecUnc->setJetEta(jets[ijet].first.Eta());
-// 		    jecUnc->setJetPt(jets[ijet].first.Pt());
-// 		    jet1Scale = 1.0 + (jet1Scale<1?-1:+1)*jecUnc->getUncertainty(true);
+	    if(scheme_=="jesup" || scheme_=="jesdown")
+	      {
+		int shiftSign( scheme_=="jesup" ? 1 : -1 );
+		jecUnc->setJetEta(jets[ijet].first.Eta());
+		jecUnc->setJetPt(jets[ijet].first.Pt());
+		jet1Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
 		    
-// 		    jecUnc->setJetEta(jets[jjet].first.Eta());
-// 		    jecUnc->setJetPt(jets[jjet].first.Pt());
-// 		    jet2Scale = 1.0 + (jet2Scale<1?-1:+1)*jecUnc->getUncertainty(true);
-// 		  }
-				  
-		for(int itry=1; itry<maxTries_; itry++)
-		  {		  
-		    //leptons
-		    TLorentzVector pl1 = leptons[0].first;
-		    TLorentzVector pl2 = leptons[1].first;
-
-		    //jets;
-		    double deltaPz = deltaPzFunc_->GetRandom();
-		    float ptScaleRes = (ptResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom()-1.0);
-		    float etaRes = etaResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom();
-		    float phiRes = phiResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom();
-		    float newpt = (1.0+ptScaleRes)*jets[ijet].first.Pt();
-		    float neweta = etaRes+jets[ijet].first.Eta();
-		    float newphi = phiRes+jets[ijet].first.Phi();
-		    TLorentzVector pb1;
-		    pb1.SetPtEtaPhiM(newpt,neweta,newphi,mb_);
-		    pb1 *= jet1Scale;
-
-		    ptScaleRes = (ptResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom()-1.0);
-		    etaRes = etaResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom();
-		    phiRes = phiResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom();
-		    newpt = (1.0+ptScaleRes)*jets[jjet].first.Pt();
-		    neweta = etaRes+jets[jjet].first.Eta();
-		    newphi = phiRes+jets[jjet].first.Phi();
-		    TLorentzVector pb2;
-		    pb2.SetPtEtaPhiM(newpt,neweta,newphi,mb_);
-		    pb2 *= jet2Scale;
-		    
-		    //MET (must correct for jet energy scale/resolution smearing)
-		    TLorentzVector met(mets[0].first);
-		    float metResol= 1.0+rndGen_.Gaus(0,0.1);
-		    double dPhiMET = rndGen_.Gaus(0,0.1);
-		    float metx = metResol*( met.Px()-(pb1.Px()-jets[ijet].first.Px())-(pb2.Px()-jets[jjet].first.Px())-(pl1.Px()-leptons[0].first.Px())-(pl2.Px()-leptons[1].first.Px()) );
-		    float mety = metResol*( met.Py()-(pb1.Py()-jets[ijet].first.Py())-(pb2.Py()-jets[jjet].first.Py())-(pl1.Py()-leptons[0].first.Py())-(pl2.Py()-leptons[1].first.Py()) );
-		    TVector3 metConstraint( metx, mety, deltaPz-pb1.Pz()-pl1.Pz()-pb2.Pz()-pl2.Pz());
-		    metConstraint.RotateZ(dPhiMET);
-		      
-		    //prevent strange values
-		    if(pl1.Pt()<1 || pb1.Pt()<1 || pl2.Pt()<1 || pb2.Pt()<1 || metConstraint.Pt()<1) continue;
-		    
-		    TTbarSolutionCollection_t sols = kin_.findSolutions(pl1,pb1,pl2,pb2,metConstraint,mw_);    
-		    if(sols.size()==0) continue;
-
-		    //compute the full kinematics obtained
-		    TTbarSolution_t *sol = &(sols.back());
-		    TLorentzVector ttbar = sol->pt1+sol->pt2;
-		    float avgMtop = (sol->pt1.M()+sol->pt2.M())*0.5;
-		    float mttbar = ttbar.M();
-		    std::vector<double> mt2 = getMT2( *sol );
-		    float afb = sol->pt1.Eta()-sol->pt2.Eta();
-
-		    //fill histos
-		    resHandler_.getHisto("mt", nComb)->Fill( avgMtop );
-		    resHandler_.getHisto("mttbar",nComb)->Fill(mttbar);
-		    resHandler_.getHisto("mt2",nComb)->Fill(mt2[0]);
-		    resHandler_.getHisto("afb",nComb)->Fill(afb);
-		  }
-// 	      }
+		jecUnc->setJetEta(jets[jjet].first.Eta());
+		jecUnc->setJetPt(jets[jjet].first.Pt());
+		jet2Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
+	      }
+	    
+	    for(int itry=1; itry<maxTries_; itry++)
+	      {		  
+		//leptons
+		TLorentzVector pl1 = leptons[0].first;
+		TLorentzVector pl2 = leptons[1].first;
+		
+		//jets;
+		double deltaPz = deltaPzFunc_->GetRandom();
+		float ptScaleRes = (ptResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom()-1.0);
+		if(scheme_=="jer") ptScaleRes *=1.2;
+		float etaRes = etaResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom();
+		float phiRes = phiResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom();
+		float newpt = (1.0+ptScaleRes)*jets[ijet].first.Pt();
+		float neweta = etaRes+jets[ijet].first.Eta();
+		float newphi = phiRes+jets[ijet].first.Phi();
+		TLorentzVector pb1;
+		pb1.SetPtEtaPhiM(newpt,neweta,newphi,mb_);
+		pb1 *= jet1Scale;
+		
+		ptScaleRes = (ptResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom()-1.0);
+		if(scheme_=="jer") ptScaleRes *=1.2;
+		etaRes = etaResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom();
+		phiRes = phiResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom();
+		newpt = (1.0+ptScaleRes)*jets[jjet].first.Pt();
+		neweta = etaRes+jets[jjet].first.Eta();
+		newphi = phiRes+jets[jjet].first.Phi();
+		TLorentzVector pb2;
+		pb2.SetPtEtaPhiM(newpt,neweta,newphi,mb_);
+		pb2 *= jet2Scale;
+		
+		//MET (must correct for jet energy scale/resolution smearing)
+		TLorentzVector met(mets[0].first);
+		float metResol= 1.0+rndGen_.Gaus(0,0.1);
+		double dPhiMET = rndGen_.Gaus(0,0.1);
+		float metx = metResol*( met.Px()-(pb1.Px()-jets[ijet].first.Px())-(pb2.Px()-jets[jjet].first.Px())-(pl1.Px()-leptons[0].first.Px())-(pl2.Px()-leptons[1].first.Px()) );
+		float mety = metResol*( met.Py()-(pb1.Py()-jets[ijet].first.Py())-(pb2.Py()-jets[jjet].first.Py())-(pl1.Py()-leptons[0].first.Py())-(pl2.Py()-leptons[1].first.Py()) );
+		TVector3 metConstraint( metx, mety, deltaPz-pb1.Pz()-pl1.Pz()-pb2.Pz()-pl2.Pz());
+		metConstraint.RotateZ(dPhiMET);
+		
+		//prevent strange values
+		if(pl1.Pt()<1 || pb1.Pt()<1 || pl2.Pt()<1 || pb2.Pt()<1 || metConstraint.Pt()<1) continue;
+		
+		TTbarSolutionCollection_t sols = kin_.findSolutions(pl1,pb1,pl2,pb2,metConstraint,mw_);    
+		if(sols.size()==0) continue;
+		
+		//compute the full kinematics obtained
+		TTbarSolution_t *sol = &(sols.back());
+		TLorentzVector ttbar = sol->pt1+sol->pt2;
+		float avgMtop = (sol->pt1.M()+sol->pt2.M())*0.5;
+		float mttbar = ttbar.M();
+		std::vector<double> mt2 = getMT2( *sol );
+		float afb = sol->pt1.Eta()-sol->pt2.Eta();
+		
+		//fill histos
+		resHandler_.getHisto("mt", nComb)->Fill( avgMtop );
+		resHandler_.getHisto("mttbar",nComb)->Fill(mttbar);
+		resHandler_.getHisto("mt2",nComb)->Fill(mt2[0]);
+		resHandler_.getHisto("afb",nComb)->Fill(afb);
+	      }
  	  }
       }
     

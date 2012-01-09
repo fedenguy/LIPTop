@@ -140,9 +140,9 @@ namespace top
   //
   void EventSummaryHandler::fillTreeWithEvent(const EventSummary_t &ev, std::vector<float> &addMeasurements)
   {
-    evSummary_.run=ev.run; evSummary_.lumi=ev.lumi; evSummary_.event=ev.event;
-    evSummary_.cat=ev.cat; evSummary_.nvtx=ev.nvtx; evSummary_.ngenpu=ev.ngenpu;
-    evSummary_.rho=ev.rho; evSummary_.weight=ev.weight; evSummary_.nparticles=ev.nparticles;
+    evSummary_.run=ev.run; evSummary_.lumi=ev.lumi;     evSummary_.event=ev.event;
+    evSummary_.cat=ev.cat; evSummary_.nvtx=ev.nvtx;     evSummary_.ngenpu=ev.ngenpu;
+    evSummary_.rho=ev.rho; evSummary_.nparticles=ev.nparticles;
     evSummary_.isSignal = ev.isSignal;
     evSummary_.weight = ev.weight;
     evSummary_.normWeight = ev.normWeight;
@@ -151,11 +151,17 @@ namespace top
     evSummary_.nparticles=0;
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
-	evSummary_.px[ipart]=ev.px[ipart];       evSummary_.py[ipart]=ev.py[ipart];
-	evSummary_.pz[ipart]=ev.pz[ipart];       evSummary_.en[ipart]=ev.en[ipart];
-	evSummary_.id[ipart]=ev.id[ipart];       evSummary_.genid[ipart]=ev.genid[ipart];
-	evSummary_.info1[ipart]=ev.info1[ipart]; evSummary_.info2[ipart]=ev.info2[ipart];
-	evSummary_.info3[ipart]=ev.info3[ipart]; evSummary_.info4[ipart]=ev.info4[ipart];
+	evSummary_.px[ipart]=ev.px[ipart];    
+	evSummary_.py[ipart]=ev.py[ipart];
+	evSummary_.pz[ipart]=ev.pz[ipart];     
+	evSummary_.en[ipart]=ev.en[ipart];
+	evSummary_.id[ipart]=ev.id[ipart];      
+	evSummary_.genid[ipart]=ev.genid[ipart];
+	evSummary_.genflav[ipart]=ev.genflav[ipart];
+	evSummary_.info1[ipart]=ev.info1[ipart]; 
+	evSummary_.info2[ipart]=ev.info2[ipart];
+	evSummary_.info3[ipart]=ev.info3[ipart]; 
+	evSummary_.info4[ipart]=ev.info4[ipart];
 	evSummary_.info5[ipart]=ev.info5[ipart];
 	evSummary_.info6[ipart]=ev.info6[ipart];
 	evSummary_.info7[ipart]=ev.info7[ipart];
