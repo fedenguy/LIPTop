@@ -1,12 +1,13 @@
 <use name="LIP/Top"/>
 <environment>
-  <bin name="runKinAnalysis"           file="runKinAnalysis.cc"></bin>
-  <bin name="displayKinResults"        file="displayKinResults.cc"></bin>  
-  <bin name="showControlDistributions" file="showControlDistributions.cc"></bin> 
-  <bin name="showMassDistribution"     file="showMassDistribution.cc"></bin> 
-  <bin name="TopMassPDFfitter"         file="TopMassPDFfitter.cc"></bin>
-  <bin name="TopMassCalibration"       file="TopMassCalibration.cc"></bin>
-  <bin name="MljAnalysisCalibration"   file="MljAnalysisCalibration.cc"></bin>
-  <bin name="fitDYcontribution"        file="fitDYcontribution.cc"></bin>
+  <bin name="runKinAnalysis"            file="runKinAnalysis.cc"></bin>
+  <bin name="displayKinResults"         file="displayKinResults.cc"></bin>  
+  <bin name="showControlDistributions"  file="showControlDistributions.cc"></bin> 
+  <bin name="showMassDistribution"      file="showMassDistribution.cc"></bin> 
+  <bin name="TopMassPDFfitter"          file="TopMassPDFfitter.cc"></bin>
+  <bin name="TopMassCalibration"        file="TopMassCalibration.cc"></bin>
+  <bin name="MljAnalysisCalibration"    file="MljAnalysisCalibration.cc"></bin>
+  <bin name="HeavyFlavorFitCalibration" file="HeavyFlavorFitCalibration.cc"></bin>
+  <bin name="fitDYcontribution"         file="fitDYcontribution.cc"></bin>
 </environment>
 <Flags CXXFLAGS="-g"/>

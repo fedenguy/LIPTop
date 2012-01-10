@@ -103,9 +103,11 @@ void HFCMeasurement::initHFCModel()
   bool fitEq(fitType_==FIT_EB_AND_EQ);
 
   //top decay modelling
-  if(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC) model.r = new RooRealVar("r","R",1.0,0.,2.0);
-  else if(fitType_==FIT_R_AND_EB)                 model.r = new RooRealVar("r","R",1.0,0.9,1.1);
-  else                                            model.r = new RooRealVar("r","R",smR_);
+  if(!fitR)                        model.r = new RooRealVar("r","R",smR_);
+  else if(fitType_==FIT_R_AND_EB)  model.r = new RooRealVar("r","R",1.0,0.9,1.1);
+  else                             model.r = new RooRealVar("r","R",1.0,0.,2.0);
+
+
 
   //this is a correction for acceptance (keep constant for now)
   model.lfacceptance = new RooRealVar("lfacceptance","A(R=0)",1.0);
@@ -129,57 +131,60 @@ void HFCMeasurement::initHFCModel()
   model.eq                   = new RooFormulaVar("eq","@0*@1",RooArgSet(*model.abseq,*model.sfeq));
 
   //add exclusive jet multiplicity models
-  TString dilChannels[]={"ee","mumu","emu"};
-  Int_t icat(0);
-  for(size_t ich=0; ich<3; ich++)
+  int icat(0);
+  for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
     {
-      for(int jmult=2; jmult<=maxJets_; jmult++, icat++)
-	{
-	  TString tag=dilChannels[ich]; tag+=jmult;      
-	  categoryKeys_.push_back(tag);
-
-	  model.jetocc[icat] = new RooRealVar("jetocc"+tag,"occ"+tag,1);
-	  
-	  if(fitEq || fitType_==FIT_R_AND_EB)  model.fcorrect[icat]=new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag]);
-	  else       model.fcorrect[icat]=new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag],fcorrect_[tag]-3*fcorrectUnc_[tag],fcorrect_[tag]+3*fcorrectUnc_[tag]);
-	  model.fcorrect_mean_constrain[icat] = new RooRealVar("meanfcorrect_"+tag,"#bar{f_{correct}^{"+tag+"}}",fcorrect_[tag]);
-	  model.fcorrect_sigma_constrain[icat] = new RooRealVar("uncfcorrect_"+tag,"#sigma_{f_{correct}^{"+tag+"}}",fcorrectUnc_[tag]);
-	  model.fcorrect_constrain[icat] = new RooGaussian("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],*model.fcorrect_mean_constrain[icat],*model.fcorrect_sigma_constrain[icat]);
+      TString tag=*cIt;
+      model.jetocc[icat] = new RooRealVar("jetocc"+tag,"occ"+tag,1);
+      
+      if(fitEq || fitType_==FIT_R_AND_EB)  model.fcorrect[icat] = new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag]);
+      else                                 model.fcorrect[icat] = new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag],fcorrect_[tag]-3*fcorrectUnc_[tag],fcorrect_[tag]+3*fcorrectUnc_[tag]);
+      model.fcorrect_mean_constrain[icat]  = new RooRealVar("meanfcorrect_"+tag,"#bar{f_{correct}^{"+tag+"}}",fcorrect_[tag]);
+      model.fcorrect_sigma_constrain[icat] = new RooRealVar("uncfcorrect_"+tag,"#sigma_{f_{correct}^{"+tag+"}}",fcorrectUnc_[tag]);
+      model.fcorrect_constrain[icat]       = new RooGaussian("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],*model.fcorrect_mean_constrain[icat],*model.fcorrect_sigma_constrain[icat]);
 	  	  
-	  if(fitEq ||  fitType_==FIT_R_AND_EB)  model.fttbar[icat]                 = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag]);
-	  else       model.fttbar[icat]                 = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag],fttbar_[tag]-3*fttbarUnc_[tag],fttbar_[tag]+3*fttbarUnc_[tag]);
-	  model.fttbar_mean_constrain[icat]  = new RooRealVar("meanfttbar_"+tag,"#bar{f_{t#bar{t}}^{"+tag+"}}",fttbar_[tag]);
-	  model.fttbar_sigma_constrain[icat] = new RooRealVar("uncfttbar_"+tag,"#sigma_{f_{t#bar{t}}^{"+tag+"}}",fttbarUnc_[tag]);
-	  model.fttbar_constrain[icat]       = new RooGaussian("ctr_fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"} constrain",*model.fttbar[icat],*model.fttbar_mean_constrain[icat],*model.fttbar_sigma_constrain[icat]);
+      if(fitEq ||  fitType_==FIT_R_AND_EB)  model.fttbar[icat] = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag]);
+      else                                  model.fttbar[icat] = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag],fttbar_[tag]-3*fttbarUnc_[tag],fttbar_[tag]+3*fttbarUnc_[tag]);
+      model.fttbar_mean_constrain[icat]    = new RooRealVar("meanfttbar_"+tag,"#bar{f_{t#bar{t}}^{"+tag+"}}",fttbar_[tag]);
+      model.fttbar_sigma_constrain[icat]   = new RooRealVar("uncfttbar_"+tag,"#sigma_{f_{t#bar{t}}^{"+tag+"}}",fttbarUnc_[tag]);
+      model.fttbar_constrain[icat]         = new RooGaussian("ctr_fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"} constrain",*model.fttbar[icat],*model.fttbar_mean_constrain[icat],*model.fttbar_sigma_constrain[icat]);
       
-	  if(fitEq ||  fitType_==FIT_R_AND_EB)   model.fsingletop[icat]                 = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag]);
-	  else        model.fsingletop[icat]                 = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag],fsingletopUnc_[tag]-3*fsingletopUnc_[tag],fsingletop_[tag]+3*fsingletopUnc_[tag]);
-	  model.fsingletop_mean_constrain[icat]  = new RooRealVar("meanfsingletop_"+tag,"#bar{f_{t}^{"+tag+"}}",fsingletop_[tag]);
-	  model.fsingletop_sigma_constrain[icat] = new RooRealVar("uncfsingletop_"+tag,"#sigma_{f_{t}^{"+tag+"}}",fsingletopUnc_[tag]);
-	  model.fsingletop_constrain[icat]       = new RooGaussian("ctr_fsingletop_"+tag,"f_{t}^{"+tag+"} constrain",*model.fsingletop[icat],*model.fsingletop_mean_constrain[icat],*model.fsingletop_sigma_constrain[icat]);
+      if(fitEq ||  fitType_==FIT_R_AND_EB)  model.fsingletop[icat] = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag]);
+      else                                  model.fsingletop[icat] = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag],fsingletopUnc_[tag]-3*fsingletopUnc_[tag],fsingletop_[tag]+3*fsingletopUnc_[tag]);
+      model.fsingletop_mean_constrain[icat]  = new RooRealVar("meanfsingletop_"+tag,"#bar{f_{t}^{"+tag+"}}",fsingletop_[tag]);
+      model.fsingletop_sigma_constrain[icat] = new RooRealVar("uncfsingletop_"+tag,"#sigma_{f_{t}^{"+tag+"}}",fsingletopUnc_[tag]);
+      model.fsingletop_constrain[icat]       = new RooGaussian("ctr_fsingletop_"+tag,"f_{t}^{"+tag+"} constrain",*model.fsingletop[icat],*model.fsingletop_mean_constrain[icat],*model.fsingletop_sigma_constrain[icat]);
 
-	  //create the model
-	  HeavyFlavorPDF *mhfc = new HeavyFlavorPDF("hfcmodel_"+tag,"hfcmodel_"+tag,*model.bmult,*model.r,*model.eb,*model.eq,*model.fcorrect[icat],*model.fttbar[icat],*model.fsingletop[icat],*model.jetocc[icat]);
-	  mhfc->setJetMultiplicity(jmult);
-	  model.pdfSet.add( *mhfc );
+      //create the model
+      HeavyFlavorPDF *mhfc = new HeavyFlavorPDF("hfcmodel_"+tag,"hfcmodel_"+tag,*model.bmult,*model.r,*model.eb,*model.eq,*model.fcorrect[icat],*model.fttbar[icat],*model.fsingletop[icat],*model.jetocc[icat]);
+
+      TString dilCategory(tag);
+      if(tag.Contains("ee"))   dilCategory="ee";
+      if(tag.Contains("emu"))  dilCategory="emu";
+      if(tag.Contains("mumu")) dilCategory="mumu";
+      TString jmultkey=tag;
+      jmultkey=jmultkey.ReplaceAll(dilCategory,"");
+      int jmult=jmultkey.Atoi();
+      mhfc->setJetMultiplicity(jmult);
+      model.pdfSet.add( *mhfc );
       
-	  //add the constraints
-	  RooProdPdf *modelconstr=0;
-	  if(fitType_==FIT_EB || fitType_==FIT_R)
-	    {
-	      modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.fttbar_constrain[icat],*model.fsingletop_constrain[icat]));
-	    }
-	  else if (fitType_==FIT_R_AND_EB) 
-	    {
-	      modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc));
-	    }
-	  else if(fitType_==FIT_EB_AND_EQ)
-	    modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.sfeq_constrain));
-	  
-	  model.constrPDFSet.add( *modelconstr );
+      //add the constraints
+      RooProdPdf *modelconstr=0;
+      if(fitType_==FIT_EB || fitType_==FIT_R)
+	{
+	  modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.fttbar_constrain[icat],*model.fsingletop_constrain[icat]));
 	}
+      else if (fitType_==FIT_R_AND_EB) 
+	{
+	  modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc));
+	}
+      else if(fitType_==FIT_EB_AND_EQ)
+	modelconstr=new RooProdPdf("modelconstr_"+tag,"model x product of constrains",RooArgSet(*mhfc,*model.sfeq_constrain));
+	  
+      model.constrPDFSet.add( *modelconstr );
     }
-  
+    
+  //all done here
   isInit_=true;
 }
 
@@ -193,6 +198,14 @@ void HFCMeasurement::resetModelValues()
   model.sfeb->setVal(sfb_);
   model.abseq->setVal(effq_);
   model.sfeq->setVal(sfq_);
+  int icat=0;
+  for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
+    {
+      TString tag=*cIt;
+      model.fcorrect[icat]->setVal(fcorrect_[tag]);
+      model.fttbar[icat]->setVal(fttbar_[tag]);
+      model.fsingletop[icat]->setVal(fsingletop_[tag]);
+    }
 }
 
 
@@ -274,20 +287,21 @@ void HFCMeasurement::runHFCFit()
   //build the likelihoods per category
   RooArgSet allLL, jetOccupancies;  
   TIterator *pdfIt     = model.constrPDFSet.createIterator();
-  TIterator *modelpdfIt     = model.pdfSet.createIterator();
+  // TIterator *modelpdfIt     = model.pdfSet.createIterator();
   std::vector<RooNLLVar *> theLLsPerCategory;
-  for(size_t icat=0; icat<categoryKeys_.size(); icat++)
+  int icat(0);
+  for(std::set<TString>::iterator cIt = categoryKeys_.begin(); cIt != categoryKeys_.end(); cIt++, icat++)
     {
       //decode this in channel and jet multiplicity
-      TString tag = categoryKeys_[icat];
+      TString tag = *cIt;
 
       TString dilCategory(tag);
-      if(tag.Contains("ee")) dilCategory="ee";
-      if(tag.Contains("emu")) dilCategory="emu";
+      if(tag.Contains("ee"))   dilCategory="ee";
+      if(tag.Contains("emu"))  dilCategory="emu";
       if(tag.Contains("mumu")) dilCategory="mumu";
       
       TString jmultkey=tag;
-      jmultkey=jmultkey.ReplaceAll(dilCategory,"");
+      jmultkey = jmultkey.ReplaceAll(dilCategory,"");
             
       //convert to a binned dataset
       TH1 *h = controlHistos_.getHisto("btags_"+jmultkey,dilCategory);
@@ -327,6 +341,7 @@ void HFCMeasurement::runHFCFit()
   minuit.migrad();
   minuit.setErrorLevel(0.5);     
   minuit.hesse();
+  minuit.minos();
   minuit.setErrorLevel(0.5);     
   RooFitResult *r=minuit.save();
 
@@ -335,22 +350,22 @@ void HFCMeasurement::runHFCFit()
   //draw the result
   if(true)
     {
-      TCanvas *c=getNewCanvas("combination","combination",false);
-      c->cd();
+      //
+      // SUMMARY OF RESULTS
+      //
+      TCanvas *c = new TCanvas("combination","combination",600,600);
       c->SetWindowSize(600,600);
-      c->SetGridx();
-      c->SetGridy();     
 
       //plot the likelihood in the main frame
       RooPlot *frame = 0;
-      TString label("CMS preliminary, #sqrt{s}=7 TeV \\");
+
       TString resLabel;
       if(fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) 
 	{
 	  frame = model.sfeb->frame(Title("Likelihood"),Range(0.8,1.1));
 	  frame->GetXaxis()->SetTitle("SF #varepsilon_{b}");
 	  char buf[100];
-	  sprintf(buf,"SF #varepsilon_{b}=%3.3f #pm %3.2f\\",model.sfeb->getVal(),model.sfeb->getError());
+	  sprintf(buf,"SF #varepsilon_{b}=%3.3f #pm %3.2f, ",model.sfeb->getVal(),model.sfeb->getError());
 	  resLabel += buf;
 	  char buf2[100];
 	  sprintf(buf2,"#varepsilon_{b}=%3.3f #pm %3.2f",model.abseb->getVal()*model.sfeb->getVal(),model.abseb->getVal()*model.sfeb->getError());
@@ -365,6 +380,26 @@ void HFCMeasurement::runHFCFit()
 	  resLabel += buf;
 	}
       combll->plotOn(frame,ShiftToZero(),Name("ll"));
+
+      TLegend *leg = new TLegend(0.2,0.65,0.45,0.9,NULL,"brNDC");
+      formatForCmsPublic(c,leg,"",5);
+      leg->AddEntry("ll","Combined","l");
+
+      TPaveText *pave = new TPaveText(0.15,0.96,0.51,0.99,"NDC");
+      pave->SetBorderSize(0);
+      pave->SetFillStyle(0);
+      pave->SetTextAlign(12);
+      pave->SetTextFont(42);
+      pave->AddText("CMS preliminary");
+      pave->Draw();
+      
+      pave = new TPaveText(0.5,0.96,0.94,0.99,"NDC");
+      pave->SetFillStyle(0);
+      pave->SetBorderSize(0);
+      pave->SetTextAlign(32);
+      pave->SetTextFont(42);
+      pave->AddText(resLabel.Data());
+      pave->Draw();
       
       //debug
       cout << "****** SUMMARY RESULT ******" << endl
@@ -376,26 +411,30 @@ void HFCMeasurement::runHFCFit()
       cout << "****************************" << endl;
 
       //superimpose the other likelihoods now
-      Int_t colors[3]={kGreen+4, kRed, kOrange};
-      for(size_t ill=0; ill< theLLsPerCategory.size(); ill++)
+      int icat(0);
+      for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
 	{
-	  RooPlot *illPlot=theLLsPerCategory[ill]->plotOn(frame,ShiftToZero(),
-							  LineColor(colors[ill/2]),
-							  LineStyle(ill%2+1),
-							  LineWidth(2),
-							  MoveToBack());
-	  double min=illPlot->GetMinimum();
-	  cout << categoryKeys_[ill] << " \t " << min << endl;
-	  
+	  TString tag=*cIt;
+	  TString lltitle("");
+	  TString dilCategory("");
+	  int lcolor(1), lstyle(1);
+	  if(tag.Contains("ee"))   { dilCategory="ee";  lltitle="ee";      lcolor=kGreen+4;}
+	  if(tag.Contains("emu"))  { dilCategory="emu"; lltitle="e#mu";    lcolor=kRed;    }
+	  if(tag.Contains("mumu")) { dilCategory="mumu"; lltitle="#mu#mu"; lcolor=kOrange; }
+	  TString jmult=tag;
+	  jmult=jmult.ReplaceAll(dilCategory,"");
+	  if(jmult=="3") lstyle=9;
+	  lltitle += " (" + jmult + " jets)";
+	  theLLsPerCategory[icat]->plotOn(frame, ShiftToZero(),  LineColor(lcolor), LineStyle(lstyle), LineWidth(2),  MoveToBack(), Name(tag+"ll") );
+	  leg->AddEntry(tag+"ll",lltitle,"l");
 	}
       frame->GetXaxis()->SetTitleOffset(0.8);
       frame->GetYaxis()->SetTitle("-Log(L/L_{Max})");
       frame->GetYaxis()->SetTitleOffset(1);
       frame->Draw();
-      
-      //final format tweak
-      formatForCmsPublic(c,0,label,1);
-
+      leg->SetFillColor(0);
+      leg->SetFillStyle(3001);
+      leg->Draw();
       
       //draw the data and the model sum in a sub-pad
       TPad *npad = new TPad("llpad","ll", 0.6, 0.6, 0.9, 0.9);
@@ -404,13 +443,18 @@ void HFCMeasurement::runHFCFit()
       frame = model.bmult->frame();
 
       RooAddPdf incmodel("incmodel","Inclusive Model",model.pdfSet,jetOccupancies);
-      //alldata->plotOn(frame,Binning(maxJets_),DrawOption("pz"));      
       alldata->plotOn(frame,Binning(maxJets_+1),DrawOption("pz"));
       incmodel.plotOn(frame,Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
       frame->Draw();
+      c->Modified();
+      c->Update();
+      c->SaveAs("HFCLikelihood.png");
+      c->SaveAs("HFCLikelihood.pdf");
+      c->SaveAs("HFCLikelihood.C");
 
-      
-      //for combined fits draw also the contour
+      //
+      // CONTOUR PLOT FOR COMBINED FITS
+      //
       if(fitType_ == FIT_EB_AND_EQ || fitType_==FIT_R_AND_EB)
 	{
 	  c = new TCanvas("contour","contour");
@@ -430,7 +474,13 @@ void HFCMeasurement::runHFCFit()
 	      plot->SetTitle("Contour for 1s,2s,3s between eb and eq") ;
 	    }	 
 	  plot->Draw();
-	  formatForCmsPublic(c,0,label,3);
+	  formatForCmsPublic(c,0,"",3);
+	  c->Modified();
+	  c->Update();
+	  c->SaveAs("HFCContour.C");
+	  c->SaveAs("HFCContour.pdf");
+	  c->SaveAs("HFCContour.png");
+
 	}
     }
 }
@@ -446,7 +496,7 @@ void HFCMeasurement::runHFCDiffFit(TString dilCategory)
   //build the likelihoods per category
   RooArgSet allLL, jetOccupancies;  
   TIterator *pdfIt       = model.constrPDFSet.createIterator();
-  TIterator *modelpdfIt  = model.pdfSet.createIterator();
+  //TIterator *modelpdfIt  = model.pdfSet.createIterator();
   std::vector<RooNLLVar *> theLLsPerCategory;
   for(int jmult=2; jmult<=maxJets_; jmult++)
     {
@@ -588,4 +638,32 @@ void HFCMeasurement::runHFCDiffFit(TString dilCategory)
        << "-log(L) at minimum = " << r->minNll() << endl   
        << "final value of floating parameters" << endl ;
   r->floatParsFinal().Print("s") ;
+}
+
+
+//
+void HFCMeasurement::printConfiguration(std::ostream &os)
+{
+  os << "[HFCMeasurement::printConfiguration]" << endl;
+  os << "Fit type:" << fitTypeTitle_ << endl;
+  os << "Using: 2<= N_{jets}<=" << maxJets_ << endl;
+  os << "Counting b-tags with: " << btagAlgo_ << " cutting @ " << algoCut_ << endl;
+  os << "\t epsilon_b:" << effb_ << " SF_b: " << sfb_ << " +/- " << sfbUnc_ << endl;
+  os << "\t epsilon_q:" << effq_ << " SF_q: " << sfq_ << " +/- " << sfqUnc_ << endl;
+  os << "Data will be split in: " << categoryKeys_.size() << " categories" << endl;
+  for(std::set<TString>::iterator cit=categoryKeys_.begin(); cit!=categoryKeys_.end(); cit++)
+    {
+      TString tag(*cit);
+      TString dilCategory(tag);
+      if(tag.Contains("ee"))   dilCategory="ee";
+      if(tag.Contains("emu"))  dilCategory="emu";
+      if(tag.Contains("mumu")) dilCategory="mumu";
+      TString jmult=tag;
+      jmult = jmult.ReplaceAll(dilCategory,"");
+
+      os << "Category: " << dilCategory << "(=" << jmult << " jets)" << endl; 
+      os << "\t f_{correct}:" << fcorrect_[tag] << " +/- " << fcorrectUnc_[tag] << endl;
+      os << "\t f_{ttbar}:" << fttbar_[tag] << " +/- " << fttbarUnc_[tag] << endl;
+      os << "\t k_{single top}:" << fsingletop_[tag] << " +/- " << fsingletopUnc_[tag] << endl;
+    }
 }

@@ -25,8 +25,8 @@
 #include "RooFitResult.h"
 
 //
-#define MAXJETMULT 8
-#define MAXCATEGORIES 8
+#define MAXJETMULT 12
+#define MAXCATEGORIES 12
 enum JetMultBins{BIN_2=0,BIN_3, BIN_4};
 struct CombinedHFCModel_t
 {
@@ -53,22 +53,32 @@ class HFCMeasurement
  public:
 
   enum FitTypes { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ };
+  SelectionMonitor controlHistos_;    
+  CombinedHFCModel_t model;
   
   /**
      @short CTOR
    */
-  HFCMeasurement(int fitType=0, int maxJets=3) : 
-    isInit_(false), fitType_(fitType), maxJets_(maxJets),  smR_(1.0), nMeasurements_(0)  
+  HFCMeasurement(int fitType=0, int maxJets=3,float smR=1.0) : 
+    isInit_(false), fitType_(fitType), maxJets_(maxJets),  smR_(smR), nMeasurements_(0)  
     {
       bookMonitoringHistograms();
+      switch(fitType_)
+	{
+	case FIT_EB:          fitTypeTitle_="#varepsilon_{b}";                    fitTypeName_="effb";                        break;
+	case FIT_R_AND_EB:    fitTypeTitle_="R vs #varepsilon_{b}";               fitTypeName_="rvseffb";                     break;
+	case FIT_R_AND_XSEC:  fitTypeTitle_="R vs #sigma";                        fitTypeName_="rvssigma";                    break;
+	case FIT_EB_AND_XSEC: fitTypeTitle_="#varepsilon_{b} vs #sigma";          fitTypeName_="effbvssigma";                 break;
+	case FIT_EB_AND_EQ:   fitTypeTitle_="#varepsilon_{b} vs #varepsilon_{q}"; fitTypeName_="effbvseffq";                  break;
+	default:              fitTypeTitle_="R";                                  fitTypeName_="r";           fitType_=FIT_R; break;
+	}
     }
-
+    
     /**
        @short DTOR
     */
     ~HFCMeasurement() { }
-    
-    
+        
     /**
        @short steer the fit
     */
@@ -79,12 +89,18 @@ class HFCMeasurement
     */
     void setStandardModelR(float r=1.0) { smR_=r; }
 
+    /**
+       @short configuration of the b-tag algorithm
+    */
     void configureBtagAlgo(TString btagAlgo,double cut)
     {
       btagAlgo_ = btagAlgo;
       algoCut_  = cut;
     }
     
+    /**
+       @short set MC expected efficiency and data-driven measurement of the scale-factor
+     */
     void setBtagEfficiency(double eff, double sfactor, double sfactorUnc)
     {
       effb_   = eff;
@@ -92,6 +108,9 @@ class HFCMeasurement
       sfbUnc_ = sfactorUnc;
     } 
 
+    /**
+       @short set MC expected efficiency and data-driven measurement of the scale-factor
+    */
     void setMistagEfficiency(double eff, double sfactor, double sfactorUnc)
     {
       effq_   = eff;
@@ -99,61 +118,72 @@ class HFCMeasurement
       sfqUnc_ = sfactorUnc;
     } 
 
+    /**
+       @short event modeling per category: used also to instantiate the categories in the fit
+     */
     void setSelectionFractions(double fcorrect,   double fcorrectunc, 
 			       double fttbar,     double fttbarunc,
 			       double fsingletop, double fsingletopunc,
 			       int jetBin=0,      TString dilChannel="emu")
     {
-      dilChannel += jetBin;
-      fcorrect_[dilChannel]      = fcorrect;
-      fcorrectUnc_[dilChannel]   = fcorrectunc;
-      fttbar_[dilChannel]        = fttbar;
-      fttbarUnc_[dilChannel]     = fttbarunc;
-      fsingletop_[dilChannel]    = fsingletop;
-      fsingletopUnc_[dilChannel] = fsingletopunc;
+      TString tag(dilChannel); tag+=jetBin;      
+      fcorrect_[tag]      = fcorrect;
+      fcorrectUnc_[tag]   = fcorrectunc;
+      fttbar_[tag]        = fttbar;
+      fttbarUnc_[tag]     = fttbarunc;
+      fsingletop_[tag]    = fsingletop;
+      fsingletopUnc_[tag] = fsingletopunc;
+      categoryKeys_.insert(tag);
     }
 
-  
+    /**
+       @short dump fitter configuration
+     */
+    void printConfiguration(std::ostream &os);
+
     /**
        @short save results
     */
     void saveMonitoringHistograms(TString tag);
-    
-    CombinedHFCModel_t model;
 
  private:
 
+    /**
+       @short reads the current configuration and instantiates the PDFs for the fit
+     */
     void initHFCModel();
-    void runHFCFit();
-    void runHFCDiffFit(TString dilCat);
 
-    void bookMonitoringHistograms();
-    void resetHistograms();
+    /**
+       @short resets the current model values to the default ones
+     */
     void resetModelValues();
 
+    /**
+       @short steers the fit 
+     */
+    void runHFCFit();
+
+    /**
+       @short steers the fit with jet pT categories (work in progress)
+     */
+    void runHFCDiffFit(TString dilCat);
+
+    /**
+       @short monitoring histogram handling 
+     */
+    void bookMonitoringHistograms();
+    void resetHistograms();
+
+    //internal parameters
     bool isInit_;
-    int fitType_;
-
-    int maxJets_;
-    std::vector<TString> categoryKeys_;
-
-    //R
+    int fitType_, maxJets_;
+    TString fitTypeTitle_, fitTypeName_;
     double smR_;
-    
-    //btag algorithm 
     TString btagAlgo_;    
     double algoCut_;
     Float_t  effb_, sfb_, sfbUnc_, effq_, sfq_, sfqUnc_;
-
-    //parametrizations for purity 
-    std::map<TString, Float_t> fcorrect_,  fcorrectUnc_, 
-      fttbar_, fttbarUnc_,
-      fsingletop_, fsingletopUnc_;
-    
-    //the histograms
-    SelectionMonitor controlHistos_;    
-
-    //a counter for pseudo-experiments
+    std::set<TString> categoryKeys_;
+    std::map<TString, Float_t> fcorrect_,  fcorrectUnc_, fttbar_, fttbarUnc_,  fsingletop_, fsingletopUnc_;
     int nMeasurements_;
 };
 
