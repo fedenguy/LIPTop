@@ -112,10 +112,10 @@ int main(int argc, char* argv[])
 void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,Double_t> &fitPars, int maxPE, Double_t dataLumi, TString syst,  bool freezeResults)
 {
 
-  TH1D *fitResH = new TH1D("fitres",";Fit result;Pseudo-experiments",100,0,2);                                            fitResH->SetDirectory(0);
-  TH1D *biasH = new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",25,-0.52,0.48);                 biasH->SetDirectory(0);
-  TH1D *pullH = new TH1D("pull",";pull=#Delta f_{correct assignments} / #sigma_{stat};Pseudo-experiments",25,-5.2,4.8);   pullH->SetDirectory(0);
-  TH1D *statUncH = new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",50,-0.05,0.05);         statUncH->SetDirectory(0);
+  TH1D *fitResH = new TH1D("fitres",";Fit result;Pseudo-experiments",100,0,2);             fitResH->SetDirectory(0);
+  TH1D *biasH = new TH1D("bias",";bias;Pseudo-experiments",25,-0.52,0.48);                 biasH->SetDirectory(0);
+  TH1D *pullH = new TH1D("pull",";pull = bias / #sigma;Pseudo-experiments",25,-5.2,4.8);   pullH->SetDirectory(0);
+  TH1D *statUncH = new TH1D("staterr",";#sigma;Pseudo-experiments",50,-0.05,0.05);         statUncH->SetDirectory(0);
 
   //
   // map the samples per type
@@ -123,6 +123,10 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   std::map<TString, Proc_t>        descForProc;
   std::map<TString, ProcYields_t > yieldsForProc;
   std::map<TString, ProcHistos_t > histosForProc;
+  
+  reweight::PoissonMeanShifter *puShifter=0;
+  if(syst=="puup") puShifter = new reweight::PoissonMeanShifter(+0.6);
+  if(syst=="pudown") puShifter = new reweight::PoissonMeanShifter(-0.6);
 
   //signal
   Double_t rToGen(1.0);
@@ -210,12 +214,15 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   DY.push_back("DYJetsToTauTau_M20to50");
 
   descForProc["DY"]=DY;
-  procYields[HFCMeasurement::EE_2JETS]=298.0;
-  procYields[HFCMeasurement::EE_3JETS]=84.8;
-  procYields[HFCMeasurement::MUMU_2JETS]=451.4;
-  procYields[HFCMeasurement::MUMU_3JETS]=121.7;
-  procYields[HFCMeasurement::EMU_2JETS]=157.3;
-  procYields[HFCMeasurement::EMU_3JETS]=33.3;
+  float uncScaleFactor(1.0);
+  if(syst=="dyup")   uncScaleFactor *= 1.3;
+  if(syst=="dydown") uncScaleFactor *= 0.7;
+  procYields[HFCMeasurement::EE_2JETS]=298.0*uncScaleFactor;
+  procYields[HFCMeasurement::EE_3JETS]=84.8*uncScaleFactor;
+  procYields[HFCMeasurement::MUMU_2JETS]=451.4*uncScaleFactor;
+  procYields[HFCMeasurement::MUMU_3JETS]=121.7*uncScaleFactor;
+  procYields[HFCMeasurement::EMU_2JETS]=157.3*uncScaleFactor;
+  procYields[HFCMeasurement::EMU_3JETS]=33.3*uncScaleFactor;
   yieldsForProc["DY"]=procYields;
 
   //
@@ -226,6 +233,8 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   TFile *inF = TFile::Open(url);
   top::EventSummaryHandler evHandler;
   cout << "[Filling histograms]" << flush;
+  Double_t avgeff[2]     = {0.0, 0.0};
+  Double_t avgeffNorm[2] = {0.0, 0.0};
   for(std::map<TString, Proc_t>::iterator pIt=descForProc.begin(); pIt!=descForProc.end(); pIt++)
     {
       bool isSignalRequired(pIt->first.Contains("Signal"));
@@ -258,6 +267,10 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	      top::EventSummary_t &ev = evHandler.getEvent();
 	      if(isSignalRequired && !ev.isSignal) continue;
 	      if(!isSignalRequired && ev.isSignal) continue;
+
+	      //event weight
+	      Double_t weight =ev.weight*ev.xsecWeight*dataLumi;
+	      if(puShifter) weight *= puShifter->ShiftWeight( ev.ngenpu );
 	      
 	      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
 	      
@@ -283,7 +296,11 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 		  else if(btagWP.Contains("JP") )     btag = phys.jets[ijet].btag5;
 		  else if(btagWP.Contains("SSVHP") )  btag = phys.jets[ijet].btag6;
 		  else if(btagWP.Contains("CSV") )    btag = phys.jets[ijet].btag7;
-		  nbtags += (btag>btagWPcut);
+		  bool isBtagged(btag>btagWPcut);
+		  bool isMatchedToB( fabs(phys.jets[ijet].flavid)==5 );
+		  avgeff[isMatchedToB]     += isBtagged*weight;
+		  avgeffNorm[isMatchedToB] += weight;
+		  nbtags += isBtagged;
 		}
 	      if(njets>maxJets || njets<2) continue;
 	      
@@ -299,7 +316,6 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	      if(icat<0) continue;
 
 	      //fill histogram
-	      Double_t weight=ev.weight*ev.xsecWeight*dataLumi;
 	      procHistos[icat]->Fill(nbtags,weight);
 	    }
 	}
@@ -327,8 +343,17 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   //
   HFCMeasurement hfcFitter(fitType,maxJets,rToGen);
   hfcFitter.configureBtagAlgo   (btagWP, btagWPcut);
-  hfcFitter.setBtagEfficiency   (fitPars[btagWP+"_effb"], fitPars[btagWP+"_sfb"], fitPars[btagWP+"_sfbunc"]);
-  hfcFitter.setMistagEfficiency (fitPars[btagWP+"_effq"], fitPars[btagWP+"_sfq"], fitPars[btagWP+"_sfqunc"]);
+  double mceb=fitPars[btagWP+"_effb"];
+  double mceq=fitPars[btagWP+"_effq"];
+  if(fitType==HFCMeasurement::FIT_R)
+    {
+      for(size_t i=0; i<2; i++) avgeff[i] /= avgeffNorm[i];
+      mceq=avgeff[0];
+      mceb=avgeff[1];
+    }
+  hfcFitter.setBtagEfficiency   (mceb, fitPars[btagWP+"_sfb"], fitPars[btagWP+"_sfbunc"]);
+  hfcFitter.setMistagEfficiency (mceq, fitPars[btagWP+"_sfq"], fitPars[btagWP+"_sfqunc"]);
+
   TString channels[]={"ee","mumu","emu"};
   for(int ich=0; ich<3; ich++)
     {
@@ -342,7 +367,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	}
     }
   hfcFitter.printConfiguration(report);
-  
+
   //keep RooFit quiet                                                                                                                                                          
   RooMsgService::instance().setSilentMode(true);
   RooMsgService::instance().getStream(0).removeTopic(Minimization);
@@ -381,18 +406,20 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
       hfcFitter.fitHFCtoMeasurement(ensembleHistos,false);
     
       double effb(hfcFitter.model.abseb->getVal()) , effq(hfcFitter.model.abseq->getVal());
-      cout << "[Ensemble #" << iPE << "]" << endl; 
-      cout << "\t R   = " << hfcFitter.model.r->getVal() << " +" << hfcFitter.model.r->getAsymErrorHi() << " " << hfcFitter.model.r->getAsymErrorLo() << endl;
-      for(int icat=0; icat<6; icat++) cout << "\t\t R_{" << icat << "}  = " << hfcFitter.model.rFit[icat] << " +" << hfcFitter.model.rFitAsymmErrHi[icat] << " " << hfcFitter.model.rFitAsymmErrLo[icat] << endl;
-      cout << "\t e_b = " << effb*hfcFitter.model.sfeb->getVal() << " +" << effb*hfcFitter.model.sfeb->getAsymErrorHi() << " " << effb*hfcFitter.model.sfeb->getAsymErrorLo() << endl;
-      for(int icat=0; icat<6; icat++) cout << "\t\t eb_{" << icat << "}  = " << hfcFitter.model.ebFit[icat] << " +" << hfcFitter.model.ebFitAsymmErrHi[icat] << " " << hfcFitter.model.ebFitAsymmErrLo[icat] << endl;
-      cout << "\t e_q = " << effq*hfcFitter.model.sfeq->getVal() << " +" << effq*hfcFitter.model.sfeq->getAsymErrorHi() << " " << effq*hfcFitter.model.sfeq->getAsymErrorLo() << endl;
-      for(int icat=0; icat<6; icat++) cout << "\t\t eq_{" << icat << "}  = " << hfcFitter.model.eqFit[icat] << " +" << hfcFitter.model.eqFitAsymmErrHi[icat] << " " << hfcFitter.model.eqFitAsymmErrLo[icat] << endl;
+      report << "[Ensemble #" << iPE << "]" << endl; 
+      report << "\t R   = " << hfcFitter.model.r->getVal() << " +" << hfcFitter.model.r->getAsymErrorHi() << " " << hfcFitter.model.r->getAsymErrorLo() << endl;
+      for(int icat=0; icat<6; icat++) report << "\t\t R_{" << icat << "}  = " << hfcFitter.model.rFit[icat] << " +" << hfcFitter.model.rFitAsymmErrHi[icat] << " " << hfcFitter.model.rFitAsymmErrLo[icat] << endl;
+      report << "\t e_b = " << effb*hfcFitter.model.sfeb->getVal() << " +" << effb*hfcFitter.model.sfeb->getAsymErrorHi() << " " << effb*hfcFitter.model.sfeb->getAsymErrorLo() << endl;
+      for(int icat=0; icat<6; icat++) report << "\t\t eb_{" << icat << "}  = " << hfcFitter.model.ebFit[icat] << " +" << hfcFitter.model.ebFitAsymmErrHi[icat] << " " << hfcFitter.model.ebFitAsymmErrLo[icat] << endl;
+      report << "\t e_q = " << effq*hfcFitter.model.sfeq->getVal() << " +" << effq*hfcFitter.model.sfeq->getAsymErrorHi() << " " << effq*hfcFitter.model.sfeq->getAsymErrorLo() << endl;
+      for(int icat=0; icat<6; icat++) report << "\t\t eq_{" << icat << "}  = " << hfcFitter.model.eqFit[icat] << " +" << hfcFitter.model.eqFitAsymmErrHi[icat] << " " << hfcFitter.model.eqFitAsymmErrLo[icat] << endl;
 
-      fitResH->Fill(hfcFitter.model.r->getVal());
-      statUncH->Fill( hfcFitter.model.r->getAsymErrorHi() );
-      statUncH->Fill( hfcFitter.model.r->getAsymErrorLo() );
-      float bias=hfcFitter.model.r->getVal()-rToGen;
+      float valFit   ( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.r->getVal()   : effb*hfcFitter.model.sfeb->getVal() );
+      float valFitErr( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.r->getError() : effb*hfcFitter.model.sfeb->getError() );
+      float trueVal  ( fitType==HFCMeasurement::FIT_R ? rToGen                        : mceb );
+      fitResH->Fill(valFit);
+      statUncH->Fill(valFitErr);
+      float bias=valFit-trueVal;
       biasH->Fill(bias);
       float statUnc=hfcFitter.model.r->getError();
       if(statUnc>0) pullH->Fill(bias/statUnc);
@@ -402,18 +429,17 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   //save the templates and results to a file for posterity
   TFile *outF = TFile::Open("HeavyFlavorFitCalibration.root","RECREATE");
   outF->cd();
+  fitResH->Write();
+  statUncH->Write();
+  statUncH->Write();
+  biasH->Write();
+  pullH->Write();
   for(std::map<TString, ProcHistos_t >::iterator it = histosForProc.begin();  it != histosForProc.end(); it++)
     {
       TDirectory *procDir = outF->mkdir(it->first);
       procDir->cd();
       for(ProcHistos_t::iterator hit=it->second.begin(); hit!=it->second.end(); hit++) (*hit)->Write(); 
     }
-  
-  fitResH->Write();
-  statUncH->Write();
-  statUncH->Write();
-  biasH->Write();
-  pullH->Write();
   outF->Close();
 
 

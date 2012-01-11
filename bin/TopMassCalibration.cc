@@ -58,7 +58,8 @@ int main(int argc, char* argv[])
     }
   else
     cout  << "Calibrating for all mass points" << endl;
-    
+  TString outDir("");
+  if(argc>5)  outDir=argv[5];
   
 
   //
@@ -76,6 +77,11 @@ int main(int argc, char* argv[])
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
       allSamples["172.5"].push_back("TTJets");
+    }
+  if(syst=="jesup" || syst=="jesdown" || syst=="jer")
+    {
+      allSamples["172.5"]=Proc_t(1,"TTJets_signal_"+syst);
+      allSamples["172.5"].push_back("TTJets_"+syst);
     }
   if(syst=="matchingdown")
     {
@@ -267,8 +273,12 @@ int main(int argc, char* argv[])
       TObjArray results = calibrate(mpoint);
  
       //save summary of results to file
-      TString outUrl=massParsUrl;
-      outUrl.ReplaceAll(".txt","_calib.root");
+      TString outUrl=outDir+"/Calib.root";
+      if(outDir=="")
+	{
+	  outUrl=massParsUrl;
+	  outUrl.ReplaceAll(".txt","_calib.root");
+	}
       TFile *outF=TFile::Open(outUrl, "UPDATE");
       outF->rmdir(mpoint);
       TDirectory *outDir = outF->mkdir(mpoint);

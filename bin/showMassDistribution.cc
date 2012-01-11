@@ -217,6 +217,7 @@ int main(int argc, char* argv[])
       TString evtag=gSystem->BaseName(evurl);
       //      evtag.ReplaceAll("_summary.root","");
       evtag.ReplaceAll(".root","");
+      if(kindir!="std") evtag += "_" + kindir;
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
       TTree *outT = new TTree("data","Event summary");
