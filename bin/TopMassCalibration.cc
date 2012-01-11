@@ -57,62 +57,40 @@ int main(int argc, char* argv[])
   else
     cout  << "Calibrating for all mass points" << endl;
     
-
+  
 
   //
   // map the samples per type
   //
-
-
   std::vector<Float_t> procYields(4,0);    
 
-  // syst samples  
-  if(syst=="baresignal")
+  //signal samples first (all share the same yields)
+  procYields[MassMeasurement::SF_EQ1BTAGS]=577.1;
+  procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0;
+  procYields[MassMeasurement::OF_EQ1BTAGS]=792.7;
+  procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+  evtYields["Signal"]=procYields;
+  if(syst=="baresignal" || syst=="effbup" || syst=="effbdown" || syst=="effqup" || syst=="effqdown")
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
       allSamples["172.5"]=Proc_t(1,"TTJets");
-      procYields[MassMeasurement::SF_EQ1BTAGS]=577.1;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=792.7;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-      evtYields["Signal"]=procYields;
     }
   if(syst=="matchingdown")
     {
-    allSamples["172.5"]=Proc_t(1,"TTJets_matchingdown");
-    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
-    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
-    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
-    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-    evtYields["Signal"]=procYields;
-  }
+      allSamples["172.5"]=Proc_t(1,"TTJets_matchingdown");
+    }
   if(syst=="matchingup")
     {
-    allSamples["172.5"]=Proc_t(1,"TTJets_matchingup");
-    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
-    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
-    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
-    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-    evtYields["Signal"]=procYields;
-  }
+      allSamples["172.5"]=Proc_t(1,"TTJets_matchingup");
+    }
   if(syst=="scaledown")
     {
-    allSamples["172.5"]=Proc_t(1,"TTJets_scaledown");
-    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
-    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
-    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
-    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-    evtYields["Signal"]=procYields;
-  }
+      allSamples["172.5"]=Proc_t(1,"TTJets_scaledown");
+    }
   if(syst=="scaleup")
     {
-    allSamples["172.5"]=Proc_t(1,"TTJets_scaleup");
-    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
-    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
-    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
-    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-    evtYields["Signal"]=procYields;
-  }
+      allSamples["172.5"]=Proc_t(1,"TTJets_scaleup");
+    }
   if(syst=="std")
     {
       //signal samples
@@ -125,12 +103,6 @@ int main(int argc, char* argv[])
       allSamples["178.5"]=Proc_t(1,"TTJets_mass_178v5");
       allSamples["181.5"]=Proc_t(1,"TTJets_mass181v5");
       allSamples["184.5"]=Proc_t(1,"TTJets_mass184v5");
-      
-      procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
-      procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-      evtYields["Signal"]=procYields;
       
       //backgrounds
       Proc_t SingleTop;
@@ -177,6 +149,12 @@ int main(int argc, char* argv[])
       evtYields["DY"]=procYields;
     }
 
+  //specific for b-tagging effiency systematics
+  float newHeavyFlavorCut(0.207), newLightFlavorCut(0.233);
+  if(syst=="effbup")   newHeavyFlavorCut-=0.09;
+  if(syst=="effbdown") newHeavyFlavorCut+=0.08;
+  if(syst=="effqup")   newLightFlavorCut-=0.02;
+  if(syst=="effqdown") newLightFlavorCut+=0.02;
   
   //
   // build the base histograms to sample for the pseudo-experiments
@@ -210,34 +188,42 @@ int main(int argc, char* argv[])
 	  TTree *t = (TTree *) f->Get(tname);
 	  if(t==0) continue;
 
-	  Int_t cat;
-	  Float_t weight,xsecWeight;
-	  Float_t evmeasurements[10];
-	  t->GetBranch("cat")->SetAddress(&cat);
-	  t->GetBranch("weight")->SetAddress(&weight);
-	  t->GetBranch("xsecWeight")->SetAddress(&xsecWeight);
-	  t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
-	  for(Int_t i=0; i<t->GetEntriesFast(); i++)
+	  top::EventSummaryHandler evHandler;
+	  if( !evHandler.attachToTree(t) ) continue;
+	  for(Int_t i=0; i<evHandler.getEntries(); i++)
 	    {
-	      t->GetEntry(i);
+	      evHandler.getEntry(i);
+	      top::EventSummary_t &ev = evHandler.getEvent();
 	      
-	      float mtop=evmeasurements[0];
+	      float mtop=ev.evmeasurements[0];
 	      if(mtop==0) continue; 
 	
-	      int nbtags(evmeasurements[5]);
+	      int nbtags(ev.evmeasurements[5]);
+	      if(syst=="effbup" || syst=="effbdown" || syst=="effqup" || syst=="effqdown")
+		{
+		  nbtags=0;
+		  top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+		  for(unsigned int ijet=0; ijet<phys.jets.size(); ijet++)
+		    {
+		      if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.4) continue;
+		      float btagDisc=phys.jets[ijet].btag7;
+		      if(fabs(phys.jets[ijet].flavid)==5) nbtags += (btagDisc>newHeavyFlavorCut);
+		      else                                nbtags += (btagDisc>newLightFlavorCut);
+		    }
+		}  
 	      if(nbtags==0) continue;
 
-	      bool isZcand= bool(evmeasurements[2]);
+	      bool isZcand= bool(ev.evmeasurements[2]);
 	      if(isZcand) continue;
 
 	      //check the category of the event
 	      int catToFill(0);
-	      bool isSF(cat==EE || cat==MUMU);
+	      bool isSF(ev.cat==EE || ev.cat==MUMU);
 	      if(nbtags==1) catToFill=(isSF ? MassMeasurement::SF_EQ1BTAGS  : MassMeasurement::OF_EQ1BTAGS);
 	      if(nbtags>1)  catToFill=(isSF ? MassMeasurement::SF_GEQ2BTAGS : MassMeasurement::OF_GEQ2BTAGS);
 
 	      //fill the histograms
-	      float evWeight=weight*xsecWeight;
+	      float evWeight=ev.weight*ev.xsecWeight;
 	      ihistos[ catToFill ]->Fill(mtop,evWeight);
 	    }
 	}
