@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_scaleup");
     }
-  if(syst=="std")
+  if(syst=="std" || syst=="dyup" || syst=="dydown")
     {
       //signal samples
       allSamples["161.5"]=Proc_t(1,"TTJets_mass_161v5");
@@ -142,10 +142,13 @@ int main(int argc, char* argv[])
       Proc_t DY;
       DY.push_back("DYJetsToLL");
       allSamples["DY"]=DY;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=207.5;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=56.8;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=29.3;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=5.1;
+      float uncScaleFactor(1.0);
+      if(syst=="dyup")   uncScaleFactor *= 1.3;
+      if(syst=="dydown") uncScaleFactor *= 0.7;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=207.5*uncScaleFactor;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=56.8*uncScaleFactor;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=29.3*uncScaleFactor;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=5.1*uncScaleFactor;
       evtYields["DY"]=procYields;
     }
 
