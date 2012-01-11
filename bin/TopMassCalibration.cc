@@ -70,10 +70,10 @@ int main(int argc, char* argv[])
   procYields[MassMeasurement::OF_EQ1BTAGS]=792.7;
   procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
   evtYields["Signal"]=procYields;
-  if(syst=="baresignal" || syst=="effbup" || syst=="effbdown" || syst=="effqup" || syst=="effqdown")
+  if(syst=="baresignal")
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
-      allSamples["172.5"]=Proc_t(1,"TTJets");
+      allSamples["172.5"].push_back("TTJets");
     }
   if(syst=="matchingdown")
     {
@@ -91,18 +91,21 @@ int main(int argc, char* argv[])
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_scaleup");
     }
-  if(syst=="std" || syst=="dyup" || syst=="dydown")
+  if(syst=="std" || syst=="dyup" || syst=="dydown" || syst=="effbup" || syst=="effbdown" || syst=="effqup" || syst=="effqdown")
     {
       //signal samples
-      allSamples["161.5"]=Proc_t(1,"TTJets_mass_161v5");
-      allSamples["163.5"]=Proc_t(1,"TTJets_mass_163v5");
-      allSamples["166.5"]=Proc_t(1,"TTJets_mass_166v5");
-      allSamples["169.5"]=Proc_t(1,"TTJets_mass_169v5");
+      if(syst=="std")
+	{
+	  allSamples["161.5"]=Proc_t(1,"TTJets_mass_161v5");
+	  allSamples["163.5"]=Proc_t(1,"TTJets_mass_163v5");
+	  allSamples["166.5"]=Proc_t(1,"TTJets_mass_166v5");
+	  allSamples["169.5"]=Proc_t(1,"TTJets_mass_169v5");
+	  allSamples["175.5"]=Proc_t(1,"TTJets_mass_175v5");
+	  allSamples["178.5"]=Proc_t(1,"TTJets_mass_178v5");
+	  allSamples["181.5"]=Proc_t(1,"TTJets_mass181v5");
+	  allSamples["184.5"]=Proc_t(1,"TTJets_mass184v5");  
+	}
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
-      allSamples["175.5"]=Proc_t(1,"TTJets_mass_175v5");
-      allSamples["178.5"]=Proc_t(1,"TTJets_mass_178v5");
-      allSamples["181.5"]=Proc_t(1,"TTJets_mass181v5");
-      allSamples["184.5"]=Proc_t(1,"TTJets_mass184v5");
       
       //backgrounds
       Proc_t SingleTop;
@@ -216,7 +219,7 @@ int main(int argc, char* argv[])
 		}  
 	      if(nbtags==0) continue;
 
-	      bool isZcand= bool(ev.evmeasurements[2]);
+	      bool isZcand=bool(ev.evmeasurements[2]);
 	      if(isZcand) continue;
 
 	      //check the category of the event
