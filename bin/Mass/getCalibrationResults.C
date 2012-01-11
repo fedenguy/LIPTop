@@ -57,6 +57,8 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
       Float_t trueMass=mpts[i].Atof();
       
       TH1D *massFitH=(TH1D *)fin->Get(mpts[i]+"/massfit");
+      if(massFitH==0) continue;
+
       TF1 *ffunc=massFitH->GetFunction("gaus");
       float avgMass=ffunc->GetParameter(1);
       float avgMassErr=ffunc->GetParError(1);
