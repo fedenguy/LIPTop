@@ -30,7 +30,7 @@ typedef std::vector<TH1D *> ProcHistos_t;
 std::map<TString,ProcHistos_t> allHistos;
 std::vector<TString> signalPts;
 
-TString url,massParsUrl;
+TString url,massParsUrl, syst;
 
 TObjArray calibrate(TString mpoint);
 
@@ -47,10 +47,11 @@ int main(int argc, char* argv[])
   gSystem->ExpandPathName(url);
   massParsUrl=argv[2];
   gSystem->ExpandPathName(massParsUrl);
+  syst=argv[3];
   TString calibrationList="";
-  if(argc>3)
+  if(argc>4)
     {
-      calibrationList=argv[3];
+      calibrationList=argv[4];
       cout << "Calibrating for: " << calibrationList << endl;
     }
   else
@@ -62,68 +63,121 @@ int main(int argc, char* argv[])
   // map the samples per type
   //
 
-  //signal samples
-  allSamples["161.5"]=Proc_t(1,"TTJets_mass_161v5");
-  allSamples["163.5"]=Proc_t(1,"TTJets_mass_163v5");
-  allSamples["166.5"]=Proc_t(1,"TTJets_mass_166v5");
-  allSamples["169.5"]=Proc_t(1,"TTJets_mass_169v5");
-  allSamples["172.5"]=Proc_t(1,"TTJets_signal");
-  allSamples["175.5"]=Proc_t(1,"TTJets_mass_175v5");
-  allSamples["178.5"]=Proc_t(1,"TTJets_mass_178v5");
-  allSamples["181.5"]=Proc_t(1,"TTJets_mass181v5");
-  allSamples["184.5"]=Proc_t(1,"TTJets_mass184v5");
+
+  std::vector<Float_t> procYields(4,0);    
+
+  // syst samples  
+  if(syst=="baresignal")
+    {
+      allSamples["172.5"]=Proc_t(1,"TTJets_signal");
+      allSamples["172.5"]=Proc_t(1,"TTJets");
+      procYields[MassMeasurement::SF_EQ1BTAGS]=577.1;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=792.7;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+      evtYields["Signal"]=procYields;
+    }
+  if(syst=="matchingdown")
+    {
+    allSamples["172.5"]=Proc_t(1,"TTJets_matchingdown");
+    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
+    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
+    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
+    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+    evtYields["Signal"]=procYields;
+  }
+  if(syst=="matchingup")
+    {
+    allSamples["172.5"]=Proc_t(1,"TTJets_matchingup");
+    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
+    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
+    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
+    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+    evtYields["Signal"]=procYields;
+  }
+  if(syst=="scaledown")
+    {
+    allSamples["172.5"]=Proc_t(1,"TTJets_scaledown");
+    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
+    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
+    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
+    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+    evtYields["Signal"]=procYields;
+  }
+  if(syst=="scaleup")
+    {
+    allSamples["172.5"]=Proc_t(1,"TTJets_scaleup");
+    procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
+    procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
+    procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
+    procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+    evtYields["Signal"]=procYields;
+  }
+  if(syst=="std")
+    {
+      //signal samples
+      allSamples["161.5"]=Proc_t(1,"TTJets_mass_161v5");
+      allSamples["163.5"]=Proc_t(1,"TTJets_mass_163v5");
+      allSamples["166.5"]=Proc_t(1,"TTJets_mass_166v5");
+      allSamples["169.5"]=Proc_t(1,"TTJets_mass_169v5");
+      allSamples["172.5"]=Proc_t(1,"TTJets_signal");
+      allSamples["175.5"]=Proc_t(1,"TTJets_mass_175v5");
+      allSamples["178.5"]=Proc_t(1,"TTJets_mass_178v5");
+      allSamples["181.5"]=Proc_t(1,"TTJets_mass181v5");
+      allSamples["184.5"]=Proc_t(1,"TTJets_mass184v5");
+      
+      procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
+      procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+      evtYields["Signal"]=procYields;
+      
+      //backgrounds
+      Proc_t SingleTop;
+      SingleTop.push_back("SingleTbar_tW");
+      SingleTop.push_back("SingleT_tW");
+      SingleTop.push_back("SingleTbar_t");
+      SingleTop.push_back("SingleT_t");
+      SingleTop.push_back("SingleTbar_s");
+      SingleTop.push_back("SingleT_s");
+      allSamples["SingleTop"]=SingleTop;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=38.5; 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=33.2; 
+      procYields[MassMeasurement::OF_EQ1BTAGS]=49.5; 
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=43.1;
+      evtYields["SingleTop"]=procYields;
+      
+      Proc_t OtherTTbar;
+      OtherTTbar.push_back("TTJets");
+      allSamples["OtherTTbar"]=OtherTTbar;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=4.7+2.0; 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=4.6+0.7; 
+      procYields[MassMeasurement::OF_EQ1BTAGS]=6.3+4.7; 
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=8.4;
+      evtYields["OtherTTbar"]=procYields;
+      
+      Proc_t DiBosons;
+      DiBosons.push_back("WW");
+      DiBosons.push_back("ZZ");
+      DiBosons.push_back("WZ");
+      allSamples["DiBosons"]=DiBosons;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=8.1;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=1.7;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=2.0;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=1.9;
+      evtYields["DiBosons"]=procYields;
+      
+      Proc_t DY;
+      DY.push_back("DYJetsToLL");
+      allSamples["DY"]=DY;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=207.5;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=56.8;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=29.3;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=5.1;
+      evtYields["DY"]=procYields;
+    }
+
   
-  std::vector<Float_t> procYields(4,0);  
-  procYields[MassMeasurement::SF_EQ1BTAGS]=577.1; 
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0; 
-  procYields[MassMeasurement::OF_EQ1BTAGS]=792.7; 
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
-  evtYields["Signal"]=procYields;
-
-  //backgrounds
-  Proc_t SingleTop;
-  SingleTop.push_back("SingleTbar_tW");
-  SingleTop.push_back("SingleT_tW");
-  SingleTop.push_back("SingleTbar_t");
-  SingleTop.push_back("SingleT_t");
-  SingleTop.push_back("SingleTbar_s");
-  SingleTop.push_back("SingleT_s");
-  allSamples["SingleTop"]=SingleTop;
-  procYields[MassMeasurement::SF_EQ1BTAGS]=38.5; 
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=33.2; 
-  procYields[MassMeasurement::OF_EQ1BTAGS]=49.5; 
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=43.1;
-  evtYields["SingleTop"]=procYields;
- 
-  Proc_t OtherTTbar;
-  OtherTTbar.push_back("TTJets");
-  allSamples["OtherTTbar"]=OtherTTbar;
-  procYields[MassMeasurement::SF_EQ1BTAGS]=4.7+2.0; 
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=4.6+0.7; 
-  procYields[MassMeasurement::OF_EQ1BTAGS]=6.3+4.7; 
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=8.4;
-  evtYields["OtherTTbar"]=procYields;
-
-  Proc_t DiBosons;
-  DiBosons.push_back("WW");
-  DiBosons.push_back("ZZ");
-  DiBosons.push_back("WZ");
-  allSamples["DiBosons"]=DiBosons;
-  procYields[MassMeasurement::SF_EQ1BTAGS]=8.1;
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=1.7;
-  procYields[MassMeasurement::OF_EQ1BTAGS]=2.0;
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=1.9;
-  evtYields["DiBosons"]=procYields;
-
-  Proc_t DY;
-  DY.push_back("DYJetsToLL");
-  allSamples["DY"]=DY;
-  procYields[MassMeasurement::SF_EQ1BTAGS]=207.5;
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=56.8;
-  procYields[MassMeasurement::OF_EQ1BTAGS]=29.3;
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=5.1;
-  evtYields["DY"]=procYields;
-
   //
   // build the base histograms to sample for the pseudo-experiments
   //
