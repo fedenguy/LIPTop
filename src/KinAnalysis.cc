@@ -102,6 +102,14 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 	      }
 	    break;
 	  default:
+	    double les(1.0);
+	    if( (scheme_=="lesup" || scheme_=="lesdown") && fabs(ev.id[ipart])==11)
+	      {
+		bool isEB( fabs(p4.Eta()) < 1.442 );
+		if(scheme_=="lesup")   les = isEB ? 1.005 : 1.025;
+		if(scheme_=="lesdown") les = isEB ? 0.995 : 0.975;
+	      }
+	    p4 *= les; 
 	    if(p4.Pt()>20 && fabs(p4.Eta())<2.5)
 	      {
 		leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );

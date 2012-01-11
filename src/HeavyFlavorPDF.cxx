@@ -27,7 +27,9 @@
    fcorrect("fcorrect","fcorrect",this,_fcorrect),
    fttbar("fttbar","fttbar",this,_fttbar),
    fsingletop("fsingletop","fsingletop",this,_fsingletop),
-   jetocc("jetocc","jetocc",this,_jetocc)
+   jetocc("jetocc","jetocc",this,_jetocc),
+   lastBinCached_(-1),
+   lastValueCached_(-1)
  { 
    //default value
    setJetMultiplicity(2);
@@ -35,37 +37,46 @@
 
 
 HeavyFlavorPDF::HeavyFlavorPDF(const HeavyFlavorPDF& other, const char* name) :  
-   RooAbsPdf(other,name), 
-   bmult("bmult",this,other.bmult),
-   r("r",this,other.r),
-   eb("eb",this,other.eb),
-   eq("eq",this,other.eq),
-   fcorrect("fcorrect",this,other.fcorrect),
-   fttbar("fttbar",this,other.fttbar),
-   fsingletop("fsingletop",this,other.fsingletop),
-   jetocc("jetocc",this,other.jetocc),
-   jmult(other.jmult)
- { 
+  RooAbsPdf(other,name), 
+  bmult("bmult",this,other.bmult),
+  r("r",this,other.r),
+  eb("eb",this,other.eb),
+  eq("eq",this,other.eq),
+  fcorrect("fcorrect",this,other.fcorrect),
+  fttbar("fttbar",this,other.fttbar),
+  fsingletop("fsingletop",this,other.fsingletop),
+  jetocc("jetocc",this,other.jetocc),
+  jmult(other.jmult),
+  lastBinCached_(-1),
+  lastValueCached_(-1)
+{ 
 
  } 
 
 
+//
+Double_t HeavyFlavorPDF::evaluate() const 
+{ 
+  Int_t nBtags=int(bmult);
+  if(nBtags<0) return 0;
+  if(nBtags>jmult) return 0;
+  
+  //check if this b-tag bin was already requested
+  //  if(lastBinCached_==nBtags) return lastValueCached_;
+  
+  //otherwise update for the new value
+  Double_t prob=_evaluate(jmult,nBtags);
+  //cacheValues(nBtags,prob);
 
- Double_t HeavyFlavorPDF::evaluate() const 
- { 
-   Int_t nBtags=int(bmult);
-   if(nBtags<0) return 0;
-   if(nBtags>jmult) return 0;
-
-   //evaluate the probability functions
-   double prob=_evaluate(jmult,nBtags);
-   return prob;
- } 
+  //evaluate the probability functions
+  return prob;
+} 
 
 
 // 
 Double_t HeavyFlavorPDF::_evaluate(int jetMult,int nBtags) const
 {
+  //compute probability
   Double_t prob(0);
   switch(jetMult)
     {

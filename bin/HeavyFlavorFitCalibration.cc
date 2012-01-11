@@ -25,6 +25,12 @@
 #include <vector>
 
 using namespace std;
+using namespace RooFit;
+
+typedef std::vector<TString> Proc_t;
+typedef std::vector<Float_t> ProcYields_t;
+typedef std::vector<TH1D *> ProcHistos_t;
+
 
 stringstream report;
  
@@ -105,74 +111,222 @@ int main(int argc, char* argv[])
 //
 void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,Double_t> &fitPars, int maxPE, Double_t dataLumi, TString syst,  bool freezeResults)
 {
+
+  TH1D *fitResH = new TH1D("fitres",";Fit result;Pseudo-experiments",100,0,2);                                            fitResH->SetDirectory(0);
+  TH1D *biasH = new TH1D("bias",";bias=#Delta f_{correct assignments};Pseudo-experiments",25,-0.52,0.48);                 biasH->SetDirectory(0);
+  TH1D *pullH = new TH1D("pull",";pull=#Delta f_{correct assignments} / #sigma_{stat};Pseudo-experiments",25,-5.2,4.8);   pullH->SetDirectory(0);
+  TH1D *statUncH = new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",50,-0.05,0.05);         statUncH->SetDirectory(0);
+
   //
   // map the samples per type
   //
-  std::map<TString,Int_t> procYields;
-  std::map<TString,TTree *> procTrees,dataTrees;
+  std::map<TString, Proc_t>        descForProc;
+  std::map<TString, ProcYields_t > yieldsForProc;
+  std::map<TString, ProcHistos_t > histosForProc;
 
   //signal
-  float rToGen(1);
-  if(syst=="matchingdown")                    procYields["TTJets_matchingdown"]=0;
-  else if(syst=="matchingup")                 procYields["TTJets_matchingup"]=0;
-  else if(syst=="scaledown")                  procYields["TTJets_scaledown"]=0;
-  else if(syst=="scaleup")                    procYields["TTJets_scaleup"]=0;
+  Double_t rToGen(1.0);
+  ProcYields_t procYields(6,0);
+  procYields[HFCMeasurement::EE_2JETS]=546.8;
+  procYields[HFCMeasurement::EE_3JETS]=273.4;
+  procYields[HFCMeasurement::MUMU_2JETS]=698.3;
+  procYields[HFCMeasurement::MUMU_3JETS]=335.8;
+  procYields[HFCMeasurement::EMU_2JETS]=1882.3;
+  procYields[HFCMeasurement::EMU_3JETS]=915.4;
+  yieldsForProc["Signal"]=procYields;
+
+  if(syst=="matchingdown")        descForProc["Signal"] = Proc_t(1,"TTJets_matchingdown");
+  else if(syst=="matchingup")     descForProc["Signal"] = Proc_t(1,"TTJets_matchingup");
+  else if(syst=="scaledown")      descForProc["Signal"] = Proc_t(1,"TTJets_scaledown");
+  else if(syst=="scaleup")        descForProc["Signal"] = Proc_t(1,"TTJets_scaleup");
   else if(syst.Contains("flavor")) 
     {
-      procYields["TT2l_R1"]=0;
-      procYields["TT2l_R05a"]=0;
-      procYields["TT2l_R05b"]=0;
-      procYields["TT2l_R0"]=0;
-      sscanf(syst.Data(),"flavor%f",&rToGen);
+      sscanf(syst.Data(),"flavor%lf",&rToGen);
+
+      descForProc["Signal1"]     = Proc_t(1,"TT2l_R1");     
+      yieldsForProc["Signal1"]   = procYields;
+      descForProc["Signal05a"]   = Proc_t(1,"TT2l_R05a");
+      yieldsForProc["Signal05a"] = procYields;
+      descForProc["Signal05b"]   = Proc_t(1,"TT2l_R05b");
+      yieldsForProc["Signal05b"] = procYields;
+      descForProc["Signal0"]     = Proc_t(1,"TT2l_R0");
+      yieldsForProc["Signal0"]   = procYields;
+
+      for(size_t icat=0; icat<6; icat++)
+	{
+	  yieldsForProc["Signal1"][icat]   *= pow(rToGen,2);
+	  yieldsForProc["Signal05a"][icat] *= rToGen*(1-rToGen);
+	  yieldsForProc["Signal05b"][icat] *= rToGen*(1-rToGen);
+	  yieldsForProc["Signal0"][icat]   *= pow(1-rToGen,2);
+	}
     }
-  else                                        procYields["TTJets_signal"]=0;
-  procYields["SingleTbar_tW"]=0;
-  procYields["SingleT_tW"]=0;
-  procYields["SingleTbar_t"]=0;
-  procYields["SingleT_t"]=0;
-  procYields["SingleTbar_s"]=0;
-  procYields["SingleT_s"]=0;
-  procYields["TTJets"]=0;
+  else                     descForProc["Signal"] = Proc_t(1,"TTJets_signal");
+
+  //backgrounds
+  Proc_t SingleTop;
+  SingleTop.push_back("SingleTbar_tW");
+  SingleTop.push_back("SingleT_tW");
+  SingleTop.push_back("SingleTbar_t");
+  SingleTop.push_back("SingleT_t");
+  SingleTop.push_back("SingleTbar_s");
+  SingleTop.push_back("SingleT_s");
+  procYields[HFCMeasurement::EE_2JETS]=33.5;
+  procYields[HFCMeasurement::EE_3JETS]=10.7;
+  procYields[HFCMeasurement::MUMU_2JETS]=43.2;
+  procYields[HFCMeasurement::MUMU_3JETS]=12.6;
+  procYields[HFCMeasurement::EMU_2JETS]=111.3;
+  procYields[HFCMeasurement::EMU_3JETS]=34.7;
+  descForProc["SingleTop"]=SingleTop;
+  yieldsForProc["SingleTop"]=procYields;
+
+  Proc_t OtherTTbar;
+  OtherTTbar.push_back("TTJets");
+  procYields[HFCMeasurement::EE_2JETS]=4.8;
+  procYields[HFCMeasurement::EE_3JETS]=3.2;
+  procYields[HFCMeasurement::MUMU_2JETS]=0.9;
+  procYields[HFCMeasurement::MUMU_3JETS]=2.1;
+  procYields[HFCMeasurement::EMU_2JETS]=7.8;
+  procYields[HFCMeasurement::EMU_3JETS]=8.2;
+  descForProc["OtherTTbar"]=OtherTTbar;
+  yieldsForProc["OtherTTbar"]=procYields;
   
-  //other backgrounds
-  procYields["WW"]=0;
-  procYields["ZZ"]=0;
-  procYields["WZ"]=0;
-  procYields["DYJetsToLL"]=0;
+  Proc_t DiBosons;
+  DiBosons.push_back("WW");
+  DiBosons.push_back("ZZ");
+  DiBosons.push_back("WZ");
+  procYields[HFCMeasurement::EE_2JETS]=11.9;
+  procYields[HFCMeasurement::EE_3JETS]=2.4;
+  procYields[HFCMeasurement::MUMU_2JETS]=13.6;
+  procYields[HFCMeasurement::MUMU_3JETS]=2.8;
+  procYields[HFCMeasurement::EMU_2JETS]=38.5;
+  procYields[HFCMeasurement::EMU_3JETS]=6.6;
+  descForProc["DiBosons"]=DiBosons;
+  yieldsForProc["DiBosons"]=procYields;
+  
+  Proc_t DY;
+  DY.push_back("DYJetsToLL");
+  DY.push_back("DYJetsToMuMu_M20to50");
+  DY.push_back("DYJetsToHFCMeasurement::EEM20to50");
+  DY.push_back("DYJetsToTauTau_M20to50");
+
+  descForProc["DY"]=DY;
+  procYields[HFCMeasurement::EE_2JETS]=298.0;
+  procYields[HFCMeasurement::EE_3JETS]=84.8;
+  procYields[HFCMeasurement::MUMU_2JETS]=451.4;
+  procYields[HFCMeasurement::MUMU_3JETS]=121.7;
+  procYields[HFCMeasurement::EMU_2JETS]=157.3;
+  procYields[HFCMeasurement::EMU_3JETS]=33.3;
+  yieldsForProc["DY"]=procYields;
 
   //
-  // map the trees with the events for the pseudo-experiments
+  // fill the histograms to be used for the pseudo-experiments
   //
-  //  cout << "[Filling trees]" << endl;
+  int maxJets=int(fitPars["maxJets"]);
+  Double_t btagWPcut(fitPars[btagWP+"_cut"]);
   TFile *inF = TFile::Open(url);
-  for(std::map<TString,Int_t>::iterator it = procYields.begin(); it!= procYields.end(); it++)
+  top::EventSummaryHandler evHandler;
+  cout << "[Filling histograms]" << flush;
+  for(std::map<TString, Proc_t>::iterator pIt=descForProc.begin(); pIt!=descForProc.end(); pIt++)
     {
-      TString tname=it->first + "/data";
-      TTree *t = (TTree *) inF->Get(tname);
-      if(t==0) continue;
-      Float_t xsecWeight;
-      t->GetBranch("xsecWeight")->SetAddress(&xsecWeight);
-      t->GetEntry(0);
-      procTrees[it->first]  = t;
-      double sf=1.0;
-      if(it->first.Contains("DY") ) sf=1.5;
-      if(it->first.Contains("DY") && syst=="dyup")   sf*=1.3;
-      if(it->first.Contains("DY") && syst=="dydown") sf*=0.7;
-      if(it->first=="TT2l_R1"   && syst.Contains("flavor") ) sf *= pow(rToGen,2);
-      if(it->first=="TT2l_R05a" && syst.Contains("flavor") ) sf *= rToGen*(1-rToGen);
-      if(it->first=="TT2l_R05b" && syst.Contains("flavor") ) sf *= rToGen*(1-rToGen);
-      if(it->first=="TT2l_R0"   && syst.Contains("flavor") ) sf *= pow(1-rToGen,2);
+      bool isSignalRequired(pIt->first.Contains("Signal"));
 
-      procYields[it->first] = sf*dataLumi*xsecWeight*t->GetEntriesFast();
-      //  cout << "\t" << it->first <<  " " <<  procYields[it->first] << " evts" << endl; 
+      //instantiate the histograms
+      ProcHistos_t procHistos;
+      for(size_t icat=0; icat<procYields.size(); icat++)
+	{
+	  TString name(pIt->first); name+=icat;
+	  TH1D *bmh=new TH1D(name,";b-tag multiplicity;Events",maxJets+1,0,maxJets+1);
+	  bmh->SetDirectory(0);
+	  procHistos.push_back(bmh);
+	}
+      
+      //fill histograms from the weighted sum of each contribution to the process
+      cout << endl << "\t" << pIt->first << " has " << pIt->second.size() << " sources" << endl;
+      for(Proc_t::iterator it = pIt->second.begin(); it != pIt->second.end(); it++)
+	{
+	  TTree *t=(TTree *)inF->Get(*it+"/data");
+	  if(t==0) continue;
+	  bool result = evHandler.attachToTree(t);
+	  if(!result) continue;
+	  
+	  cout << endl;
+	  const int nentries=evHandler.getEntries();
+	  for(int ientry=0; ientry<nentries; ientry++)
+	    {
+	      printf("\r\t\t [ %3.0f/100 ] completed",100*float(ientry)/float(nentries));
+	      evHandler.getEntry(ientry);
+	      top::EventSummary_t &ev = evHandler.getEvent();
+	      if(isSignalRequired && !ev.isSignal) continue;
+	      if(!isSignalRequired && ev.isSignal) continue;
+	      
+	      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+	      
+	      //sanity checks for the selection
+	      LorentzVector dilepton = phys.leptons[0]+phys.leptons[1];
+	      float dilcharge=(phys.leptons[0].id/fabs(phys.leptons[0].id)) *(phys.leptons[1].id/fabs(phys.leptons[1].id));
+	      if((ev.cat==EE || ev.cat==MUMU) && (fabs(dilepton.mass()-91)<15 || phys.met.pt()<30)) continue;
+	      if(dilcharge>0) continue;
+
+	      //count b-tags
+	      int njets=0;
+	      int nbtags=0;
+	      for(unsigned int ijet=0; ijet<phys.jets.size(); ijet++)
+		{
+		  if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.4) continue;
+
+		  njets++;
+		  double btag(-9999.);
+		  if(btagWP.Contains("TCHE") )        btag = phys.jets[ijet].btag1;
+		  else if(btagWP.Contains("TCHP") )   btag = phys.jets[ijet].btag2;
+		  else if(btagWP.Contains("SSVHE") )  btag = phys.jets[ijet].btag3;
+		  else if(btagWP.Contains("JBP") )    btag = phys.jets[ijet].btag4;
+		  else if(btagWP.Contains("JP") )     btag = phys.jets[ijet].btag5;
+		  else if(btagWP.Contains("SSVHP") )  btag = phys.jets[ijet].btag6;
+		  else if(btagWP.Contains("CSV") )    btag = phys.jets[ijet].btag7;
+		  nbtags += (btag>btagWPcut);
+		}
+	      if(njets>maxJets || njets<2) continue;
+	      
+
+	      //check event category
+	      int icat=-1;
+	      if(ev.cat==EE &&   njets==2)  icat=HFCMeasurement::EE_2JETS;
+	      if(ev.cat==EE &&   njets==3)  icat=HFCMeasurement::EE_3JETS;
+	      if(ev.cat==MUMU && njets==2)  icat=HFCMeasurement::MUMU_2JETS;
+	      if(ev.cat==MUMU && njets==3)  icat=HFCMeasurement::MUMU_3JETS;
+	      if(ev.cat==EMU &&  njets==2)  icat=HFCMeasurement::EMU_2JETS;
+	      if(ev.cat==EMU &&  njets==3)  icat=HFCMeasurement::EMU_3JETS;
+	      if(icat<0) continue;
+
+	      //fill histogram
+	      Double_t weight=ev.weight*ev.xsecWeight*dataLumi;
+	      procHistos[icat]->Fill(nbtags,weight);
+	    }
+	}
+	 
+      //save histograms for sampling
+      histosForProc[pIt->first]=procHistos;
+    }
+  inF->Close();    
+  cout << endl;
+  
+  //
+  //create the histos for the ensemble to be fit
+  //
+  ProcHistos_t ensembleHistos;
+  for(size_t icat=0; icat<procYields.size(); icat++)
+    {
+      TString name("ensemble"); name+=icat;
+      TH1D *bmh=new TH1D(name,";b-tag multiplicity;Events",maxJets+1,0,maxJets+1);
+      bmh->SetDirectory(0);
+      ensembleHistos.push_back(bmh);
     }
 
   //
   // configure the fitter
   //
-  int maxJets=int(fitPars["maxJets"]);
-  HFCMeasurement hfcFitter(fitType,maxJets,int(fitPars["smR"]));
-  hfcFitter.configureBtagAlgo   (btagWP, fitPars[btagWP+"_cut"]);
+  HFCMeasurement hfcFitter(fitType,maxJets,rToGen);
+  hfcFitter.configureBtagAlgo   (btagWP, btagWPcut);
   hfcFitter.setBtagEfficiency   (fitPars[btagWP+"_effb"], fitPars[btagWP+"_sfb"], fitPars[btagWP+"_sfbunc"]);
   hfcFitter.setMistagEfficiency (fitPars[btagWP+"_effq"], fitPars[btagWP+"_sfq"], fitPars[btagWP+"_sfqunc"]);
   TString channels[]={"ee","mumu","emu"};
@@ -188,66 +342,84 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	}
     }
   hfcFitter.printConfiguration(report);
+  
+  //keep RooFit quiet                                                                                                                                                          
+  RooMsgService::instance().setSilentMode(true);
+  RooMsgService::instance().getStream(0).removeTopic(Minimization);
+  RooMsgService::instance().getStream(1).removeTopic(Minimization);
+  RooMsgService::instance().getStream(1).removeTopic(Fitting);
+  RooMsgService::instance().getStream(1).removeTopic(Eval);
+  RooMsgService::instance().getStream(1).removeTopic(Integration);
+  RooMsgService::instance().getStream(1).removeTopic(NumIntegration);
 
-  return;
+ 
   //
   // run the calibration
   //
-  top::EventSummaryHandler evHandler, ensembleHandler;
+  cout << "[Running calibration]" << endl;
   for(int iPE=1; iPE<=maxPE; iPE++)
     {
       if(iPE%5==0) { printf("\rCompleted %d/%d ",iPE,maxPE); cout << flush; }
       
-      bool initEnsemble(true);
-      for(std::map<TString,TTree*>::iterator it = procTrees.begin(); it!= procTrees.end(); it++)
-	{
-
-	  bool hasSignal(it->first.Contains("TTJets") || it->first.Contains("SingleT") );
-	  TTree *t=it->second;
-	  bool result = evHandler.attachToTree(t);
-	  if(!result) continue;
+      //fill randomly the ensemble histos
+      for(size_t ih=0; ih<ensembleHistos.size(); ih++) ensembleHistos[ih]->Reset("ICE");
+      for(std::map<TString,ProcHistos_t>::iterator itt = histosForProc.begin(); itt!=histosForProc.end(); itt++)
+        {
 	  
-	  //clone tree structure only and release to base directory
-	  //NB the addresses of the branches are connected to the original tree
-	  //   when filling the tree the values in the evHandler.evSummary_ structure will be copied
-	  //   for details cf. http://root.cern.ch/root/html/TTree.html#TTree:CloneTree
-	  if(initEnsemble)
+	  int procEvts(0);
+	  for(size_t ih=0; ih<itt->second.size(); ih++)
 	    {
-	      ensembleHandler.initTree(t->CloneTree(0),false);
-	      ensembleHandler.getTree()->SetDirectory(0);
-	      initEnsemble=false;
+	      //generate randomly from the template histograms                                                                                                                            
+	      int nevExpected=yieldsForProc[itt->first][ih];
+	      Int_t nevToGenerate=gRandom->Poisson(nevExpected);
+	      procEvts+=nevToGenerate;
+	      for(int iev=0; iev<nevToGenerate; iev++) ensembleHistos[ih]->Fill( itt->second[ih]->GetRandom() );
 	    }
-	  
-	  int nevts   = evHandler.getEntries();
-	  if(nevts==0) continue;
-
-	  //generate randomly according to expectations
-	  float nevExpected = procYields[it->first];
-	  Int_t nevToGenerate=gRandom->Poisson(nevExpected);
-	  std::set<int> evtList;
-	  for(int iev=0; iev<nevToGenerate; iev++)
-	    {
-	      int ientry=gRandom->Uniform(0,nevts);
-	      if(evtList.find(ientry)!=evtList.end()) continue;
-	      evtList.insert(ientry);
-	      evHandler.getEntry(ientry);
-	      evHandler.evSummary_.nmeasurements=1;
-	      evHandler.evSummary_.evmeasurements[0]=hasSignal;
-	      ensembleHandler.fillTree();
-	    }	  
 	}
-      
-      //take control of the filled ensemble and run the misassignment measurement
-      ensembleHandler.attachToTree( ensembleHandler.getTree() );
-      
 
-      //reset tree used ensemble
-      ensembleHandler.getTree()->Delete("all");
+      //fit
+      hfcFitter.fitHFCtoMeasurement(ensembleHistos,false);
+    
+      double effb(hfcFitter.model.abseb->getVal()) , effq(hfcFitter.model.abseq->getVal());
+      cout << "[Ensemble #" << iPE << "]" << endl; 
+      cout << "\t R   = " << hfcFitter.model.r->getVal() << " +" << hfcFitter.model.r->getAsymErrorHi() << " " << hfcFitter.model.r->getAsymErrorLo() << endl;
+      for(int icat=0; icat<6; icat++) cout << "\t\t R_{" << icat << "}  = " << hfcFitter.model.rFit[icat] << " +" << hfcFitter.model.rFitAsymmErrHi[icat] << " " << hfcFitter.model.rFitAsymmErrLo[icat] << endl;
+      cout << "\t e_b = " << effb*hfcFitter.model.sfeb->getVal() << " +" << effb*hfcFitter.model.sfeb->getAsymErrorHi() << " " << effb*hfcFitter.model.sfeb->getAsymErrorLo() << endl;
+      for(int icat=0; icat<6; icat++) cout << "\t\t eb_{" << icat << "}  = " << hfcFitter.model.ebFit[icat] << " +" << hfcFitter.model.ebFitAsymmErrHi[icat] << " " << hfcFitter.model.ebFitAsymmErrLo[icat] << endl;
+      cout << "\t e_q = " << effq*hfcFitter.model.sfeq->getVal() << " +" << effq*hfcFitter.model.sfeq->getAsymErrorHi() << " " << effq*hfcFitter.model.sfeq->getAsymErrorLo() << endl;
+      for(int icat=0; icat<6; icat++) cout << "\t\t eq_{" << icat << "}  = " << hfcFitter.model.eqFit[icat] << " +" << hfcFitter.model.eqFitAsymmErrHi[icat] << " " << hfcFitter.model.eqFitAsymmErrLo[icat] << endl;
+
+      fitResH->Fill(hfcFitter.model.r->getVal());
+      statUncH->Fill( hfcFitter.model.r->getAsymErrorHi() );
+      statUncH->Fill( hfcFitter.model.r->getAsymErrorLo() );
+      float bias=hfcFitter.model.r->getVal()-rToGen;
+      biasH->Fill(bias);
+      float statUnc=hfcFitter.model.r->getError();
+      if(statUnc>0) pullH->Fill(bias/statUnc);
     }
   
 
-  if(!freezeResults) return;
+  //save the templates and results to a file for posterity
+  TFile *outF = TFile::Open("HeavyFlavorFitCalibration.root","RECREATE");
+  outF->cd();
+  for(std::map<TString, ProcHistos_t >::iterator it = histosForProc.begin();  it != histosForProc.end(); it++)
+    {
+      TDirectory *procDir = outF->mkdir(it->first);
+      procDir->cd();
+      for(ProcHistos_t::iterator hit=it->second.begin(); hit!=it->second.end(); hit++) (*hit)->Write(); 
+    }
+  
+  fitResH->Write();
+  statUncH->Write();
+  statUncH->Write();
+  biasH->Write();
+  pullH->Write();
+  outF->Close();
+
+
   /*      
+  if(!freezeResults) return;
+
   //display the results
   char titBuf[250];
   sprintf(titBuf,"CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.1f fb^{-1}",float(dataLumi/1000));
@@ -410,7 +582,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   pullc->SaveAs("MisassignmentPull"+postfix+".pdf");
   */
 
-  inF->Close();    
+
 }
 
 

@@ -14,7 +14,9 @@
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 #include "LIP/Top/interface/MassMeasurement.h"
+
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
+#include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
 
 #include <vector>
 
@@ -70,7 +72,7 @@ int main(int argc, char* argv[])
   procYields[MassMeasurement::OF_EQ1BTAGS]=792.7;
   procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
   evtYields["Signal"]=procYields;
-  if(syst=="baresignal")
+  if(syst=="baresignal" || syst=="puup" || syst=="pudown")
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
       allSamples["172.5"].push_back("TTJets");
@@ -162,6 +164,10 @@ int main(int argc, char* argv[])
   if(syst=="effqup")   newLightFlavorCut-=0.02;
   if(syst=="effqdown") newLightFlavorCut+=0.02;
   
+  reweight::PoissonMeanShifter *puShifter=0;
+  if(syst=="puup") puShifter = new reweight::PoissonMeanShifter(+0.6);
+  if(syst=="pudown") puShifter = new reweight::PoissonMeanShifter(-0.6);
+  
   //
   // build the base histograms to sample for the pseudo-experiments
   //
@@ -230,6 +236,7 @@ int main(int argc, char* argv[])
 
 	      //fill the histograms
 	      float evWeight=ev.weight*ev.xsecWeight;
+	      if(puShifter) evWeight *= puShifter->ShiftWeight( ev.ngenpu );
 	      ihistos[ catToFill ]->Fill(mtop,evWeight);
 	    }
 	}

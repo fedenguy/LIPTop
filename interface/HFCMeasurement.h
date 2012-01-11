@@ -45,6 +45,10 @@ struct CombinedHFCModel_t
   RooGaussian *fttbar_constrain[MAXCATEGORIES];
   RooRealVar *fsingletop[MAXCATEGORIES],*fsingletop_mean_constrain[MAXCATEGORIES],*fsingletop_sigma_constrain[MAXCATEGORIES];
   RooGaussian *fsingletop_constrain[MAXCATEGORIES];
+
+  Double_t rFit[MAXCATEGORIES],  rFitAsymmErrHi[MAXCATEGORIES], rFitAsymmErrLo[MAXCATEGORIES];
+  Double_t ebFit[MAXCATEGORIES], ebFitAsymmErrHi[MAXCATEGORIES], ebFitAsymmErrLo[MAXCATEGORIES];
+  Double_t eqFit[MAXCATEGORIES], eqFitAsymmErrHi[MAXCATEGORIES], eqFitAsymmErrLo[MAXCATEGORIES];
 };
 
 //
@@ -52,6 +56,7 @@ class HFCMeasurement
 {
  public:
 
+  enum EventCategories {EE_2JETS, EE_3JETS, MUMU_2JETS, MUMU_3JETS, EMU_2JETS, EMU_3JETS};
   enum FitTypes { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ };
   SelectionMonitor controlHistos_;    
   CombinedHFCModel_t model;
@@ -82,7 +87,8 @@ class HFCMeasurement
     /**
        @short steer the fit
     */
-    void fitHFCtoEnsemble(top::EventSummaryHandler &evHandler);
+    void fitHFCtoEnsemble(top::EventSummaryHandler &evHandler,bool debug=false);
+    void fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos,bool debug=false);
     
     /**
        @short setters for parameters
@@ -146,7 +152,6 @@ class HFCMeasurement
     */
     void saveMonitoringHistograms(TString tag);
 
- private:
 
     /**
        @short reads the current configuration and instantiates the PDFs for the fit
@@ -161,12 +166,12 @@ class HFCMeasurement
     /**
        @short steers the fit 
      */
-    void runHFCFit();
+    void runHFCFit(bool debug);
 
     /**
        @short steers the fit with jet pT categories (work in progress)
      */
-    void runHFCDiffFit(TString dilCat);
+    void runHFCDiffFit(TString dilCat,bool debug);
 
     /**
        @short monitoring histogram handling 

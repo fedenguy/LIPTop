@@ -31,11 +31,6 @@ void HFCMeasurement::bookMonitoringHistograms()
       controlHistos_.addHistogram( (TH1D *)bmh->Clone( "avgbtags_" + tag ) );
     }
 
-  //control pseudo experiments
-  controlHistos_.addHistogram( new TH1D("bias",";bias=#varepsilon_{b}-#bar{#varepsilon_{b}};Pseudo-experiments",100,-0.99,1.01) );
-  controlHistos_.addHistogram( new TH1D("pull",";pull=(#varepsilon_{b}-#bar{#varepsilon_{b}}) / #sigma_{#varepsilon_{b}};Pseudo-experiments",100,-2.97,3.03) );
-  controlHistos_.addHistogram( new TH1D("stat",";#sigma_{#varepsilon_{b}};Pseudo-experiments",100,0.0,1.0) );
-
   //instantiate for different categories
   controlHistos_.initMonitorForStep("ee");
   controlHistos_.initMonitorForStep("emu");
@@ -74,12 +69,10 @@ void HFCMeasurement::saveMonitoringHistograms(TString tag)
 	  fixExtremities(hit->second,true,true);
 	  
 	  TString hname=hit->second->GetName();
-	  if(hname.Contains("bias") || hname.Contains("pull") || hname.Contains("stat") )
-	    {
-	      if(nMeasurements_>0) hit->second->Scale(1./nMeasurements_);
-	      hit->second->Fit("gaus","Q");
-	    }
-        }
+	  bool doAverage(hname.Contains("avg") && nMeasurements_>0);
+	  if(doAverage) hit->second->Scale(1./nMeasurements_);
+	  hit->second->Write();
+	}
     }
   
   //close file
@@ -95,7 +88,10 @@ void HFCMeasurement::initHFCModel()
   //b-tag multiplicity is the observable
   //model.bmult = new RooRealVar("bmult","N_{btags}",0.,float(maxJets_));
   model.bmult = new RooRealVar("bmult","N_{btags}",0.,float(maxJets_+1));
-  RooAbsReal::defaultIntegratorConfig()->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",50);
+  model.bmult->setMin("",0.);
+  model.bmult->setMax("",maxJets_+1);
+  model.bmult->setBins(maxJets_+1);
+  //RooAbsReal::defaultIntegratorConfig()->getConfigSection("RooIntegrator1D").setRealValue("maxSteps",50);
 
   //what do we want to fit from the observable
   bool fitR(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC || fitType_==FIT_R_AND_EB);
@@ -106,8 +102,6 @@ void HFCMeasurement::initHFCModel()
   if(!fitR)                        model.r = new RooRealVar("r","R",smR_);
   else if(fitType_==FIT_R_AND_EB)  model.r = new RooRealVar("r","R",1.0,0.9,1.1);
   else                             model.r = new RooRealVar("r","R",1.0,0.,2.0);
-
-
 
   //this is a correction for acceptance (keep constant for now)
   model.lfacceptance = new RooRealVar("lfacceptance","A(R=0)",1.0);
@@ -208,9 +202,45 @@ void HFCMeasurement::resetModelValues()
     }
 }
 
+//
+void HFCMeasurement::fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos, bool debug)
+{
+  if(btagHistos.size()==0) return;
+
+  //restart all over again
+  initHFCModel();
+  resetModelValues();
+  resetHistograms();
+
+  //add the histograms
+  std::map<int,TString> cats;
+  cats[EE_2JETS]="ee";
+  cats[EE_3JETS]="ee";
+  cats[MUMU_2JETS]="mumu";
+  cats[MUMU_3JETS]="mumu";
+  cats[EMU_2JETS]="emu";
+  cats[EMU_3JETS]="emu";
+  for(std::map<int,TString>::iterator cit = cats.begin(); cit!= cats.end(); cit++)
+    {
+      TString tag("");
+      if(cit->first==EE_2JETS || cit->first==MUMU_2JETS ||cit->first==EMU_2JETS) tag="btags_2";
+      if(cit->first==EE_3JETS || cit->first==MUMU_3JETS ||cit->first==EMU_3JETS) tag="btags_3";
+      TH1 *bmh=btagHistos[cit->first];
+      TString ctf=cit->second;
+      controlHistos_.getHisto("btags",ctf)->Add(bmh);
+      controlHistos_.getHisto(tag,ctf)->Add(bmh);
+      controlHistos_.getHisto("avg"+tag, ctf)->Add(bmh);
+      controlHistos_.getHisto("avgbtags", ctf)->Add(bmh);
+    }
+  
+  //run the fit
+  nMeasurements_++;
+  runHFCFit(debug);
+}
+
 
 //
-void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler)
+void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler,bool debug )
 {
   if(evHandler.getEntries()==0) return;
 
@@ -273,12 +303,12 @@ void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler)
     }
   
   //run the fit
-  runHFCFit();
+  runHFCFit(debug);
 }
 
 
 //
-void HFCMeasurement::runHFCFit()
+void HFCMeasurement::runHFCFit(bool debug)
 {
 
   //all data
@@ -315,9 +345,10 @@ void HFCMeasurement::runHFCFit()
       //build the likelihood
       RooNLLVar *nll=0;
       RooProdPdf *modelconstr = dynamic_cast<RooProdPdf *>( pdfIt->Next() );
-      if(fitType_==FIT_EB || fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
+      if(fitType_==FIT_EB || fitType_==FIT_R)
 	{
 	  nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.fttbar[icat],*model.fsingletop[icat])),NumCPU(2));
+	  modelconstr->fitTo(*ds,Constrain(RooArgSet(*model.fttbar[icat],*model.fsingletop[icat])),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false));
 	}
       else if(  fitType_==FIT_R_AND_EB)
 	{
@@ -326,8 +357,26 @@ void HFCMeasurement::runHFCFit()
       else if(fitType_==FIT_EB_AND_EQ /*|| fitType_==FIT_R_AND_EQ*/)  
 	{
 	  nll = (RooNLLVar *) modelconstr->createNLL(*ds,Constrain(RooArgSet(*model.sfeq)),NumCPU(2));
+	  modelconstr->fitTo(*ds,Constrain(RooArgSet(*model.sfeq)),Minos(),Save(kTRUE),PrintLevel(-1),Verbose(false));
 	}
+      
+      //save values fit and likelihood
+      model.rFit[icat]=model.r->getVal();	
+      model.rFitAsymmErrHi[icat]=model.r->getAsymErrorHi();
+      model.rFitAsymmErrLo[icat]=model.r->getAsymErrorLo();
 
+      model.ebFit[icat]=model.abseb->getVal()*model.sfeb->getVal();	
+      model.ebFitAsymmErrHi[icat]=model.abseb->getVal()*model.sfeb->getAsymErrorHi();
+      model.ebFitAsymmErrLo[icat]=model.abseb->getVal()*model.sfeb->getAsymErrorLo();
+
+      model.eqFit[icat]=model.abseq->getVal()*model.sfeq->getVal();	
+      model.eqFitAsymmErrHi[icat]=model.abseq->getVal()*model.sfeq->getAsymErrorHi();
+      model.eqFitAsymmErrLo[icat]=model.abseq->getVal()*model.sfeq->getAsymErrorLo();
+      
+      //    RooMinuit minuit(*nll);
+      //       minuit.setVerbose(false);
+      //       minuit.migrad();
+      //       minuit.hesse();
       TString itit="="+jmultkey + " jets";
       nll->SetTitle(itit);
       allLL.add(*nll); 
@@ -338,21 +387,20 @@ void HFCMeasurement::runHFCFit()
   // reinforce that the error is to be taken from  +/- 1/2
   RooAddition *combll = new RooAddition("combll","combll",allLL);      
   RooMinuit minuit(*combll); 
+  minuit.setErrorLevel(0.5);     
+  minuit.hesse();
   minuit.migrad();
   minuit.setErrorLevel(0.5);     
   minuit.hesse();
   minuit.minos();
   minuit.setErrorLevel(0.5);     
-  RooFitResult *r=minuit.save();
-
-  printf("\n\n#varepsilon_{b}=%3.3f #pm %3.2f\n\n",model.abseb->getVal()*model.sfeb->getVal(),model.abseb->getVal()*model.sfeb->getError());
-
-  //draw the result
-  if(true)
+  
+  //
+  // draw the result
+  //
+  if(debug)
     {
-      //
-      // SUMMARY OF RESULTS
-      //
+      RooFitResult *r=minuit.save();
       TCanvas *c = new TCanvas("combination","combination",600,600);
       c->SetWindowSize(600,600);
 
@@ -362,7 +410,7 @@ void HFCMeasurement::runHFCFit()
       TString resLabel;
       if(fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) 
 	{
-	  frame = model.sfeb->frame(Title("Likelihood"),Range(0.8,1.1));
+	  frame = model.sfeb->frame(Title("Likelihood"),Range(0.5,1.3));
 	  frame->GetXaxis()->SetTitle("SF #varepsilon_{b}");
 	  char buf[100];
 	  sprintf(buf,"SF #varepsilon_{b}=%3.3f #pm %3.2f, ",model.sfeb->getVal(),model.sfeb->getError());
@@ -373,7 +421,7 @@ void HFCMeasurement::runHFCFit()
 	}
       else if (fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
 	{
-	  frame = model.r->frame(Title("Likelihood"),Range(0.7,1.4)) ;    
+	  frame = model.r->frame(Title("Likelihood"),Range(0.8,1.2)) ;    
 	  frame->GetXaxis()->SetTitle("R");
 	  char buf[100];
 	  sprintf(buf,"R=%3.2f #pm %3.2f",model.r->getVal(),model.r->getError());
@@ -382,8 +430,41 @@ void HFCMeasurement::runHFCFit()
       combll->plotOn(frame,ShiftToZero(),Name("ll"));
 
       TLegend *leg = new TLegend(0.2,0.65,0.45,0.9,NULL,"brNDC");
-      formatForCmsPublic(c,leg,"",5);
       leg->AddEntry("ll","Combined","l");
+     
+      //debug
+      //       cout << "****** SUMMARY RESULT ******" << endl
+      // 	   << resLabel << endl
+      // 	   << "EDM = " << r->edm() << endl
+      // 	   << "-log(L) at minimum = " << r->minNll() << endl   
+      // 	   << "final value of floating parameters" << endl ;
+      //       r->floatParsFinal().Print("s") ;
+      //       cout << "****************************" << endl;
+      
+      //superimpose the other likelihoods now
+      int icat(0);
+      for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
+	{
+	  TString tag=*cIt;
+	  TString lltitle("");
+	  TString dilCategory("");
+	  int lcolor(1), lstyle(1);
+	  if(tag.Contains("ee"))   { dilCategory="ee";  lltitle="ee";      lcolor=kGreen+4;}
+	  if(tag.Contains("emu"))  { dilCategory="emu"; lltitle="e#mu";    lcolor=kRed;    }
+	  if(tag.Contains("mumu")) { dilCategory="mumu"; lltitle="#mu#mu"; lcolor=kOrange; }
+	  TString jmult=tag;
+	  jmult=jmult.ReplaceAll(dilCategory,"");
+	  if(jmult=="3") lstyle=2;
+	  lltitle += " (" + jmult + " jets)";
+	  theLLsPerCategory[icat]->plotOn(frame, ShiftToZero(),  LineColor(lcolor), LineStyle(lstyle), LineWidth(2),  MoveToBack(), Name(tag+"ll") );
+	  leg->AddEntry(tag+"ll",lltitle,"l");
+	}
+
+      frame->GetXaxis()->SetTitleOffset(0.8);
+      frame->GetYaxis()->SetTitle("-Log(L/L_{Max})");
+      frame->GetYaxis()->SetTitleOffset(1);
+      frame->GetYaxis()->SetRangeUser(0,5);
+      frame->Draw();
 
       TPaveText *pave = new TPaveText(0.15,0.96,0.51,0.99,"NDC");
       pave->SetBorderSize(0);
@@ -400,38 +481,8 @@ void HFCMeasurement::runHFCFit()
       pave->SetTextFont(42);
       pave->AddText(resLabel.Data());
       pave->Draw();
-      
-      //debug
-      cout << "****** SUMMARY RESULT ******" << endl
-	   << resLabel << endl
-	   << "EDM = " << r->edm() << endl
-	   << "-log(L) at minimum = " << r->minNll() << endl   
-	   << "final value of floating parameters" << endl ;
-      r->floatParsFinal().Print("s") ;
-      cout << "****************************" << endl;
 
-      //superimpose the other likelihoods now
-      int icat(0);
-      for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
-	{
-	  TString tag=*cIt;
-	  TString lltitle("");
-	  TString dilCategory("");
-	  int lcolor(1), lstyle(1);
-	  if(tag.Contains("ee"))   { dilCategory="ee";  lltitle="ee";      lcolor=kGreen+4;}
-	  if(tag.Contains("emu"))  { dilCategory="emu"; lltitle="e#mu";    lcolor=kRed;    }
-	  if(tag.Contains("mumu")) { dilCategory="mumu"; lltitle="#mu#mu"; lcolor=kOrange; }
-	  TString jmult=tag;
-	  jmult=jmult.ReplaceAll(dilCategory,"");
-	  if(jmult=="3") lstyle=9;
-	  lltitle += " (" + jmult + " jets)";
-	  theLLsPerCategory[icat]->plotOn(frame, ShiftToZero(),  LineColor(lcolor), LineStyle(lstyle), LineWidth(2),  MoveToBack(), Name(tag+"ll") );
-	  leg->AddEntry(tag+"ll",lltitle,"l");
-	}
-      frame->GetXaxis()->SetTitleOffset(0.8);
-      frame->GetYaxis()->SetTitle("-Log(L/L_{Max})");
-      frame->GetYaxis()->SetTitleOffset(1);
-      frame->Draw();
+      formatForCmsPublic(c,leg,"",5);
       leg->SetFillColor(0);
       leg->SetFillStyle(3001);
       leg->Draw();
@@ -480,14 +531,13 @@ void HFCMeasurement::runHFCFit()
 	  c->SaveAs("HFCContour.C");
 	  c->SaveAs("HFCContour.pdf");
 	  c->SaveAs("HFCContour.png");
-
 	}
     }
 }
 
 
 //
-void HFCMeasurement::runHFCDiffFit(TString dilCategory)
+void HFCMeasurement::runHFCDiffFit(TString dilCategory, bool debug)
 {
 
   //all data
@@ -537,7 +587,7 @@ void HFCMeasurement::runHFCDiffFit(TString dilCategory)
   RooFitResult *r=minuit.save();
 
   //draw the result
-  if(true)
+  if(debug)
     {
       setStyle();
 
@@ -563,7 +613,7 @@ void HFCMeasurement::runHFCDiffFit(TString dilCategory)
 	}
       else if (fitType_==FIT_R || fitType_==FIT_R_AND_EB) 
 	{
-	  frame = model.r->frame(Title("Likelihood"),Range(0.7,1.4)) ;    
+	  frame = model.r->frame(Title("Likelihood"),Range(0.8,1.2)) ;    
 	  frame->GetXaxis()->SetTitle("R");
 	  char buf[100];
 	  sprintf(buf,"R=%3.2f #pm %3.2f",model.r->getVal(),model.r->getError());
@@ -625,19 +675,6 @@ void HFCMeasurement::runHFCDiffFit(TString dilCategory)
 	  formatForCmsPublic(c,0,label,3);
 	}
     }
-  //  float bias=(fitType_==0 ? model.sfeb->getVal()-1.0 : model.r->getVal()-smR_);
-  //  float unc =(fitType_==0 ? model.sfeb->getError()   :  model.r->getError());
-  //  if(unc>0.01)
-  //    {
-  //      controlHistos_.fillHisto("bias","all",bias);
-  //      controlHistos_.fillHisto("stat","all",unc);
-  //      controlHistos_.fillHisto("pull","all",bias/unc);
-  
-  // Access basic information
-  cout << "EDM = " << r->edm() << endl
-       << "-log(L) at minimum = " << r->minNll() << endl   
-       << "final value of floating parameters" << endl ;
-  r->floatParsFinal().Print("s") ;
 }
 
 
