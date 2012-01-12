@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
       allSamples["172.5"].push_back("TTJets");
     }
-  if(syst=="jesup" || syst=="jesdown" || syst=="jer")
+  if(syst=="jesup" || syst=="jesdown" || syst=="jer"  || syst=="lesup" || syst=="lesdown")
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal_"+syst);
       allSamples["172.5"].push_back("TTJets_"+syst);
