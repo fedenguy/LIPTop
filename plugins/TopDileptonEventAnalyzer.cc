@@ -42,6 +42,10 @@
 
 #include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
 
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
+#include "CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h"
+#include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
+
 #include "Math/LorentzVector.h"
 
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > LorentzVector;
@@ -63,6 +67,8 @@ private:
   void saveEvent(const edm::Event& event, int evCat, std::vector<reco::CandidatePtr> &leptons, std::vector<const pat::Jet *> &jets, const pat::MET *met, 
 		 int nvertices, float rho, float weight, float normWeight);
 
+  void initJetEnergyCorrector(const edm::EventSetup &iSetup, bool isData);
+
   std::map<std::string, edm::ParameterSet> objConfig_;
   
   EventSummaryHandler summaryHandler_;
@@ -70,6 +76,10 @@ private:
   gen::top::Event genEvent_;
   edm::LumiReWeighting *LumiWeights_;
   double maxPuWeight_;
+
+  //jet energy correction
+  FactorizedJetCorrector *jecCor_;
+  std::vector<JetCorrectorParameters> jetCorPars_;
 };
 
 using namespace std;
@@ -78,7 +88,8 @@ using namespace std;
 TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
   : controlHistos_("top"),
     LumiWeights_(0),
-    maxPuWeight_(999999.)
+    maxPuWeight_(999999.),
+    jecCor_(0)
 {
   try{
 
@@ -202,7 +213,12 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
   selStreams.push_back("mumu");
   selStreams.push_back("emu");
   selStreams.push_back("ee");
-  
+
+  if(jecCor_==0) initJetEnergyCorrector( iSetup, event.isRealData() );
+
+
+
+
   try{
 
     //
@@ -636,10 +652,19 @@ void TopDileptonEventAnalyzer::saveEvent(const edm::Event& event, int evCat, std
   for(size_t ijet=0; ijet<jets.size(); ijet++)
     {
       int pidx = leptons.size()+ijet;
-      summaryHandler_.evSummary_.px[pidx]=jets[ijet]->px();
-      summaryHandler_.evSummary_.py[pidx]=jets[ijet]->py();
-      summaryHandler_.evSummary_.pz[pidx]=jets[ijet]->pz();
-      summaryHandler_.evSummary_.en[pidx]=jets[ijet]->energy();
+      
+      //get the new correction
+      pat::Jet rawJet = jets[ijet]->correctedJet("Uncorrected");
+      jecCor_->setJetPt(rawJet.pt());
+      jecCor_->setJetEta(rawJet.eta());
+      jecCor_->setJetA(rawJet.jetArea());
+      jecCor_->setRho(rho);
+      float jec = jecCor_->getCorrection();
+ 
+      summaryHandler_.evSummary_.px[pidx]=rawJet.px()*jec;     //jets[ijet]->px();
+      summaryHandler_.evSummary_.py[pidx]=rawJet.py()*jec;     //jets[ijet]->py();
+      summaryHandler_.evSummary_.pz[pidx]=rawJet.pz()*jec;     //jets[ijet]->pz();
+      summaryHandler_.evSummary_.en[pidx]=rawJet.energy()*jec; //jets[ijet]->energy();
       summaryHandler_.evSummary_.id[pidx] = 1;
       const reco::Candidate *genParton = jets[ijet]->genParton();
       summaryHandler_.evSummary_.genid[pidx] = genParton ? genParton->pdgId() : -9999;
@@ -671,6 +696,31 @@ void TopDileptonEventAnalyzer::saveEvent(const edm::Event& event, int evCat, std
   //all done
   summaryHandler_.fillTree();
 }
+
+
+//
+void TopDileptonEventAnalyzer::initJetEnergyCorrector(const edm::EventSetup &iSetup, bool isData)
+{
+  //jet energy correction levels to apply on raw jet
+  std::vector<std::string> jecLevels;
+  jecLevels.push_back("L1FastJet");
+  jecLevels.push_back("L2Relative");
+  jecLevels.push_back("L3Absolute");
+  if(isData) jecLevels.push_back("L2L3Residual");
+
+  //check the corrector parameters needed according to the correction levels
+  edm::ESHandle<JetCorrectorParametersCollection> parameters;
+  iSetup.get<JetCorrectionsRecord>().get("AK5PFchs",parameters);
+  for(std::vector<std::string>::const_iterator ll = jecLevels.begin(); ll != jecLevels.end(); ++ll)
+    { 
+      const JetCorrectorParameters& ip = (*parameters)[*ll];
+      jetCorPars_.push_back(ip); 
+    } 
+
+  //instantiate the jet corrector
+  jecCor_ = new FactorizedJetCorrector(jetCorPars_);
+}
+
 
 
 

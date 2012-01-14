@@ -2,11 +2,13 @@
 <use name="FWCore/ParameterSet"/>
 <use name="FWCore/FWLite"/>
 <use name="CondFormats/JetMETObjects"/>
+<use name="JetMETCorrections/Objects"/>
 <use name="CMGTools/HtoZZ2l2nu"/>
 <use name="root"/>
 <use name="roottmva"/>
 <use name="rootrflx"/>
 <use name="roofit"/>
+<use name="roostats"/>
 <use name="boost"/>
 <use name="rootmath"/>
 <export>

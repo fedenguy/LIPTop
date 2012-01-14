@@ -18,11 +18,15 @@
 #include "RooFormulaVar.h"
 #include "RooProdPdf.h"
 #include "RooDataHist.h"
+#include "RooDataSet.h"
 #include "RooAddition.h"
 #include "RooPlot.h"
 #include "RooMinuit.h"
 #include "RooAddPdf.h"
 #include "RooFitResult.h"
+#include "RooGenericPdf.h"
+#include "RooCategory.h"
+#include "RooSimultaneous.h"
 
 //
 #define MAXJETMULT 12
@@ -30,10 +34,17 @@
 enum JetMultBins{BIN_2=0,BIN_3, BIN_4};
 struct CombinedHFCModel_t
 {
-  RooArgSet pdfSet,constrPDFSet;
-  RooRealVar *bmult, *r, *lfacceptance;
-  RooRealVar *abseb,*sfeb,*sfeb_mean_constrain,*sfeb_sigma_constrain,*diff_sfeb[MAXCATEGORIES];
-  RooFormulaVar *eb,*diff_eb[MAXCATEGORIES];
+  RooSimultaneous *pdf;
+  RooProdPdf *constrPdf;
+  RooArgSet pdfConstrains;
+  std::map<TString, RooAbsPdf *> pdfForCategory;
+  RooCategory *sample;
+  RooRealVar *r;
+  RooRealVar *bmult, *bmultWgt;
+  RooRealVar *acc1,*acc05,*acc0;
+  RooFormulaVar *alpha[MAXCATEGORIES],*alpha2[MAXCATEGORIES],*alpha1[MAXCATEGORIES],*alpha0[MAXCATEGORIES];
+  RooRealVar *abseb,*sfeb,*sfeb_mean_constrain,*sfeb_sigma_constrain;
+  RooFormulaVar *eb;
   RooGaussian *sfeb_constrain;
   RooRealVar *abseq,*sfeq,*sfeq_mean_constrain,*sfeq_sigma_constrain;
   RooFormulaVar *eq;
@@ -168,10 +179,6 @@ class HFCMeasurement
      */
     void runHFCFit(bool debug);
 
-    /**
-       @short steers the fit with jet pT categories (work in progress)
-     */
-    void runHFCDiffFit(TString dilCat,bool debug);
 
     /**
        @short monitoring histogram handling 

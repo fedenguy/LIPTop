@@ -103,11 +103,7 @@
 	 "marker":1,
          "data":[
 		{
- 	        "dtag":"TTJets_mu",
-		"xsec":0.09585155
-                },
-		{
- 	        "dtag":"TTJets_e",
+ 	        "dtag":"TTJets_signal",
 		"xsec":0.09585155
                 }
 	  ]

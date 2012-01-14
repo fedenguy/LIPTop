@@ -146,6 +146,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   else if(syst.Contains("flavor")) 
     {
       sscanf(syst.Data(),"flavor%lf",&rToGen);
+      cout << "*********************" << rToGen << " ********************* " << endl;
 
       descForProc["Signal1"]     = Proc_t(1,"TT2l_R1");     
       yieldsForProc["Signal1"]   = procYields;
@@ -180,8 +181,11 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=12.6;
   procYields[HFCMeasurement::EMU_2JETS]=111.3;
   procYields[HFCMeasurement::EMU_3JETS]=34.7;
-  descForProc["SingleTop"]=SingleTop;
-  yieldsForProc["SingleTop"]=procYields;
+  //  if(!syst.Contains("flavor"))
+    {
+      descForProc["SingleTop"]=SingleTop;
+      yieldsForProc["SingleTop"]=procYields;
+    }
 
   Proc_t OtherTTbar;
   OtherTTbar.push_back("TTJets");
@@ -191,9 +195,12 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=2.1;
   procYields[HFCMeasurement::EMU_2JETS]=7.8;
   procYields[HFCMeasurement::EMU_3JETS]=8.2;
-  descForProc["OtherTTbar"]=OtherTTbar;
-  yieldsForProc["OtherTTbar"]=procYields;
-  
+  //  if(!syst.Contains("flavor"))
+    {
+      descForProc["OtherTTbar"]=OtherTTbar;
+      yieldsForProc["OtherTTbar"]=procYields;
+    }
+
   Proc_t DiBosons;
   DiBosons.push_back("WW");
   DiBosons.push_back("ZZ");
@@ -204,16 +211,17 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=2.8;
   procYields[HFCMeasurement::EMU_2JETS]=38.5;
   procYields[HFCMeasurement::EMU_3JETS]=6.6;
-  descForProc["DiBosons"]=DiBosons;
-  yieldsForProc["DiBosons"]=procYields;
-  
+  //  if(!syst.Contains("flavor"))
+    {
+      descForProc["DiBosons"]=DiBosons;
+      yieldsForProc["DiBosons"]=procYields;
+    }
+
   Proc_t DY;
   DY.push_back("DYJetsToLL");
   DY.push_back("DYJetsToMuMu_M20to50");
   DY.push_back("DYJetsToHFCMeasurement::EEM20to50");
   DY.push_back("DYJetsToTauTau_M20to50");
-
-  descForProc["DY"]=DY;
   float uncScaleFactor(1.0);
   if(syst=="dyup")   uncScaleFactor *= 1.3;
   if(syst=="dydown") uncScaleFactor *= 0.7;
@@ -223,7 +231,11 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=121.7*uncScaleFactor;
   procYields[HFCMeasurement::EMU_2JETS]=157.3*uncScaleFactor;
   procYields[HFCMeasurement::EMU_3JETS]=33.3*uncScaleFactor;
-  yieldsForProc["DY"]=procYields;
+  //  if(!syst.Contains("flavor"))
+    {
+      descForProc["DY"]=DY;
+      yieldsForProc["DY"]=procYields;
+    }
 
   //
   // fill the histograms to be used for the pseudo-experiments
@@ -235,9 +247,13 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   cout << "[Filling histograms]" << flush;
   Double_t avgeff[2]     = {0.0, 0.0};
   Double_t avgeffNorm[2] = {0.0, 0.0};
+  Double_t fcorrect[6], fcorrectNorm[6], fttbar[6], fttbarNorm[6], fsingletop[6], fsingletopNorm[6];
+  for(size_t i=0; i<6; i++) { fcorrect[i]=0; fcorrectNorm[i]=0; fttbar[i]=0; fttbarNorm[i]=0; fsingletop[i]=0; fsingletopNorm[i]=0; }
   for(std::map<TString, Proc_t>::iterator pIt=descForProc.begin(); pIt!=descForProc.end(); pIt++)
     {
       bool isSignalRequired(pIt->first.Contains("Signal"));
+      bool isSingleTop(pIt->first.Contains("SingleT"));
+      bool isTTbar(pIt->first.Contains("TT") || isSignalRequired);
 
       //instantiate the histograms
       ProcHistos_t procHistos;
@@ -283,6 +299,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	      //count b-tags
 	      int njets=0;
 	      int nbtags=0;
+	      int ncorrect(0);
 	      for(unsigned int ijet=0; ijet<phys.jets.size(); ijet++)
 		{
 		  if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.4) continue;
@@ -301,10 +318,11 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 		  avgeff[isMatchedToB]     += isBtagged*weight;
 		  avgeffNorm[isMatchedToB] += weight;
 		  nbtags += isBtagged;
+		  ncorrect += ((isTTbar || isSingleTop) && fabs(phys.jets[ijet].genid)==5 );
 		}
 	      if(njets>maxJets || njets<2) continue;
 	      
-
+	      
 	      //check event category
 	      int icat=-1;
 	      if(ev.cat==EE &&   njets==2)  icat=HFCMeasurement::EE_2JETS;
@@ -314,6 +332,15 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	      if(ev.cat==EMU &&  njets==2)  icat=HFCMeasurement::EMU_2JETS;
 	      if(ev.cat==EMU &&  njets==3)  icat=HFCMeasurement::EMU_3JETS;
 	      if(icat<0) continue;
+
+	      fttbarNorm[icat]+=weight;
+	      if(isTTbar)     { fttbar[icat] += weight;    fsingletopNorm[icat] += weight; }
+	      if(isSingleTop) { fsingletop[icat] += weight; }
+	      if(it->Contains("TT2l_R1"))
+		{
+		  fcorrect[icat] += ncorrect*weight;
+		  fcorrectNorm[icat] += 2*njets*weight;
+		}
 
 	      //fill histogram
 	      procHistos[icat]->Fill(nbtags,weight);
@@ -325,6 +352,9 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
     }
   inF->Close();    
   cout << endl;
+
+  for(size_t i=0; i<6; i++) 
+    report << "[cat #" << i << "] fcorrect=" << fcorrect[i]/fcorrectNorm[i] << " fttbar=" << fttbar[i]/fttbarNorm[i] << " fsingletop=" << fsingletop[i]/fsingletopNorm[i] << endl;
   
   //
   //create the histos for the ensemble to be fit
@@ -366,7 +396,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 					   ijets, channels[ich]);
 	}
     }
-  hfcFitter.printConfiguration(report);
+  //  hfcFitter.printConfiguration(report);
 
   //keep RooFit quiet                                                                                                                                                          
   RooMsgService::instance().setSilentMode(true);
@@ -376,8 +406,8 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   RooMsgService::instance().getStream(1).removeTopic(Eval);
   RooMsgService::instance().getStream(1).removeTopic(Integration);
   RooMsgService::instance().getStream(1).removeTopic(NumIntegration);
-
  
+
   //
   // run the calibration
   //
@@ -408,11 +438,11 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
       double effb(hfcFitter.model.abseb->getVal()) , effq(hfcFitter.model.abseq->getVal());
       report << "[Ensemble #" << iPE << "]" << endl; 
       report << "\t R   = " << hfcFitter.model.r->getVal() << " +" << hfcFitter.model.r->getAsymErrorHi() << " " << hfcFitter.model.r->getAsymErrorLo() << endl;
-      for(int icat=0; icat<6; icat++) report << "\t\t R_{" << icat << "}  = " << hfcFitter.model.rFit[icat] << " +" << hfcFitter.model.rFitAsymmErrHi[icat] << " " << hfcFitter.model.rFitAsymmErrLo[icat] << endl;
-      report << "\t e_b = " << effb*hfcFitter.model.sfeb->getVal() << " +" << effb*hfcFitter.model.sfeb->getAsymErrorHi() << " " << effb*hfcFitter.model.sfeb->getAsymErrorLo() << endl;
-      for(int icat=0; icat<6; icat++) report << "\t\t eb_{" << icat << "}  = " << hfcFitter.model.ebFit[icat] << " +" << hfcFitter.model.ebFitAsymmErrHi[icat] << " " << hfcFitter.model.ebFitAsymmErrLo[icat] << endl;
-      report << "\t e_q = " << effq*hfcFitter.model.sfeq->getVal() << " +" << effq*hfcFitter.model.sfeq->getAsymErrorHi() << " " << effq*hfcFitter.model.sfeq->getAsymErrorLo() << endl;
-      for(int icat=0; icat<6; icat++) report << "\t\t eq_{" << icat << "}  = " << hfcFitter.model.eqFit[icat] << " +" << hfcFitter.model.eqFitAsymmErrHi[icat] << " " << hfcFitter.model.eqFitAsymmErrLo[icat] << endl;
+      //for(int icat=0; icat<6; icat++) report << "\t\t R_{" << icat << "}  = " << hfcFitter.model.rFit[icat] << " +" << hfcFitter.model.rFitAsymmErrHi[icat] << " " << hfcFitter.model.rFitAsymmErrLo[icat] << endl;
+      // report << "\t e_b = " << effb*hfcFitter.model.sfeb->getVal() << " +" << effb*hfcFitter.model.sfeb->getAsymErrorHi() << " " << effb*hfcFitter.model.sfeb->getAsymErrorLo() << endl;
+      // for(int icat=0; icat<6; icat++) report << "\t\t eb_{" << icat << "}  = " << hfcFitter.model.ebFit[icat] << " +" << hfcFitter.model.ebFitAsymmErrHi[icat] << " " << hfcFitter.model.ebFitAsymmErrLo[icat] << endl;
+      //    report << "\t e_q = " << effq*hfcFitter.model.sfeq->getVal() << " +" << effq*hfcFitter.model.sfeq->getAsymErrorHi() << " " << effq*hfcFitter.model.sfeq->getAsymErrorLo() << endl;
+      // for(int icat=0; icat<6; icat++) report << "\t\t eq_{" << icat << "}  = " << hfcFitter.model.eqFit[icat] << " +" << hfcFitter.model.eqFitAsymmErrHi[icat] << " " << hfcFitter.model.eqFitAsymmErrLo[icat] << endl;
 
       float valFit   ( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.r->getVal()   : effb*hfcFitter.model.sfeb->getVal() );
       float valFitErr( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.r->getError() : effb*hfcFitter.model.sfeb->getError() );
@@ -427,8 +457,13 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   
 
   //save the templates and results to a file for posterity
-  TFile *outF = TFile::Open("HeavyFlavorFitCalibration.root","RECREATE");
+  TFile *outF = TFile::Open("HeavyFlavorFitCalibration.root","UPDATE");
   outF->cd();
+  TString baseDir=syst;
+  if(baseDir=="") baseDir="std";
+  outF->rmdir(baseDir);   //remove if already existing
+  TDirectory *outDir = outF->mkdir(baseDir);
+  outDir->cd();
   fitResH->Write();
   statUncH->Write();
   statUncH->Write();
@@ -436,7 +471,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   pullH->Write();
   for(std::map<TString, ProcHistos_t >::iterator it = histosForProc.begin();  it != histosForProc.end(); it++)
     {
-      TDirectory *procDir = outF->mkdir(it->first);
+      TDirectory *procDir = outDir->mkdir(it->first);
       procDir->cd();
       for(ProcHistos_t::iterator hit=it->second.begin(); hit!=it->second.end(); hit++) (*hit)->Write(); 
     }

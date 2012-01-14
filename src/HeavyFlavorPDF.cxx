@@ -62,8 +62,10 @@ Double_t HeavyFlavorPDF::evaluate() const
   if(nBtags>jmult) return 0;
   
   //check if this b-tag bin was already requested
-  //  if(lastBinCached_==nBtags) return lastValueCached_;
-  
+  //  if(lastBinCached_==nBtags) {
+ 
+  //  return lastValueCached_;
+  // }
   //otherwise update for the new value
   Double_t prob=_evaluate(jmult,nBtags);
   //cacheValues(nBtags,prob);
