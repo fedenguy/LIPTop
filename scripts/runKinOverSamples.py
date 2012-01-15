@@ -33,7 +33,7 @@ except getopt.GetoptError:
     usage()
                                                               
 #open the file which describes the sample
-subToBatch="8nh"
+subToBatch=""
 samplesDB = ''
 evPerJob=-1
 evToRun=-1
@@ -45,7 +45,6 @@ for o,a in opts:
         usage()
         sys.exit(0)
     elif o in('-s'): subToBatch=a
-    if(subToBatch=="True") : subToBatch="8nh"
     elif o in('-j'): samplesDB = a
     elif o in('-t'): tagSel=a
     elif o in('-e'): evPerJob=int(a)
@@ -97,7 +96,7 @@ for proc in procList :
                 evStart= ijob*evPerJob
                 evEnd= (ijob+1)*evPerJob
                 params = '-src=' + fileName + ' -f=' + str(evStart) + ' -e=' + str(evEnd) + ' ' + extraParams
-                if(subToBatch==0) :
+                if(len(subToBatch)==0) :
                     os.system(scriptFile + ' '  + params)
                 else :
                     os.system('submit2batch.sh -q' + subToBatch + ' ' + scriptFile + ' ' + params)
