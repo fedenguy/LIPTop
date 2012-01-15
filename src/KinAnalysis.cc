@@ -227,8 +227,8 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		//fill histos
 		resHandler_.getHisto("mt", nComb)->Fill( avgMtop );
 		resHandler_.getHisto("mttbar",nComb)->Fill(mttbar);
-		resHandler_.getHisto("mt2",nComb)->Fill(mt2[0]);
-		resHandler_.getHisto("afb",nComb)->Fill(afb);
+		//resHandler_.getHisto("mt2",nComb)->Fill(mt2[0]);
+		//resHandler_.getHisto("afb",nComb)->Fill(afb);
 	      }
  	  }
       }
