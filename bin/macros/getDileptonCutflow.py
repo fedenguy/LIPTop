@@ -17,7 +17,7 @@ def usage() :
     print '  -i : input file'
     print '  -c : counting histo (=evtflow by default)'
     print '  -b : bin to summarize'
-    print '  -m : mode=simple,std,chhiggs'
+    print '  -m : mode=simple,std,chhiggs,syst'
     print '  -s : scale factors for DY emu/mumu/ee e.g. -s  1.0/1.9/2.1 to be applied'
     print '  -o : overall trigger efficiencies for emu/umu/ee e.g -o 0.946/0.920/0.966 to be applied'
     print '  '
@@ -65,7 +65,7 @@ except getopt.GetoptError:
 inputFile='plotter.root'
 evCats   = ['emu','mumu','ee']
 mode='std'
-countHisto='cutflow'
+countHisto='evtflow'
 ibinSummary=5
 dySfactors = { "emu":1, "mumu":1, "ee":1 }
 trigEffs   = { "emu":1, "mumu":1, "ee":1 }
@@ -97,11 +97,12 @@ elif(mode=='chhiggs') :
     procs = [ "WH80", "HH80", "WH90", "HH90", "WH100","HH100", "WH120","HH120", "WH140","HH140", "WH150","HH150", "WH155","HH155", "WH160","HH160" ]
     systs = ['jer', 'jesup','jesdown','puup', 'pudown']
     singleSyst = [True,  False,   False,    False,  False]
+elif(mode=='syst'):
+    procs=[ "t#bar{t} matching down", "t#bar{t} matching up", "t#bar{t} scale down", "t#bar{t} scale up" ]
 
 if(len(procs)==0) :
     usage()
     sys.exit(1)
-
 
 #now get plots from file
 f    = ROOT.TFile.Open(inputFile)
@@ -114,7 +115,7 @@ hsummary = ROOT.TH2F("summaryyields","summaryyields",len(evCats),0,len(evCats),l
 for iec in xrange(0,len(evCats)):
     ec=evCats[iec]
     prefix=ec+'_'
-    
+
     #prepare the total expected from simulation and the variations histogram
     hcatsum = href.Clone(prefix+'totalmc')
     hcatsum.SetTitle('Total expected')
