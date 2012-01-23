@@ -6,6 +6,7 @@
 #include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
 #include "LIP/Top/interface/HistogramAnalyzer.h"
+#include "LIP/Top/interface/MassLikelihoodExtractor.h"
 #include "LIP/Top/interface/KinAnalysis.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
@@ -126,7 +127,7 @@ int main(int argc, char* argv[])
       controlHistos.getHisto("btagsraw","all")->GetXaxis()->SetBinLabel(ibin,label + " b-tags");
     }
 
-
+  controlHistos.addHistogram( new TH1F("totalMassLikelihood","M_{t} likelihood from KINb solutions;M_{t} [GeV/c^{2}];Likelihood / (2.5 GeV/c^{2})",800,0,2000) );
   TH1F * h=new TH1F ("evtflow", "; Cutflow; Events", 5, 0.,5.);
   h->GetXaxis()->SetBinLabel(1,"E_{T}^{miss}>30");
   h->GetXaxis()->SetBinLabel(2,"KIN");
@@ -277,6 +278,10 @@ int main(int argc, char* argv[])
   cout << "Selected : " << selEvents.size() << " events,  looking for kin results" << endl;
 
   //loop over kin results
+
+  MassLikelihoodExtractor* massLikelihood = new MassLikelihoodExtractor(false);
+  
+
   int nresults(0),neventsused(0);
   std::set<TString> usedEvents;
   for (int inum=0; inum < t->GetEntries(); ++inum)
@@ -393,6 +398,10 @@ int main(int argc, char* argv[])
 	    }
 	}
 
+      // get the top mass likelihood
+      massLikelihood->processEvent(kinHandler,*t, inum);
+      // massLikelihood.getEventLikelihood() // eventually store that
+
       //
       // get preferred combination and the top mass measurement from the MPV fit
       //
@@ -405,8 +414,8 @@ int main(int argc, char* argv[])
       if(mtop<=0) continue;
       TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
       double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
-      TH1F *afbpref=kinHandler.getHisto("afb",icomb);
-      double afb = kinHandler.getMPVEstimate(afbpref)[1];
+      //      TH1F *afbpref=kinHandler.getHisto("afb",icomb);
+      //      double afb = kinHandler.getMPVEstimate(afbpref)[1];
       LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
       LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
       
@@ -497,6 +506,14 @@ int main(int argc, char* argv[])
 	      << " | " << phys.met.pt() << " | " << htlep << endl; 
 	  
     }
+
+
+  // store that
+  //  controlHistos.addHistogram( &(massLikelihood.getFinalLikelihood()) );
+  TH1F blah = massLikelihood->getFinalLikelihood();
+  //  TH1F* blah2 = &blah;
+  controlHistos.getHisto("totalMassLikelihood","all")->Add( &blah );
+
   kinHandler.end();
   
   //if MC: rescale to number of selected events and to units of pb
