@@ -157,7 +157,8 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
   
-  TString cats[]={"ee","mumu","emu"};//,"etau","mutau"};
+  //TString cats[]={"ee","mumu","emu"};
+  TString cats[]={"etau","mutau"};
 
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};
@@ -302,18 +303,7 @@ int main(int argc, char* argv[])
 
       //get event summary
       EventSummary_t &ev = evSummaryHandler.getEvent();
-      
-      //fill histos
-      float weight = ev.weight;
-      int normWeight=0;
-      if(LumiWeights) 
-	{
-	  weight = LumiWeights->weight( ev.ngenpu );
-	  float rnd=gRandom->Uniform();
-	  if(rnd > weight/maxPuWeight) normWeight=1;
-	}
-      //else if (isMC)  weight = ev.weight;
-    
+   
       std::vector<TString> categs;
       categs.push_back("all");
       if(ev.cat==MUMU)  categs.push_back("mumu");
@@ -321,6 +311,20 @@ int main(int argc, char* argv[])
       if(ev.cat==EMU) categs.push_back("emu");
       if(ev.cat==ETAU) categs.push_back("etau");
       if(ev.cat==MUTAU) categs.push_back("mutau");
+
+
+      //fill histos
+      float weight = ev.weight;
+      int normWeight=0;
+      if(LumiWeights && ev.cat!=ETAU && ev.cat!=MUTAU) 
+	{
+	  weight = LumiWeights->weight( ev.ngenpu );
+	  float rnd=gRandom->Uniform();
+	  if(rnd > weight/maxPuWeight) normWeight=1;
+	}
+      //else if (isMC)  weight = ev.weight;
+
+
       PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       top::PhysicsObjectJetCollection prunedJets;
       int nbtags(0),nbtagscor(0);
@@ -406,7 +410,7 @@ int main(int argc, char* argv[])
       // get preferred combination and the top mass measurement from the MPV fit
       //
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-      //h1->Rebin(2); h2->Rebin(2);  <- don't rebin you'll loose resolution
+      h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
       Int_t icomb=getPreferredCombination(h1,h2);
       if(icomb<0) continue;
       TH1F *mpref=kinHandler.getHisto("mt",icomb);

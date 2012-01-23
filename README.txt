@@ -33,6 +33,7 @@ runOverSamples.py -j data/samples.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s 2nd
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-nosyst -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ  -p "@saveSummaryTree=True" -s 8nh
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -p "@saveSummaryTree=True @runSystematics=True" -s 8nh
 
 
 #
@@ -50,7 +51,10 @@ runKinOverSamples.py -j data/samples.json -e 100 -d /store/cmst3/user/psilva/Top
 runKinOverSamples.py -j data/samples.json -e 100 -d /store/cmst3/user/psilva/Top_ntuples_14Jan -p "-out=/castor/cern.ch/user/p/psilva/Top -run=jer" -s 2nd -t TT
 
 runKinOverSamples.py -j data/mutau-samples.json -e 100 -d /store/cmst3/user/psilva/Top_mutau_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=std" -s 2nd
-runKinOverSamples.py -j data/mutau-mass-samples.json -e 100 -d /store/cmst3/user/psilva/Top_mutau_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=std" -s 2nd
+runKinOverSamples.py -j data/tau-mass-samples.json -e 100 -d /store/cmst3/user/psilva/Top_mutau_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top -run=std" -s 2nd
+
+runKinOverSamples.py -j data/etau-samples.json -e 10 -d /store/cmst3/user/psilva/Top_etau_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top_etau -run=std" -s 8nh
+runKinOverSamples.py -j data/tau-mass-samples.json -e 10 -d /store/cmst3/user/psilva/Top_etau_ntuples -p "-out=/castor/cern.ch/user/p/psilva/Top_etau -run=std" -s 8nh
 
 
 # generate plots for signal templates

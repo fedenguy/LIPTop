@@ -82,7 +82,7 @@ hfcFitter = HFCMeasurement(fitType)
 fitParamsFile = open('hfcFitter_cfg.json','r')
 fitParams=json.load(fitParamsFile,encoding='utf-8')
 
-vareb=0
+vareb=1
 vareq=0
 varfcorrect=0
 varttbar=0
@@ -101,9 +101,11 @@ for ch in ['emu','mumu','ee'] :
     catParams=fitParams[ch]
     for jbin in [2,3] :
         key=str(jbin)+'jets'
-        hfcFitter.setSelectionFractions (catParams[key]['fcorrect'][0]  +varfcorrect*catParams[key]['fcorrect'][1],     catParams[key]['fcorrect'][1],
-                                         catParams[key]['fttbar'][0]    +varttbar*catParams[key]['fttbar'][1],       catParams[key]['fttbar'][1],
-                                         catParams[key]['fsingletop'][0]+varst*catParams[key]['fsingletop'][1],   catParams[key]['fsingletop'][1], jbin, ch)
+        hfcFitter.setParametersForCategory(catParams[key]['fcorrect'][0]  +varfcorrect*catParams[key]['fcorrect'][1],     catParams[key]['fcorrect'][1],
+                                           catParams[key]['fttbar'][0]    +varttbar*catParams[key]['fttbar'][1],       catParams[key]['fttbar'][1],
+                                           catParams[key]['fsingletop'][0]+varst*catParams[key]['fsingletop'][1],   catParams[key]['fsingletop'][1],
+                                           catParams[key]['effb']/btagAlgos[btagWP]['effb'][0], catParams[key]['effq']/btagAlgos[btagWP]['effq'][0],
+                                           jbin, ch)
 
 fitParamsFile.close()
 
@@ -153,7 +155,10 @@ for proc in procList :
 ensembleHandler.attachToTree( ensembleHandler.getTree() )
 
 #run the fitter
-hfcFitter.fitHFCtoEnsemble( ensembleHandler )
+hfcFitter.fitHFCtoEnsemble( ensembleHandler, True )
+print str(hfcFitter.model.r.getVal()) + ' +' + str(hfcFitter.model.r.getAsymErrorHi()) + ' ' + str(hfcFitter.model.r.getAsymErrorLo()) 
+for icat in xrange(0,6):
+    print str(icat) + ' ' + str(hfcFitter.model.rFit[icat]) + ' +' + str(hfcFitter.model.rFitAsymmErrHi[icat]) + ' ' + str(hfcFitter.model.rFitAsymmErrLo[icat])
 
 raw_input('*********************************')
 #ensembleHandler.getTree().Delete("all")

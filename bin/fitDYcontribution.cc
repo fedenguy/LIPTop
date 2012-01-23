@@ -45,32 +45,47 @@
 using namespace RooFit;
 using namespace std;
 
+//
+void printHelp()
+{
+  printf("--in      --> input file with standard control plots from showControlPlots\n");
+  printf("--ttrep   --> input file with control plots from showControlPlots for the syst. json (optional)\n");
+  printf("--syst    --> will run systematics also\n");
+  printf("command line example: fitDYcontribution --in std_plotter.root --ttrep syst_plotter.root\n");
+}
+
+//
 int main(int argc,char *argv[])
 {
-  stringstream report;
 
-  if(argc<2)
+  bool doSyst(false);
+  TString stdUrl(""),dyReplacementUrl("");
+  for(int i=1;i<argc;i++)
     {
-      cout << endl
-	   << "fitDYcontribution path/std_plotter.root <path/syst_plotter.root>" << endl
-	   << endl;
-      return -1;
+      string arg(argv[i]);
+      if(arg.find("--help")!=string::npos) { printHelp();    return 0; }
+      if(arg.find("--in")!=string::npos)                  { stdUrl=argv[i+1];           gSystem->ExpandPathName(stdUrl);            i++;  printf("in      = %s\n", stdUrl.Data()); }
+      if(arg.find("--ttrep")!=string::npos)               { dyReplacementUrl=argv[i+1]; gSystem->ExpandPathName(dyReplacementUrl);  i++;  printf("ttRep   = %s\n", dyReplacementUrl.Data()); }
+      if(arg.find("--syst")!=string::npos)                { doSyst=true;                                                            i++;  printf("Will run systematics\n"); }
     }
+  if(stdUrl=="") { printHelp(); return 0; }
 
+
+  stringstream report;
   setStyle();
 
-  TString stdUrl=argv[1];
-  gSystem->ExpandPathName(stdUrl);
-  TString dyReplacementUrl("");
-  if(argc>2) 
-    {
-      dyReplacementUrl=argv[2];
-      gSystem->ExpandPathName(dyReplacementUrl);
-    }
-
   //systematics to consider for the templates
-  TString vars[]={"","puup","pudown","jesup","jesdown","jer"};
-  const size_t nvars=sizeof(vars)/sizeof(TString);
+  std::vector<TString> vars;
+  vars.push_back("");
+  if(doSyst)
+    {
+      vars.push_back("puup");
+      vars.push_back("pudown");
+      vars.push_back("jesup");
+      vars.push_back("jesdown");
+      vars.push_back("jer");
+    }
+  const size_t nvars=vars.size();
 
   TString ch[]               ={"ee1jets",                      "ee",                    "mumu1jets",                      "mumu",                    "emu"};
   size_t runNvars[]          ={1,                              nvars,                   1,                                 nvars,                    nvars};

@@ -29,7 +29,7 @@
 	 "marker":1,
          "data":[
 		{
- 	        "dtag":"DYToLL",
+ 	        "dtag":"DY_M50",
 		"xsec":0.63044334
                 }
 	  ]
@@ -88,24 +88,20 @@
 	 "marker":1,
          "data":[
 		{
- 	        "dtag":"TTbar_other",
+ 	        "dtag":"TTJets_other",
 		"xsec":0.08562379
                 }
 	  ]
 	},
 	{
-	 "tag":"t#bar{t}#rightarrow l+#tau",
+	 "tag":"t#bar{t}#rightarrow e+#tau",
          "isdata":false,
          "color":"614",
 	 "lcolor":1,
 	 "marker":1,
          "data":[
 		{
- 	        "dtag":"TTbar_mutau",
-		"xsec":0.08562379
-                },
-		{
- 	        "dtag":"TTbar_etau",
+ 	        "dtag":"TTJets_signal",
 		"xsec":0.08562379
                 }
 	  ]
@@ -118,7 +114,7 @@
 	 "marker":20,
          "data":[
 		{
- 	        "dtag":"SingleEle"
+ 	        "dtag":"SingleElectron"
                 }
 	  ]
 	}

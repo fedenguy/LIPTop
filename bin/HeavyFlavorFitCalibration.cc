@@ -35,7 +35,8 @@ typedef std::vector<TH1D *> ProcHistos_t;
 stringstream report;
  
 //
-void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,Double_t> &fitPars, int maxPE, Double_t dataLumi, TString syst,  bool freezeResults);
+void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TString btagWP, 
+		    std::map<TString,Double_t> &fitPars, int maxPE, Double_t dataLumi, TString syst,  bool freezeResults);
 
 //
 void printHelp()
@@ -44,7 +45,9 @@ void printHelp()
   printf("--iLumi   --> integrated luminosity to be used /pb  (default:2165)\n");
   printf("--in      --> input file with the summary trees\n");
   printf("--par     --> fitter configuration file\n");
-  printf("--fit     --> fit type code                         (default: 0 = R\n");
+  printf("--fit     --> fit type code                         (default: 0 = R)\n");
+  printf("--nui     --> nuisance for fcorrect                 (default: 0 = Gaussian)\n");
+  printf("--run     --> run mode                              (default: 0 = inclusive only)\n");
   printf("--btag    --> btag algorithm                        (default: TCHEL)\n");
   printf("--syst    --> systematic uncertainty to evalute     (default:none)\n");
   printf("--npe     --> number of pseudo-experiments to throw (default:1)\n");
@@ -82,6 +85,8 @@ int main(int argc, char* argv[])
   TString url("");
   TString fitParFile("");
   Int_t fitType(HFCMeasurement::FIT_R);
+  Int_t nuisanceType(HFCMeasurement::GAUSSIAN);
+  int runMode(HFCMeasurement::FITINCLUSIVEONLY);
   TString btagWP("TCHEL");
   TString syst("");
   int maxPE(1);
@@ -96,6 +101,8 @@ int main(int argc, char* argv[])
       if(arg.find("--syst")!=string::npos && i+1<argc)  { syst=argv[i+1];                                             i++;  printf("syst    = %s\n", syst.Data());       }
       if(arg.find("--npe")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&maxPE);                              i++;  printf("N_{PE}  = %d\n", maxPE);             }
       if(arg.find("--fit")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&fitType);                            i++;  printf("fitType  = %d\n", fitType);          }
+      if(arg.find("--nui")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&nuisanceType);                       i++;  printf("nuisanceType = %d\n", nuisanceType); }
+      if(arg.find("--run")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&runMode);                            i++;  printf("runMode = %d\n", runMode);           }
       if(arg.find("--btag")!=string::npos && i+1<argc)  { btagWP=argv[i+1];                                           i++;  printf("btag WP  = %s\n", btagWP.Data());    }
     } 
   if(url=="" || fitParFile=="") { printHelp(); return 0; }
@@ -103,19 +110,29 @@ int main(int argc, char* argv[])
 
   bool freezeResults(true);
   std::map<TString,Double_t> fitPars=parseParametersFrom(fitParFile);
-  runCalibration(url, fitType, btagWP, fitPars, maxPE, dataLumi, syst, freezeResults );
+  runCalibration(url, fitType, nuisanceType, runMode, btagWP, fitPars, maxPE, dataLumi, syst, freezeResults );
   
   cout << report.str() << endl;
 }
 	  
 //
-void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,Double_t> &fitPars, int maxPE, Double_t dataLumi, TString syst,  bool freezeResults)
+void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TString btagWP, 
+		    std::map<TString,Double_t> &fitPars, int maxPE, Double_t dataLumi, TString syst,  bool freezeResults)
 {
 
   TH1D *fitResH = new TH1D("fitres",";Fit result;Pseudo-experiments",100,0,2);             fitResH->SetDirectory(0);
-  TH1D *biasH = new TH1D("bias",";bias;Pseudo-experiments",25,-0.52,0.48);                 biasH->SetDirectory(0);
-  TH1D *pullH = new TH1D("pull",";pull = bias / #sigma;Pseudo-experiments",25,-5.2,4.8);   pullH->SetDirectory(0);
+  TH1D *fitDiffH[6];
+  for(size_t icat=0; icat<6; icat++) 
+    {
+      TString catStr(""); catStr += icat;
+      fitDiffH[icat] = new TH1D("fitdiff"+catStr,";R_{i}-R;Pseudo-experiments",40,-0.195,0.205);
+      fitDiffH[icat]->SetDirectory(0);
+    }
+  TH1D *biasH = new TH1D("bias",";bias;Pseudo-experiments",50,-0.052,0.048);               biasH->SetDirectory(0);
+  TH1D *pullH = new TH1D("pull",";pull = bias / #sigma;Pseudo-experiments",50,-5.2,4.8);   pullH->SetDirectory(0);
   TH1D *statUncH = new TH1D("staterr",";#sigma;Pseudo-experiments",50,-0.05,0.05);         statUncH->SetDirectory(0);
+  TH1D *lowerPointH = new TH1D("lowerpoint",";bias;Pseudo-experiments",100,0.5,1.);       lowerPointH->SetDirectory(0);
+  TH1D *upperPointH = new TH1D("uppperpoint",";bias;Pseudo-experiments",100,0.5,1.);      upperPointH->SetDirectory(0);
 
   //
   // map the samples per type
@@ -125,7 +142,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   std::map<TString, ProcHistos_t > histosForProc;
   
   reweight::PoissonMeanShifter *puShifter=0;
-  if(syst=="puup") puShifter = new reweight::PoissonMeanShifter(+0.6);
+  if(syst=="puup")   puShifter = new reweight::PoissonMeanShifter(+0.6);
   if(syst=="pudown") puShifter = new reweight::PoissonMeanShifter(-0.6);
 
   //signal
@@ -165,7 +182,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	  yieldsForProc["Signal0"][icat]   *= pow(1-rToGen,2);
 	}
     }
-  else                     descForProc["Signal"] = Proc_t(1,"TTJets_signal");
+  else                     descForProc["Signal"] = Proc_t(1,"TTJets_signal"); 
 
   //backgrounds
   Proc_t SingleTop;
@@ -181,7 +198,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=12.6;
   procYields[HFCMeasurement::EMU_2JETS]=111.3;
   procYields[HFCMeasurement::EMU_3JETS]=34.7;
-  //  if(!syst.Contains("flavor"))
+  if(!syst.Contains("flavor"))
     {
       descForProc["SingleTop"]=SingleTop;
       yieldsForProc["SingleTop"]=procYields;
@@ -195,7 +212,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=2.1;
   procYields[HFCMeasurement::EMU_2JETS]=7.8;
   procYields[HFCMeasurement::EMU_3JETS]=8.2;
-  //  if(!syst.Contains("flavor"))
+  if(!syst.Contains("flavor"))
     {
       descForProc["OtherTTbar"]=OtherTTbar;
       yieldsForProc["OtherTTbar"]=procYields;
@@ -211,7 +228,7 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=2.8;
   procYields[HFCMeasurement::EMU_2JETS]=38.5;
   procYields[HFCMeasurement::EMU_3JETS]=6.6;
-  //  if(!syst.Contains("flavor"))
+  if(!syst.Contains("flavor"))
     {
       descForProc["DiBosons"]=DiBosons;
       yieldsForProc["DiBosons"]=procYields;
@@ -231,11 +248,26 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   procYields[HFCMeasurement::MUMU_3JETS]=121.7*uncScaleFactor;
   procYields[HFCMeasurement::EMU_2JETS]=157.3*uncScaleFactor;
   procYields[HFCMeasurement::EMU_3JETS]=33.3*uncScaleFactor;
-  //  if(!syst.Contains("flavor"))
+  if(!syst.Contains("flavor"))
     {
       descForProc["DY"]=DY;
       yieldsForProc["DY"]=procYields;
     }
+
+
+  //MC truth for the fit parameters
+  Double_t fcorrect[6], fcorrectNorm[6], fttbar[6], fttbarNorm[6], fsingletop[6], fsingletopNorm[6];
+  Double_t avgbeffPerCat[6], avgbeffPerCatNorm[6], avgleffPerCat[6], avgleffPerCatNorm[6];
+  Double_t avgbeff(0.),avgbeffNorm(0.),avgleff(0.), avgleffNorm(0.);
+  for(size_t i=0; i<6; i++) 
+    { 
+      fcorrect[i]=0;      fcorrectNorm[i]=0; 
+      fttbar[i]=0;        fttbarNorm[i]=0; 
+      fsingletop[i]=0;    fsingletopNorm[i]=0; 
+      avgbeffPerCat[i]=0; avgbeffPerCatNorm[i]=0;
+      avgleffPerCat[i]=0; avgleffPerCatNorm[i]=0;
+    }
+
 
   //
   // fill the histograms to be used for the pseudo-experiments
@@ -245,10 +277,6 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   TFile *inF = TFile::Open(url);
   top::EventSummaryHandler evHandler;
   cout << "[Filling histograms]" << flush;
-  Double_t avgeff[2]     = {0.0, 0.0};
-  Double_t avgeffNorm[2] = {0.0, 0.0};
-  Double_t fcorrect[6], fcorrectNorm[6], fttbar[6], fttbarNorm[6], fsingletop[6], fsingletopNorm[6];
-  for(size_t i=0; i<6; i++) { fcorrect[i]=0; fcorrectNorm[i]=0; fttbar[i]=0; fttbarNorm[i]=0; fsingletop[i]=0; fsingletopNorm[i]=0; }
   for(std::map<TString, Proc_t>::iterator pIt=descForProc.begin(); pIt!=descForProc.end(); pIt++)
     {
       bool isSignalRequired(pIt->first.Contains("Signal"));
@@ -298,12 +326,12 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 
 	      //count b-tags
 	      int njets=0;
-	      int nbtags=0;
+	      int nbtags(0);
 	      int ncorrect(0);
+	      float nbstagged(0), nlstagged(0), nbs(0), nls(0);
 	      for(unsigned int ijet=0; ijet<phys.jets.size(); ijet++)
 		{
 		  if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.4) continue;
-
 		  njets++;
 		  double btag(-9999.);
 		  if(btagWP.Contains("TCHE") )        btag = phys.jets[ijet].btag1;
@@ -315,12 +343,13 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 		  else if(btagWP.Contains("CSV") )    btag = phys.jets[ijet].btag7;
 		  bool isBtagged(btag>btagWPcut);
 		  bool isMatchedToB( fabs(phys.jets[ijet].flavid)==5 );
-		  avgeff[isMatchedToB]     += isBtagged*weight;
-		  avgeffNorm[isMatchedToB] += weight;
 		  nbtags += isBtagged;
-		  ncorrect += ((isTTbar || isSingleTop) && fabs(phys.jets[ijet].genid)==5 );
+		  nbstagged += isMatchedToB*isBtagged;     nbs += isMatchedToB;
+		  nlstagged += (!isMatchedToB)*isBtagged;  nls += !isMatchedToB;
+		  ncorrect += ((isTTbar || isSingleTop) && fabs(phys.jets[ijet].genid)==5 && isMatchedToB);
 		}
 	      if(njets>maxJets || njets<2) continue;
+	      if(ncorrect>2) ncorrect=2;
 	      
 	      
 	      //check event category
@@ -336,11 +365,13 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	      fttbarNorm[icat]+=weight;
 	      if(isTTbar)     { fttbar[icat] += weight;    fsingletopNorm[icat] += weight; }
 	      if(isSingleTop) { fsingletop[icat] += weight; }
-	      if(it->Contains("TT2l_R1"))
-		{
-		  fcorrect[icat] += ncorrect*weight;
-		  fcorrectNorm[icat] += 2*njets*weight;
-		}
+	      //	      if(it->Contains("TT2l_R1") || it->Contains("TTJets") || isSingleTop)
+	      fcorrect[icat]     += ncorrect*weight;
+	      fcorrectNorm[icat] += 2*njets*weight;
+	      avgleff             += nlstagged*weight;   avgleffNorm             += nls*weight; 
+	      avgleffPerCat[icat] += nlstagged*weight;   avgleffPerCatNorm[icat] += nls*weight;
+	      avgbeff             += nbstagged*weight;   avgbeffNorm             += nbs*weight; 
+	      avgbeffPerCat[icat] += nbstagged*weight;   avgbeffPerCatNorm[icat] += nbs*weight;
 
 	      //fill histogram
 	      procHistos[icat]->Fill(nbtags,weight);
@@ -352,9 +383,6 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
     }
   inF->Close();    
   cout << endl;
-
-  for(size_t i=0; i<6; i++) 
-    report << "[cat #" << i << "] fcorrect=" << fcorrect[i]/fcorrectNorm[i] << " fttbar=" << fttbar[i]/fttbarNorm[i] << " fsingletop=" << fsingletop[i]/fsingletopNorm[i] << endl;
   
   //
   //create the histos for the ensemble to be fit
@@ -371,15 +399,30 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   //
   // configure the fitter
   //
-  HFCMeasurement hfcFitter(fitType,maxJets,rToGen);
+  HFCMeasurement hfcFitter(fitType, nuisanceType,maxJets,rToGen);
   hfcFitter.configureBtagAlgo   (btagWP, btagWPcut);
   double mceb=fitPars[btagWP+"_effb"];
   double mceq=fitPars[btagWP+"_effq"];
   if(fitType==HFCMeasurement::FIT_R)
     {
-      for(size_t i=0; i<2; i++) avgeff[i] /= avgeffNorm[i];
-      mceq=avgeff[0];
-      mceb=avgeff[1];
+      avgbeff /= avgbeffNorm;
+      mceb=avgbeff;
+      avgleff /= avgleffNorm;
+      mceq=avgleff;
+      report << "MC truth for fit parameters" << endl
+	     << "[Inclusive]"
+	     << " effb=" << avgbeff 
+	     << " effq=" << avgleff << endl;
+      
+      for(size_t i=0; i<6; i++)
+	{
+	  report << "\t cat #" << i << ")"
+		 << " effb=" << avgbeffPerCat[i]/avgbeffPerCatNorm[i]
+		 << " effq=" << avgleffPerCat[i]/avgleffPerCatNorm[i]
+		 << " fcorrect=" << fcorrect[i]/fcorrectNorm[i] 
+		 << " fttbar=" << fttbar[i]/fttbarNorm[i] 
+		 << " fsingletop=" << fsingletop[i]/fsingletopNorm[i] << endl;
+	}
     }
   hfcFitter.setBtagEfficiency   (mceb, fitPars[btagWP+"_sfb"], fitPars[btagWP+"_sfbunc"]);
   hfcFitter.setMistagEfficiency (mceq, fitPars[btagWP+"_sfq"], fitPars[btagWP+"_sfqunc"]);
@@ -390,10 +433,12 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
       for(int ijets=2; ijets<=maxJets; ijets++)
 	{
 	  TString key(channels[ich]+"_"); key += ijets; key += "jets";
-	  hfcFitter.setSelectionFractions( fitPars[key+"_fcorrect"],   fitPars[key+"_fcorrectunc"],
-					   fitPars[key+"_fttbar"],     fitPars[key+"_fttbarunc"],
-					   fitPars[key+"_fsingletop"], fitPars[key+"_fsingletop"],
-					   ijets, channels[ich]);
+	  hfcFitter.setParametersForCategory( fitPars[key+"_fcorrect"],   fitPars[key+"_fcorrectunc"],
+					      fitPars[key+"_fttbar"],     fitPars[key+"_fttbarunc"],
+					      fitPars[key+"_fsingletop"], fitPars[key+"_fsingletopunc"],
+					      fitPars[key+"_effb"]/mceb,  fitPars[key+"_effq"]/mceq, 
+					      ijets, channels[ich]);
+
 	}
     }
   //  hfcFitter.printConfiguration(report);
@@ -431,10 +476,11 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
 	      for(int iev=0; iev<nevToGenerate; iev++) ensembleHistos[ih]->Fill( itt->second[ih]->GetRandom() );
 	    }
 	}
+      
 
       //fit
-      hfcFitter.fitHFCtoMeasurement(ensembleHistos,false);
-    
+      hfcFitter.fitHFCtoMeasurement(ensembleHistos,runMode,false);
+      
       double effb(hfcFitter.model.abseb->getVal()) , effq(hfcFitter.model.abseq->getVal());
       report << "[Ensemble #" << iPE << "]" << endl; 
       report << "\t R   = " << hfcFitter.model.r->getVal() << " +" << hfcFitter.model.r->getAsymErrorHi() << " " << hfcFitter.model.r->getAsymErrorLo() << endl;
@@ -444,15 +490,22 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
       //    report << "\t e_q = " << effq*hfcFitter.model.sfeq->getVal() << " +" << effq*hfcFitter.model.sfeq->getAsymErrorHi() << " " << effq*hfcFitter.model.sfeq->getAsymErrorLo() << endl;
       // for(int icat=0; icat<6; icat++) report << "\t\t eq_{" << icat << "}  = " << hfcFitter.model.eqFit[icat] << " +" << hfcFitter.model.eqFitAsymmErrHi[icat] << " " << hfcFitter.model.eqFitAsymmErrLo[icat] << endl;
 
-      float valFit   ( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.r->getVal()   : effb*hfcFitter.model.sfeb->getVal() );
-      float valFitErr( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.r->getError() : effb*hfcFitter.model.sfeb->getError() );
-      float trueVal  ( fitType==HFCMeasurement::FIT_R ? rToGen                        : mceb );
+      float valFit   ( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.rFitResult           : effb*hfcFitter.model.sfeb->getVal() );
+      float valFitErr( fitType==HFCMeasurement::FIT_R ? hfcFitter.model.rFitResultAsymmErrHi : effb*hfcFitter.model.sfeb->getError() );
+      float trueVal  ( fitType==HFCMeasurement::FIT_R ? rToGen                               : mceb );
       fitResH->Fill(valFit);
+      if(runMode==HFCMeasurement::FITEXCLUSIVECATEGORIES)
+	for(int icat=0; icat<6; icat++) fitDiffH[icat]->Fill(hfcFitter.model.rFit[icat]-valFit);
       statUncH->Fill(valFitErr);
       float bias=valFit-trueVal;
       biasH->Fill(bias);
-      float statUnc=hfcFitter.model.r->getError();
-      if(statUnc>0) pullH->Fill(bias/statUnc);
+      if(valFitErr>0) pullH->Fill(bias/valFitErr);
+      if(fitType==HFCMeasurement::FIT_R_CONSTRAINED)
+	{
+	  lowerPointH->Fill(hfcFitter.model.rFitLowerLimit);
+	  upperPointH->Fill(hfcFitter.model.rFitUpperLimit);
+	}
+
     }
   
 
@@ -461,14 +514,22 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
   outF->cd();
   TString baseDir=syst;
   if(baseDir=="") baseDir="std";
+  if(nuisanceType!=HFCMeasurement::GAUSSIAN) { baseDir += "_"; baseDir += nuisanceType; }
   outF->rmdir(baseDir);   //remove if already existing
   TDirectory *outDir = outF->mkdir(baseDir);
   outDir->cd();
   fitResH->Write();
+  for(int icat=0; icat<6; icat++)
+    {
+      fitDiffH[icat]->Fit("gaus","LMEQ+");
+      fitDiffH[icat]->Write();
+    }
   statUncH->Write();
   statUncH->Write();
   biasH->Write();
   pullH->Write();
+  lowerPointH->Write();
+  upperPointH->Write();
   for(std::map<TString, ProcHistos_t >::iterator it = histosForProc.begin();  it != histosForProc.end(); it++)
     {
       TDirectory *procDir = outDir->mkdir(it->first);
@@ -477,174 +538,4 @@ void runCalibration(TString url, int fitType, TString btagWP, std::map<TString,D
     }
   outF->Close();
 
-
-  /*      
-  if(!freezeResults) return;
-
-  //display the results
-  char titBuf[250];
-  sprintf(titBuf,"CMS preliminary, #sqrt{s}=7 TeV, #int L=%3.1f fb^{-1}",float(dataLumi/1000));
-  setStyle();
-  gStyle->SetOptFit(0);
-  TCanvas *mljc = new TCanvas("mljc","mljc",true);
-  mljc->SetCanvasSize(1200,1200);
-  mljc->SetWindowSize(1200,1200);
-  mljc->Divide(2,2);
-  TCanvas *misc = new TCanvas("misc","misc",true);
-  misc->SetCanvasSize(1200,1200);
-  misc->SetWindowSize(1200,1200);
-  misc->Divide(2,2);
-  TCanvas *misresc = new TCanvas("misresc","misc",true);
-  misresc->SetCanvasSize(1200,1200);
-  misresc->SetWindowSize(1200,1200);
-  misresc->Divide(2,2);
-  TCanvas *biasc = new TCanvas("biasc","biasc",true);
-  biasc->SetCanvasSize(1200,1200);
-  biasc->SetWindowSize(1200,1200);
-  biasc->Divide(2,2);
-  TCanvas *pullc = new TCanvas("pullc","pullc",true);
-  pullc->SetCanvasSize(1200,1200);
-  pullc->SetWindowSize(1200,1200);
-  pullc->Divide(2,2);
-
-  for(int icat=0; icat<4; icat++)
-    {
-      //get the histograms
-      TH1 *mcWrongH = misMeasurement->controlHistos.getHisto("avgwrongmlj",cats[icat]);
-      formatPlot(mcWrongH,809,1,1,0,1001,true,false,1,809,809);
-      mcWrongH->SetTitle("Wrong assignments");
-      mcWrongH->Scale(dataLumi/lumi);
-
-      TH1 *mcCorrectH= misMeasurement->controlHistos.getHisto("avgcorrectmlj",cats[icat]);
-      formatPlot(mcCorrectH,614,1,1,0,1001,true,false,1,614,614);
-      mcCorrectH->SetTitle("Correct assignments");
-      mcCorrectH->Scale(dataLumi/lumi);
-
-      TH1 *dataH=misMeasurement->controlHistos.getHisto("datainclusivemlj",cats[icat]);
-      dataH->SetTitle("data");
-
-      TH1 *mcmodelH=misMeasurement->controlHistos.getHisto("avgwrongmodelmlj",cats[icat]);
-      mcmodelH->SetTitle("MC model");
-      formatPlot(mcmodelH,8,9,2,1,0,true,false,8,8,8);
-      mcmodelH->Scale(dataLumi/lumi);
-      
-      TH1 *datamodelH = misMeasurement->controlHistos.getHisto("datawrongmodelmlj",cats[icat]);
-      datamodelH->SetTitle("data model");
-      formatPlot(datamodelH,1,9,2,1,0,true,false,1,1,1);
-      
-      TH1 *mcSubtractedH = (TH1 *)mcCorrectH->Clone("mcres"+cats[icat]);
-      mcSubtractedH->Add(mcWrongH);
-      mcSubtractedH->Add(mcmodelH,-1);
-      formatPlot(mcSubtractedH,8,9,2,1,0,true,false,8,8,8);
-      mcSubtractedH->SetTitle("MC subtracted");
-
-      TH1 *dataSubtractedH = (TH1 *)dataH->Clone("datares"+cats[icat]);
-      dataSubtractedH->Add(datamodelH,-1);
-      dataSubtractedH->SetTitle("data subtracted");
-
-      TH1 *biasH = misMeasurement->controlHistos.getHisto("bias",cats[icat]);
-      formatPlot(biasH,1,1,2,20,0,true,false,1,1,1);
-      
-      TH1 *pullH = misMeasurement->controlHistos.getHisto("pull",cats[icat]);
-      formatPlot(pullH,1,1,2,20,0,true,false,1,1,1);
-      
-      TList nullList;
-      TList dataList;   dataList.Add(dataH);
-      TList mcList;     mcList.Add(mcWrongH);       mcList.Add(mcCorrectH);    
-      TList modelList;  modelList.Add(mcmodelH);    modelList.Add(datamodelH);
-      
-      TPad *p=(TPad *) mljc->cd(icat+1);
-      TLegend *leg = showPlotsAndMCtoDataComparison(p,mcList,nullList,dataList);     
-      TPad *sp=(TPad *)p->cd(1);
-      if(icat==0)  formatForCmsPublic(sp,leg,titBuf,3);
-      else         leg->Delete();
-      sp->SetLogx(true);
-      sp->SetLogy(false);
-      TPaveText *pave = new TPaveText(0.20,0.8,0.35,0.9,"NDC");
-      pave->SetBorderSize(0);
-      pave->SetFillStyle(0);
-      pave->SetTextFont(42);
-      pave->AddText(catTits[icat]);
-      pave->Draw();
-      sp=(TPad *)p->cd(2);
-      sp->SetLogx(true);
-      
-      p=(TPad *)misc->cd(icat+1);
-      leg = showPlotsAndMCtoDataComparison( p,mcList,modelList,dataList);     
-      sp=(TPad *)p->cd(1);
-      if(icat==0)  formatForCmsPublic(sp,leg,titBuf,4);
-      else         leg->Delete();
-      sp->SetLogx(true);
-      sp->SetLogy(false);
-      pave->DrawClone();
-      sp=(TPad *)p->cd(2);
-      sp->SetLogx(true);
-
-      p=(TPad *)misresc->cd(icat+1);
-      TList mcCorList;    mcCorList.Add(mcCorrectH); 
-      TList mcresList;    mcresList.Add(mcSubtractedH);
-      TList dataresList;  dataresList.Add(dataSubtractedH);
-      leg = showPlotsAndMCtoDataComparison(p,mcCorList,mcresList,dataresList);     
-      sp=(TPad *)p->cd(1);
-      if(icat==0)  formatForCmsPublic(sp,leg,titBuf,2);
-      else         leg->Delete();
-      sp->SetLogx(true);
-      sp->SetLogy(false);
-      pave->DrawClone();
-      sp=(TPad *)p->cd(2);
-      sp->SetLogx(true);
-
-      p=(TPad *)biasc->cd(icat+1);
-      biasH->Draw("e1");
-      leg=p->BuildLegend();
-      if(icat==0)  formatForCmsPublic(p,leg,"CMS simulation",2);
-      leg->Delete();
-      pave->DrawClone();
-
-      p=(TPad *)pullc->cd(icat+1);
-      pullH->Draw("e1");
-      leg=p->BuildLegend();
-      if(icat==0)  formatForCmsPublic(p,leg,"CMS simulation",2);
-      leg->Delete();
-      pave->DrawClone();
-    }
-
-  TString postfix("");
-  if(jetbin>0) { postfix+="_"; postfix += jetbin; }
-
-  mljc->Modified();
-  mljc->Update();
-  mljc->SaveAs("Mlj"+postfix+".C");
-  mljc->SaveAs("Mlj"+postfix+".png");
-  mljc->SaveAs("Mlj"+postfix+".pdf");
-
-  misc->Modified();
-  misc->Update();
-  misc->SaveAs("MljWithModel"+postfix+".C");
-  misc->SaveAs("MljWithModel"+postfix+".png");
-  misc->SaveAs("MljWithModel"+postfix+".pdf");
-
-  misresc->Modified();
-  misresc->Update();
-  misresc->SaveAs("MljSubtracted"+postfix+".C");
-  misresc->SaveAs("MljSubtracted"+postfix+".png");
-  misresc->SaveAs("MljSubtracted"+postfix+".pdf");
-
-  biasc->Modified();
-  biasc->Update();
-  biasc->SaveAs("MisassignmentBias"+postfix+".C");
-  biasc->SaveAs("MisassignmentBias"+postfix+".png");
-  biasc->SaveAs("MisassignmentBias"+postfix+".pdf");
-
-  pullc->Modified();
-  pullc->Update();
-  pullc->SaveAs("MisassignmentPull"+postfix+".C");
-  pullc->SaveAs("MisassignmentPull"+postfix+".png");
-  pullc->SaveAs("MisassignmentPull"+postfix+".pdf");
-  */
-
-
 }
-
-
-

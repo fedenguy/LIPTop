@@ -119,14 +119,22 @@ TObjArray getDistributionFromPlotter(TString plot,TString baseURL="~/scratch0/to
 
 
 //
-void determineWorkingPoint(TString baseURL="~/scratch0/top-nosyst/plotter.root")
+void determineWorkingPoint(TString algo="csv",TString baseURL="~/scratch0/top-nosyst/plotter.root")
 {
   float workPoint(0.244);
   float sfb(1.020),    sfberr(0.04);      //from BTV-11-003
   float sflight(1.08), sflighterr(0.13);  //from BTV-11-002
+  //  float sfb(0.99),        sfberr(0.099);      //from BTV-11-001
+  //  float sflight(1.07882), sflighterr(0.244);  //from BTV-11-001
+  if(algo=="tche")
+    {
+      workPoint=1.7;
+      sfb=0.95; sfberr=0.095;
+      sflight=1.08018; sflighterr=0.1125;
+    }
 
-  TObjArray bjets=getDistributionFromPlotter("csvb",baseURL);
-  TObjArray lightjets=getDistributionFromPlotter("csvlight",baseURL);
+  TObjArray bjets=getDistributionFromPlotter(algo+"b",baseURL);
+  TObjArray lightjets=getDistributionFromPlotter(algo+"light",baseURL);
   
   TH1F *bDisc=(TH1F *) bjets.At(1);
   TH1F *lightDisc=(TH1F *) lightjets.At(1);
@@ -195,6 +203,7 @@ void determineWorkingPoint(TString baseURL="~/scratch0/top-nosyst/plotter.root")
 
       lightEff->GetPoint(ip,cut,y);     ey = lightEff->GetErrorY(ip);
       relEff=y/baseLightEff;
+      //      if(relEff<sflight+7*sflighterr && relEff>sflight-7*sflighterr)
       if(relEff<sflight+3*sflighterr && relEff>sflight-3*sflighterr)
 	{
 	  int ipt=relLightEff->GetN();
@@ -222,6 +231,7 @@ void determineWorkingPoint(TString baseURL="~/scratch0/top-nosyst/plotter.root")
   float newBCut=(TMath::Log(sfb)-ffunc->GetParameter(0))/ffunc->GetParameter(1);
   float newBCutErrPlus=(TMath::Log(sfb+sfberr)-ffunc->GetParameter(0))/ffunc->GetParameter(1)-newBCut;
   float newBCutErrMinus=(TMath::Log(sfb-sfberr)-ffunc->GetParameter(0))/ffunc->GetParameter(1)-newBCut;
+  cout <<  sfb << " " << sfb+sfberr << " " << sfb-sfberr << endl;
   TArrow *bArrow    = new TArrow(newBCut, sflight-3*sflighterr, newBCut, sflight-3*sflighterr*0.8, 0.02, "<|");
   bArrow->Draw("SAME <|");
 

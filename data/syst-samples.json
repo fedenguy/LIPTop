@@ -22,6 +22,21 @@
 	   ]
     	},
 	{
+	 "tag":"t#bar{t} (Powheg)",
+         "isdata":false,
+         "color":"8",
+	 "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"TT2l_Powheg",
+		"dset":"",
+                "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/Top/TT2l_Powheg"],
+                "xsec":165,
+		"br":[0.065]
+                }
+	]
+	},
+	{
 	 "tag":"t#bar{t} matching down",
          "isdata":false,
          "color":"8",
