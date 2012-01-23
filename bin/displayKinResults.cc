@@ -119,9 +119,9 @@ TH1F processSingleEvent(TString url, TString ourl, Int_t event, TString& eventTa
       cout << "baseline for combination 1: " << baseline_1 << endl;
       cout << "baseline for combination 2: " << baseline_2 << endl;
 
-      for(Int_t i=0; i<h1->GetEntries(); i++)
+      for(Int_t i=0; i<h1->GetNbinsX(); i++)
 	h1->AddBinContent(i, baseline_1);
-      for(Int_t i=0; i<h2->GetEntries(); i++)
+      for(Int_t i=0; i<h2->GetNbinsX(); i++)
 	h2->AddBinContent(i, baseline_2);
       
       h1->Add(h2);
@@ -173,7 +173,7 @@ void processNEvents(TString url, TString ourl, Int_t event){
     c->SaveAs(ourl+"kinideogram"+eventTag+".C");
     c->SaveAs(ourl+"kinideogram"+eventTag+".png");
     
-    for(Int_t i=0; i<kinideogram->GetEntries(); i++)
+    for(Int_t i=0; i<kinideogram->GetNbinsX(); i++)
       kinideogram->AddBinContent(i,TMath::Log(eventideogram.GetBinContent(i)));
   }
   
