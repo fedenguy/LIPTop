@@ -34,8 +34,6 @@ runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/t
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-nosyst -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ  -p "@saveSummaryTree=True" -s 8nh
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -s 8nh
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -p "@saveSummaryTree=True @runSystematics=True" -s 8nh
-
-
 #
 # PLOTTING THE RESULTS
 # besides creating the plots it will collect all in a file called plotter.root

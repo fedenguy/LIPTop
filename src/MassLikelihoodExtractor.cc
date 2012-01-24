@@ -6,13 +6,17 @@
 using namespace std;
 
 MassLikelihoodExtractor::MassLikelihoodExtractor(bool debug = false):
-  debug_(debug)
+  debug_(debug),
+  hcomb1_(0), 
+  hcomb2_(0)
 {
   totalMassLikelihood_ = new TH1F("totalMassLikelihood","M_{t} likelihood from KINb solutions;M_{t} [GeV/c^{2}];Likelihood / (2.5 GeV/c^{2})",800,0,2000);
   totalMassLikelihood_->Reset();
 
-  hcomb1_ = new TH1F();
-  hcomb2_ = new TH1F();
+
+  // hcomb1_ = new TH1F();
+  // hcomb2_ = new TH1F();
+
 }
 
 MassLikelihoodExtractor::~MassLikelihoodExtractor()
@@ -20,17 +24,19 @@ MassLikelihoodExtractor::~MassLikelihoodExtractor()
   
 }
 
-void MassLikelihoodExtractor::processEvent(KinResultsHandler& kinHandler, TChain& t, Int_t event)
+void MassLikelihoodExtractor::processEvent(KinResultsHandler& kinHandler)
 {
   HistogramAnalyzer histoAnalyzer;
 
   // Loading event: if not loaded, it is still not possible to use the same event already loaded outside of this
-  t.GetEntry(event);
+  //  t.GetEntry(event);
 
   // Eventually, acquire event info in order to label histograms and events and output files
 
   // Analyze first combination
-  hcomb1_ = kinHandler.getHisto("mt",1);
+  TH1F *h1=kinHandler.getHisto("mt",1);
+  if(hcomb1_==0) { hcomb1_ = (TH1F *) h1->Clone("hcomb1"); hcomb1_->SetDirectory(0); }
+  else           { hcomb1_->Add(h1); }
   std::map<TString,Double_t> res = histoAnalyzer.analyzeHistogram(hcomb1_);
   double mtop = kinHandler.getMPVEstimate(hcomb1_) [1];
   if(debug_)
@@ -40,7 +46,9 @@ void MassLikelihoodExtractor::processEvent(KinResultsHandler& kinHandler, TChain
     }
   
   // Analyze second combination
-  hcomb2_ = kinHandler.getHisto("mt",2);
+  TH1F *h2=kinHandler.getHisto("mt",2);
+  if(hcomb2_==0) { hcomb2_ = (TH1F *) h2->Clone("hcomb2"); hcomb2_->SetDirectory(0); }
+  else           { hcomb2_->Add(h2); }
   res=histoAnalyzer.analyzeHistogram(hcomb2_);
   mtop = kinHandler.getMPVEstimate(hcomb2_) [1];
   if(debug_)

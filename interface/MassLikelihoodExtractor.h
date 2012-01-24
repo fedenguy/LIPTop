@@ -59,7 +59,7 @@ class MassLikelihoodExtractor
   MassLikelihoodExtractor(bool);
   ~MassLikelihoodExtractor();
   
-  void processEvent(KinResultsHandler&, TChain&, Int_t);
+  void processEvent(KinResultsHandler&);
   TH1F getEventLikelihood(/* event parameter */);
   TH1F getFinalLikelihood();
 

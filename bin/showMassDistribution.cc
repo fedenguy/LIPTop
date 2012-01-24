@@ -42,7 +42,7 @@ struct ptSorter{
 
 
 //
-int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=25)
+int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=100)
 {
   int prefComb(-1);
   if(h1==0 || h2==0) return prefComb;
@@ -157,8 +157,8 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
   
-  //TString cats[]={"ee","mumu","emu"};
-  TString cats[]={"etau","mutau"};
+  TString cats[]={"ee","mumu","emu"};
+  //TString cats[]={"etau","mutau"};
 
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};
@@ -403,14 +403,14 @@ int main(int argc, char* argv[])
 	}
 
       // get the top mass likelihood
-      massLikelihood->processEvent(kinHandler,*t, inum);
+      massLikelihood->processEvent(kinHandler);
       // massLikelihood.getEventLikelihood() // eventually store that
 
       //
       // get preferred combination and the top mass measurement from the MPV fit
       //
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-      h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
+      //h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
       Int_t icomb=getPreferredCombination(h1,h2);
       if(icomb<0) continue;
       TH1F *mpref=kinHandler.getHisto("mt",icomb);

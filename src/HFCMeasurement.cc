@@ -537,38 +537,37 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
   minuit.setErrorLevel(0.5);     
   RooFitResult *r=minuit.save();
   model.minLL = r->minNll();
-  
-
-  //
-  // prepare the configuration for Feldman-Cousins
-  //
-  //create a workspace
-  RooWorkspace* w = new RooWorkspace("w");
-  ModelConfig modelConfig("hfcfit",w);
-  modelConfig.SetPdf(*model.constrPdf);
-  modelConfig.SetParametersOfInterest(RooArgSet(*model.r));
-  modelConfig.SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
  
-  //configure FC
-  RooStats::FeldmanCousins fc(*data,modelConfig);
-  RooDataSet poiToTest("poitotest","poitotest",RooArgSet(*model.r));
-  double rmin=max(double(0.),double(model.rFitResult+model.rFitResultAsymmErrLo*5));
-  double rmax=1.0;
-  for(double r=rmin; r<=rmax; r+= (rmax-rmin)/20.)
-    {
-      model.r->setVal(r);
-      poiToTest.add(RooArgSet(*model.r));
-    }
-  fc.SetPOIPointsToTest(poiToTest);
-  fc.SetTestSize(.05);               // set size of test 
-  fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-  fc.SetConfidenceLevel(0.95);       // 95% interval
-  fc.UseAdaptiveSampling(true);      // speed it up a bit
-  fc.CreateConfBelt(true);
-  
   //get the interval if required
   if(fitType_==FIT_R_CONSTRAINED)
     {
+      //
+      // prepare the configuration for Feldman-Cousins
+      //
+      //create a workspace
+      RooWorkspace* w = new RooWorkspace("w");
+      ModelConfig modelConfig("hfcfit",w);
+      modelConfig.SetPdf(*model.constrPdf);
+      modelConfig.SetParametersOfInterest(RooArgSet(*model.r));
+      modelConfig.SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
+      
+      //configure FC
+      RooStats::FeldmanCousins fc(*data,modelConfig);
+      RooDataSet poiToTest("poitotest","poitotest",RooArgSet(*model.r));
+      double rmin=max(double(0.),double(model.rFitResult+model.rFitResultAsymmErrLo*5));
+      double rmax=1.0;
+      for(double r=rmin; r<=rmax; r+= (rmax-rmin)/20.)
+	{
+	  model.r->setVal(r);
+	  poiToTest.add(RooArgSet(*model.r));
+	}
+      fc.SetPOIPointsToTest(poiToTest);
+      fc.SetTestSize(.05);               // set size of test 
+      fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
+      fc.SetConfidenceLevel(0.95);       // 95% interval
+      fc.UseAdaptiveSampling(true);      // speed it up a bit
+      fc.CreateConfBelt(true);
+      
       cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
       PointSetInterval* interval = (PointSetInterval*)fc.GetInterval();
       ConfidenceBelt* belt = fc.GetConfidenceBelt();

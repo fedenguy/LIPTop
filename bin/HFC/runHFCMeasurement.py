@@ -82,7 +82,7 @@ hfcFitter = HFCMeasurement(fitType)
 fitParamsFile = open('hfcFitter_cfg.json','r')
 fitParams=json.load(fitParamsFile,encoding='utf-8')
 
-vareb=1
+vareb=0
 vareq=0
 varfcorrect=0
 varttbar=0
@@ -155,7 +155,7 @@ for proc in procList :
 ensembleHandler.attachToTree( ensembleHandler.getTree() )
 
 #run the fitter
-hfcFitter.fitHFCtoEnsemble( ensembleHandler, True )
+hfcFitter.fitHFCtoEnsemble( ensembleHandler,0,True )
 print str(hfcFitter.model.r.getVal()) + ' +' + str(hfcFitter.model.r.getAsymErrorHi()) + ' ' + str(hfcFitter.model.r.getAsymErrorLo()) 
 for icat in xrange(0,6):
     print str(icat) + ' ' + str(hfcFitter.model.rFit[icat]) + ' +' + str(hfcFitter.model.rFitAsymmErrHi[icat]) + ' ' + str(hfcFitter.model.rFitAsymmErrLo[icat])
