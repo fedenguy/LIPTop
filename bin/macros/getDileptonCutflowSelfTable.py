@@ -125,15 +125,15 @@ singleSyst= [True,  False,   False,    False,  False]
 #singleSyst= [True,  False,   False,    False,  False]
 
 # top systematics
-procs=[
-    "t#bar{t} matching down",
-    "t#bar{t} matching up",
-    "t#bar{t} scale down",
-    "t#bar{t} scale up",
-    "Single top (DS)"
-     ]
-systs=[]
-singleSyst=[]
+#procs=[
+#    "t#bar{t} matching down",
+#    "t#bar{t} matching up",
+#    "t#bar{t} scale down",
+#    "t#bar{t} scale up",
+#    "Single top (DS)"
+#     ]
+#systs=[]
+#singleSyst=[]
 
 f = ROOT.TFile.Open(inputFile)
 href=f.Get(procs[0]+'/'+countHisto)
