@@ -30,6 +30,14 @@
 #include "RooLognormal.h"
 #include "RooUniform.h"
 
+#include "RooStats/ConfInterval.h"
+#include "RooStats/PointSetInterval.h"
+#include "RooStats/ConfidenceBelt.h"
+#include "RooStats/FeldmanCousins.h"
+#include "RooStats/ModelConfig.h"
+
+
+
 //
 #define MAXJETMULT 12
 #define MAXCATEGORIES 12
@@ -58,6 +66,9 @@ struct CombinedHFCModel_t
   RooAbsPdf *fttbar_constrain[MAXCATEGORIES];
   RooRealVar *fsingletop[MAXCATEGORIES];
   RooAbsPdf *fsingletop_constrain[MAXCATEGORIES];
+
+  RooWorkspace *ws;
+  RooStats::ModelConfig *modelConfig;
   
   Double_t rFitLowerLimit,         rFitUpperLimit;
   Double_t rFitResult,           rFitResultAsymmErrHi,           rFitResultAsymmErrLo;
@@ -209,6 +220,9 @@ class HFCMeasurement
     std::set<TString> categoryKeys_;
     std::map<TString, Float_t> fcorrect_,  fcorrectUnc_, fttbar_, fttbarUnc_,  fsingletop_, fsingletopUnc_, btagEffCorr_, ltagEffCorr_;
     int nMeasurements_;
+
+    RooStats::FeldmanCousins *fc_;
+
 };
 
 

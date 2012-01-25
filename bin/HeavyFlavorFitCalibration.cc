@@ -148,12 +148,12 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
   //signal
   Double_t rToGen(1.0);
   ProcYields_t procYields(6,0);
-  procYields[HFCMeasurement::EE_2JETS]=546.8;
-  procYields[HFCMeasurement::EE_3JETS]=273.4;
-  procYields[HFCMeasurement::MUMU_2JETS]=698.3;
-  procYields[HFCMeasurement::MUMU_3JETS]=335.8;
-  procYields[HFCMeasurement::EMU_2JETS]=1882.3;
-  procYields[HFCMeasurement::EMU_3JETS]=915.4;
+  procYields[HFCMeasurement::EE_2JETS]=548;
+  procYields[HFCMeasurement::EE_3JETS]=274;
+  procYields[HFCMeasurement::MUMU_2JETS]=702;
+  procYields[HFCMeasurement::MUMU_3JETS]=352;
+  procYields[HFCMeasurement::EMU_2JETS]=1884;
+  procYields[HFCMeasurement::EMU_3JETS]=1046;
   yieldsForProc["Signal"]=procYields;
 
   if(syst=="matchingdown")        descForProc["Signal"] = Proc_t(1,"TTJets_matchingdown");
@@ -192,12 +192,12 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
   SingleTop.push_back("SingleT_t");
   SingleTop.push_back("SingleTbar_s");
   SingleTop.push_back("SingleT_s");
-  procYields[HFCMeasurement::EE_2JETS]=33.5;
-  procYields[HFCMeasurement::EE_3JETS]=10.7;
-  procYields[HFCMeasurement::MUMU_2JETS]=43.2;
-  procYields[HFCMeasurement::MUMU_3JETS]=12.6;
-  procYields[HFCMeasurement::EMU_2JETS]=111.3;
-  procYields[HFCMeasurement::EMU_3JETS]=34.7;
+  procYields[HFCMeasurement::EE_2JETS]=33.7;
+  procYields[HFCMeasurement::EE_3JETS]=10.8;
+  procYields[HFCMeasurement::MUMU_2JETS]=43;
+  procYields[HFCMeasurement::MUMU_3JETS]=13.5;
+  procYields[HFCMeasurement::EMU_2JETS]=111.6;
+  procYields[HFCMeasurement::EMU_3JETS]=36.5;
   if(!syst.Contains("flavor"))
     {
       descForProc["SingleTop"]=SingleTop;
@@ -209,8 +209,8 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
   procYields[HFCMeasurement::EE_2JETS]=4.8;
   procYields[HFCMeasurement::EE_3JETS]=3.2;
   procYields[HFCMeasurement::MUMU_2JETS]=0.9;
-  procYields[HFCMeasurement::MUMU_3JETS]=2.1;
-  procYields[HFCMeasurement::EMU_2JETS]=7.8;
+  procYields[HFCMeasurement::MUMU_3JETS]=2.2;
+  procYields[HFCMeasurement::EMU_2JETS]=7.6;
   procYields[HFCMeasurement::EMU_3JETS]=8.2;
   if(!syst.Contains("flavor"))
     {
@@ -222,12 +222,12 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
   DiBosons.push_back("WW");
   DiBosons.push_back("ZZ");
   DiBosons.push_back("WZ");
-  procYields[HFCMeasurement::EE_2JETS]=11.9;
-  procYields[HFCMeasurement::EE_3JETS]=2.4;
-  procYields[HFCMeasurement::MUMU_2JETS]=13.6;
-  procYields[HFCMeasurement::MUMU_3JETS]=2.8;
-  procYields[HFCMeasurement::EMU_2JETS]=38.5;
-  procYields[HFCMeasurement::EMU_3JETS]=6.6;
+  procYields[HFCMeasurement::EE_2JETS]=11.8;
+  procYields[HFCMeasurement::EE_3JETS]=2.0;
+  procYields[HFCMeasurement::MUMU_2JETS]=14;
+  procYields[HFCMeasurement::MUMU_3JETS]=2.6;
+  procYields[HFCMeasurement::EMU_2JETS]=38;
+  procYields[HFCMeasurement::EMU_3JETS]=6.7;
   if(!syst.Contains("flavor"))
     {
       descForProc["DiBosons"]=DiBosons;
@@ -236,18 +236,16 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
 
   Proc_t DY;
   DY.push_back("DYJetsToLL");
-  DY.push_back("DYJetsToMuMu_M20to50");
-  DY.push_back("DYJetsToHFCMeasurement::EEM20to50");
-  DY.push_back("DYJetsToTauTau_M20to50");
+  DY.push_back("DYJetsToLL_M10to50");
   float uncScaleFactor(1.0);
-  if(syst=="dyup")   uncScaleFactor *= 1.3;
-  if(syst=="dydown") uncScaleFactor *= 0.7;
-  procYields[HFCMeasurement::EE_2JETS]=298.0*uncScaleFactor;
-  procYields[HFCMeasurement::EE_3JETS]=84.8*uncScaleFactor;
-  procYields[HFCMeasurement::MUMU_2JETS]=451.4*uncScaleFactor;
-  procYields[HFCMeasurement::MUMU_3JETS]=121.7*uncScaleFactor;
-  procYields[HFCMeasurement::EMU_2JETS]=157.3*uncScaleFactor;
-  procYields[HFCMeasurement::EMU_3JETS]=33.3*uncScaleFactor;
+  if(syst=="dyup")   uncScaleFactor *= 1.15;
+  if(syst=="dydown") uncScaleFactor *= 0.85;
+  procYields[HFCMeasurement::EE_2JETS]=291*uncScaleFactor;
+  procYields[HFCMeasurement::EE_3JETS]=96*uncScaleFactor;
+  procYields[HFCMeasurement::MUMU_2JETS]=424*uncScaleFactor;
+  procYields[HFCMeasurement::MUMU_3JETS]=139*uncScaleFactor;
+  procYields[HFCMeasurement::EMU_2JETS]=159.6*uncScaleFactor;
+  procYields[HFCMeasurement::EMU_3JETS]=30.3*uncScaleFactor;
   if(!syst.Contains("flavor"))
     {
       descForProc["DY"]=DY;

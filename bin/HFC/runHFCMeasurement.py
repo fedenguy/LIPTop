@@ -82,8 +82,8 @@ hfcFitter = HFCMeasurement(fitType)
 fitParamsFile = open('hfcFitter_cfg.json','r')
 fitParams=json.load(fitParamsFile,encoding='utf-8')
 
-vareb=0
-vareq=-1
+vareb=1
+vareq=0
 varfcorrect=0
 varttbar=0
 varst=0

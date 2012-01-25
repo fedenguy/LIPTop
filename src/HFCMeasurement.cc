@@ -1,12 +1,6 @@
 #include "LIP/Top/interface/HFCMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
-#include "RooStats/ConfInterval.h"
-#include "RooStats/PointSetInterval.h"
-#include "RooStats/ConfidenceBelt.h"
-#include "RooStats/FeldmanCousins.h"
-#include "RooStats/ModelConfig.h"
-
 #include "RooNumIntConfig.h"
 #include "RooNLLVar.h"
 #include "RooConstVar.h"
@@ -277,6 +271,15 @@ void HFCMeasurement::initHFCModel()
   RooArgSet argSet(*model.pdf);  argSet.add(model.pdfConstrains);
   model.constrPdf = new RooProdPdf("hfcconstrmodel","hfconstrmodel",argSet);
 
+
+  //create a workspace
+  model.ws = new RooWorkspace("w");
+  model.modelConfig = new ModelConfig("hfcfit",model.ws);
+  model.modelConfig->SetPdf(*model.constrPdf);
+  model.modelConfig->SetParametersOfInterest(RooArgSet(*model.r));
+  model.modelConfig->SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
+     
+
   //all done here
   isInit_=true;
 }
@@ -544,15 +547,9 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       //
       // prepare the configuration for Feldman-Cousins
       //
-      //create a workspace
-      RooWorkspace* w = new RooWorkspace("w");
-      ModelConfig modelConfig("hfcfit",w);
-      modelConfig.SetPdf(*model.constrPdf);
-      modelConfig.SetParametersOfInterest(RooArgSet(*model.r));
-      modelConfig.SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
       
       //configure FC
-      RooStats::FeldmanCousins fc(*data,modelConfig);
+      if(fc_==0) fc_ = new RooStats::FeldmanCousins(*data,*model.modelConfig);
       RooDataSet poiToTest("poitotest","poitotest",RooArgSet(*model.r));
       double rmin=max(double(0.),double(model.rFitResult+model.rFitResultAsymmErrLo*5));
       double rmax=1.0;
@@ -561,16 +558,16 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	  model.r->setVal(r);
 	  poiToTest.add(RooArgSet(*model.r));
 	}
-      fc.SetPOIPointsToTest(poiToTest);
-      fc.SetTestSize(.05);               // set size of test 
-      fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-      fc.SetConfidenceLevel(0.95);       // 95% interval
-      fc.UseAdaptiveSampling(true);      // speed it up a bit
-      fc.CreateConfBelt(true);
+      fc_->SetPOIPointsToTest(poiToTest);
+      fc_->SetTestSize(.05);               // set size of test 
+      fc_->FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
+      fc_->SetConfidenceLevel(0.95);       // 95% interval
+      fc_->UseAdaptiveSampling(true);      // speed it up a bit
+      fc_->CreateConfBelt(true);
       
       cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
-      PointSetInterval* interval = (PointSetInterval*)fc.GetInterval();
-      ConfidenceBelt* belt = fc.GetConfidenceBelt();
+      PointSetInterval* interval = (PointSetInterval*)fc_->GetInterval();
+      ConfidenceBelt* belt = fc_->GetConfidenceBelt();
       model.rFitLowerLimit=interval->LowerLimit(*model.r);
       model.rFitUpperLimit=interval->UpperLimit(*model.r);
 
@@ -581,17 +578,17 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	  //save workspace to file
 	  TFile *debugF = TFile::Open("HeavyFlavorWS.root","RECREATE");
 	  debugF->cd();
-	  w->import(modelConfig);
-	  w->import(*data);
-	  w->Write();
+	  model.ws->import(*model.modelConfig);
+	  model.ws->import(*data);
+	  model.ws->Write();
 	  debugF->Close();
 	  debugF->Delete();
-
+	  
 	  //display in canvas
 	  TCanvas *c = new TCanvas("HFCIntervalForFeldmanCousins","HFCIntervalForFeldmanCousins",600,600);
 	  c->SetWindowSize(600,600);     
 	  TGraph *frame = new TGraph;
-	  RooDataSet* parameterScan = (RooDataSet*) fc.GetPointsToScan();
+	  RooDataSet* parameterScan = (RooDataSet*) fc_->GetPointsToScan();
 	  for(Int_t i=0; i<parameterScan->numEntries(); ++i)
 	    {
 	      RooArgSet *tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
