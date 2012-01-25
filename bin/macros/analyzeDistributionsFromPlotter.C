@@ -49,7 +49,6 @@ TGraphAsymmErrors *getEfficiencyFrom(TH1F *h)
   return effgr;
 }
 
-
 //
 TObjArray getDistributionFromPlotter(TString plot,TString baseURL="~/scratch0/top-nosyst/plotter.root")
 {
@@ -114,6 +113,7 @@ TObjArray getDistributionFromPlotter(TString plot,TString baseURL="~/scratch0/to
   res.Add(totalData);
   res.Add(totalMC);
   res.Add(ttbarMC);
+  res.Add(mc);
   return res;
 }
 
@@ -280,3 +280,47 @@ void determineWorkingPoint(TString algo="csv",TString baseURL="~/scratch0/top-no
 }
 
 
+
+//
+void compareDYTemplates(TString baseURL="~/scratch0/top-newjec/syst_plotter.root")
+{
+  TString ch[]={"ee","mumu"};
+  TString categs[]={"eq1jets",""};
+  for(size_t ich=0; ich<2; ich++)
+    {
+      for(size_t icat=0; icat<2; icat++)
+	{
+	  TObjArray lowMet  = getDistributionFromPlotter(ch[ich]+"_"+categs[icat]+"lowmetdilarccosine",baseURL);
+	  TH1 *lowMetH = (TH1 *) ((TList *)lowMet.At(3))->At(3);
+	  formatPlot(lowMetH,1,1,1,24,0,false,false,1,1,1);
+	  lowMetH->SetTitle("E_{T}^{miss}<30 GeV/c^{2}");
+	  lowMetH->Scale(1./lowMetH->Integral());
+
+	  TObjArray highMet = getDistributionFromPlotter(ch[ich]+"_"+categs[icat]+"dilarccosine",baseURL);
+	  TH1 *highMetH = (TH1 *)  ((TList *)highMet.At(3))->At(3);
+	  formatPlot(highMetH,1,1,1,20,0,false,false,1,1,1);
+	  highMetH->SetTitle("E_{T}^{miss}>30 GeV/c^{2}");
+	  highMetH->Scale(1./highMetH->Integral());
+
+	  TString channelTitle(ich==0 ? "ee" : "#mu#mu"); 
+	  if(categs[icat]=="eq1jets") channelTitle += "+ 1 jet";
+	  else                        channelTitle += "+ #geq 2 jets";
+
+	  //draw
+	  TString plot(ch[ich]+categs[icat]+"_anglecomparison");
+	  TCanvas *cnv = getNewCanvas(plot+"c",plot+"c",false);
+	  cnv->Clear();
+	  cnv->SetWindowSize(600,600);
+	  cnv->cd(); 
+	  TList *mc = new TList; mc->Add(lowMetH);
+	  TList *data = new TList; data->Add(highMetH);
+	  TList *spimpose = new TList;
+	  TLegend *leg=showPlotsAndMCtoDataComparison(cnv,*mc,*spimpose,*data,false);
+	  TPad *p=(TPad *)cnv->cd(1);
+	  formatForCmsPublic(p,leg,"CMS simulation, " + channelTitle, 4);
+	  cnv->SaveAs(plot+".C");
+	  cnv->SaveAs(plot+".pdf");
+	  cnv->SaveAs(plot+".png");
+	}
+    }
+}

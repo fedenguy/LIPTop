@@ -98,41 +98,12 @@
 	       "patdir":["/store/cmst3/user/querten/11_07_25_HtoZZ2l2n/DYToLL/DYJetsToLL_TuneZ2_M-50_7TeV-madgraph-tauola"],
                "xsec":3048
               },
-   	      {
-               "dtag":"DYJetsToMuMu_M20to50",
-               "dset":"/DYToMuMu_M-20_TuneZ2_7TeV-pythia6/Summer11-PU_S4_START42_V11-v2/AODSIM",
-               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToMuMu_M-20_TuneZ2_7TeV-pythia6"],
-               "xsec":1666
-              },
-              {
-               "dtag":"DYJetsToEE_M20to50",
-               "dset":"/DYToEE_M-20_TuneZ2_7TeV-pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM",
-               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToEE_M-20_TuneZ2_7TeV-pythia6"],
-               "xsec":1666
-              },
-              {
-               "dtag":"DYJetsToTauTau_M20to50",
-               "dset":"/DYToTauTau_M-20_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
-               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToTauTau_M-20_TuneZ2_7TeV-pythia6-tauola"],
-               "xsec":1666
-              },
-              {
-               "dtag":"DYJetsToEE_M10to20",
-               "dset":"/DYToEE_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia/Summer11-PU_S3_START42_V11-v2/AODSIM",
-               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToEE_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia"],
-               "xsec":2659.0
-              },
-              {
-               "dtag":"DYJetsToMuMu_M10to20",
-               "dset":"/DYToMuMu_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia/Summer11-PU_S3_START42_V11-v2/AODSIM",
-               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToMuMu_M-10To20_CT10_TuneZ2_7TeV-powheg-pythia"],
-               "xsec":2659.0
-              },
-              {
-               "dtag":"DYJetsToTauTau_M10to20",
-               "dset":"/DYToTauTau_M-10To20_TuneZ2_7TeV-pythia6-tauola/Summer11-PU_S3_START42_V11-v2/AODSIM",
-               "patdir":["/store/cmst3/user/psilva//HZZ_11.10.03/G/DYToTauTau_M-10To20_TuneZ2_7TeV-pythia6-tauola"],
-               "xsec":2659.0
+	      {
+               "dtag":"DYJetsToLL_M10to50",
+               "dset":"DYJetsToLL_M-10To50_TuneZ2_7TeV-madgraph",
+               "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/DYJetsToLL_M-10To50_TuneZ2_7TeV-madgraph"],
+               "xsec":9927,
+               "br":[1.14]
               }
           ]
 	},

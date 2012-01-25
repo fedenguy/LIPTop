@@ -115,7 +115,7 @@ void HFCMeasurement::initHFCModel()
 
   //b-tagging effiency
   model.abseb                = new RooRealVar("abseb","abs#varepsilon_{b}",effb_);
-  if(fitType_==FIT_R_AND_EB) model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.85,1.05); 
+  if(fitType_==FIT_R_AND_EB) model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.90,1.1); 
   else if(fitEb)             model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.7,min(1./effb_,1.3));
   else                     { model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_);                          model.sfeb->setError( sfbUnc_ );  }
   model.sfeb_constrain       = new RooGaussian("sfeb_constrain","#varepsilon_{b} constrain",*model.sfeb,RooConst(sfb_),RooConst(sfbUnc_));

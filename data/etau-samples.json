@@ -76,7 +76,7 @@
          "data":[
 		{
  	        "dtag":"WJets",
-		"xsec":1.21142255
+		"xsec":1.20185284
                 }
 	  ]
 	},
@@ -89,7 +89,7 @@
          "data":[
 		{
  	        "dtag":"TTJets_other",
-		"xsec":0.08562379
+		"xsec":0.08494740
                 }
 	  ]
 	},
@@ -101,8 +101,8 @@
 	 "marker":1,
          "data":[
 		{
- 	        "dtag":"TTJets_signal",
-		"xsec":0.08562379
+ 	        "dtag":"TTJets_175p5",
+		"xsec":0.20304711
                 }
 	  ]
 	},

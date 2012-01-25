@@ -157,8 +157,7 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
   
-  TString cats[]={"ee","mumu","emu"};
-  //TString cats[]={"etau","mutau"};
+  TString cats[]={/*"ee","mumu","emu",*/"etau","mutau"};
 
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};

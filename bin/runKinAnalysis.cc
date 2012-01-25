@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
   
   TString uncFile =  kinProcess.getParameter<std::string>("jesUncFileName"); gSystem->ExpandPathName(uncFile);
   JetCorrectionUncertainty jecUnc(uncFile.Data());
-
+  cout << uncFile.Data() << endl;
   //open the file and get directory
   TFile *file = TFile::Open(url);
   if(file==0) return -1;
