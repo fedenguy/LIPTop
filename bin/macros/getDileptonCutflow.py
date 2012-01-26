@@ -64,7 +64,7 @@ except getopt.GetoptError:
 
 inputFile='plotter.root'
 evCats   = ['emu','mumu','ee']
-mode='std'
+mode='simple'
 countHisto='evtflow'
 ibinSummary=5
 dySfactors = { "emu":1, "mumu":1, "ee":1 }
@@ -253,7 +253,7 @@ tabtex +='\\end{table}\n'
 tabtex +='\\end{document}\n'
 
 #save to file
-fileObj = open('summaryyields.tex',"w")
+fileObj = open('summaryyields'+bintitle+'.tex',"w")
 fileObj.write(tabtex)
 fileObj.close()
  
