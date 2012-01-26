@@ -228,7 +228,7 @@ tabtex +='\\caption{$'+bintitle+'$ summary events for $2165^{-1}$pb}\n'
 tabtex +='\\label{tab:summaryyields}\n'
 tabtex +='\\hspace*{-0.9cm}\n'
 tabtex +='\\scalebox{0.70}{\n'
-colfmt='lc'
+colfmt='l'
 colnames=''
 for ec in evTitles:
     colfmt += 'c' 
