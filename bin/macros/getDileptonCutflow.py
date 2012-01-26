@@ -63,8 +63,8 @@ except getopt.GetoptError:
     sys.exit(1)
 
 inputFile='plotter.root'
-evCats   = ['emu','mumu','ee']
-mode='simple'
+evCats   = ['','emu','mumu','ee']
+mode='std'
 countHisto='evtflow'
 ibinSummary=5
 dySfactors = { "emu":1, "mumu":1, "ee":1 }
@@ -108,13 +108,14 @@ if(len(procs)==0) :
 f    = ROOT.TFile.Open(inputFile)
 href = f.Get(procs[0]+'/'+countHisto)
 
-evTitles = ['$e\\mu$','$\\mu\\mu$','$ee$']
+evTitles = ['$Inclusive$','$e\\mu$','$\\mu\\mu$','$ee$']
 hsummary = ROOT.TH2F("summaryyields","summaryyields",len(evCats),0,len(evCats),len(procs),0,len(procs))
 
 #create tables for each event category
 for iec in xrange(0,len(evCats)):
     ec=evCats[iec]
-    prefix=ec+'_'
+    prefix=ec
+    if(len(prefix)>0): prefix = prefix+'_'
 
     #prepare the total expected from simulation and the variations histogram
     hcatsum = href.Clone(prefix+'totalmc')
@@ -228,10 +229,11 @@ tabtex +='\\label{tab:summaryyields}\n'
 tabtex +='\\hspace*{-0.9cm}\n'
 tabtex +='\\scalebox{0.70}{\n'
 colfmt='lc'
+colnames=''
 for ec in evTitles:
     colfmt += 'c' 
     colnames +=' & ' + ec
-colnames=' & Total'
+
 tabtex += '\\begin{tabular}{'+colfmt+'} \\hline\n'
 tabtex += 'Channel '+colnames+'\\\\ \\hline\\hline\n'
 hsummaryfinal    = ROOT.TH1F("summaryfinalyields","Total expected",len(evCats),0,len(evCats))
