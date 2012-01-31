@@ -15,6 +15,7 @@ def usage(msg='') :
     print '  -s : submit or not to batch'
     print '  -j : json file containing the samples'
     print '  -e : number of events per job'
+    print '  -i : initial event (-1 by default)'
     print '  -n : number of events to run per sample'
     print '  -d : directory containing the event summaries'
     print '  -t : select tag to submit'
@@ -25,7 +26,7 @@ def usage(msg='') :
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "s:j:e:n:p:d:t:h?"
+    shortopts  = "s:j:e:n:p:d:i:t:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -36,6 +37,7 @@ except getopt.GetoptError:
 subToBatch=""
 samplesDB = ''
 evPerJob=-1
+initEvent=-1
 evToRun=-1
 extraParams=''
 summaryDir=''
@@ -49,6 +51,7 @@ for o,a in opts:
     elif o in('-t'): tagSel=a
     elif o in('-e'): evPerJob=int(a)
     elif o in('-n'): evToRun=int(a)
+    elif o in('-i'): initEvent=int(a)
     elif o in('-p'): extraParams = a
     elif o in('-d'): summaryDir = a
 
@@ -95,7 +98,9 @@ for proc in procList :
             for ijob in range(njobs) :
                 evStart= ijob*evPerJob
                 evEnd= (ijob+1)*evPerJob
+                if(evStart<initEvent) : continue
                 params = '-src=' + fileName + ' -f=' + str(evStart) + ' -e=' + str(evEnd) + ' ' + extraParams
+                print params
                 if(len(subToBatch)==0) :
                     os.system(scriptFile + ' '  + params)
                 else :

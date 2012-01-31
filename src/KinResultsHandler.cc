@@ -131,8 +131,8 @@ std::vector<double> KinResultsHandler::getMPVEstimate(TH1 *h)
   //fit a gaussian near the most probable value
   Int_t iBin = h->GetMaximumBin();	  
   double mpv = h->GetXaxis()->GetBinCenter(iBin);
-  fitFunc_->SetRange(mpv-25,mpv+25);
-  fitFunc_->SetParLimits(1,mpv-10,mpv+10);
+  fitFunc_->SetRange(mpv-40,mpv+40);
+  fitFunc_->SetParLimits(1,mpv-20,mpv+20);
   h->Fit(fitFunc_,"LRQN");
   for(size_t iparam=0; iparam<3; iparam++) res[iparam]= fitFunc_->GetParameter(iparam);
   if(fitFunc_->GetNDF()>0) res[3] = fitFunc_->GetChisquare()/fitFunc_->GetNDF();

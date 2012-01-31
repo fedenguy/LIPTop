@@ -2,6 +2,7 @@
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 #include <memory>
 #include "TCut.h"
+#include "RooHist.h"
 
 using namespace std;
 using namespace RooFit;
@@ -109,15 +110,11 @@ void MassMeasurement::InitModel()
       TString calibname("CalibratedTopMass"+tag_+sName);
       RooFormulaVar *calibtopmass = new RooFormulaVar(calibname,calibformula,*topMass);
 
-
       //signal component  
-      RooRealVar *massfrac_shift ( new RooRealVar("#alpha(intercept)_"+tag_+sName,     "Sig Lan frac (int)"+sName,     fitPars_["#alpha(intercept)_"+sName]) );
-      RooRealVar *massfrac_slope ( new RooRealVar("#alpha(slope)_"+tag_+sName,         "Sig Lan frac (slope)"+sName,   fitPars_["#alpha(slope)_"+sName]) );
       RooRealVar *g_mean_shift   ( new RooRealVar("#mu_{G}(intercept)_"+tag_+sName,    "Sig Gaus mean (int)"+sName,    fitPars_["#mu_{G}(intercept)_"+sName]) );
       RooRealVar *g_mean_slope   ( new RooRealVar("#mu_{G}(slope)_"+tag_+sName,        "Sig Gaus mean(slope)"+sName,   fitPars_["#mu_{G}(slope)_"+sName]) );
       RooRealVar *g_sigma_shift  ( new RooRealVar("#sigma_{G}(intercept)_"+tag_+sName, "Sig Gaus width (int)"+sName,   fitPars_["#sigma_{G}(intercept)_"+sName]) );
       RooRealVar *g_sigma_slope  ( new RooRealVar("#sigma_{G}(slope)_"+tag_+sName,     "Sig Gaus width (slope)"+sName, fitPars_["#sigma_{G}(slope)_"+sName]) );
-      RooFormulaVar *massfrac    ( new RooFormulaVar("#alpha_"+tag_+sName,             "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*massfrac_slope,*massfrac_shift)));
       RooFormulaVar *g_mean      ( new RooFormulaVar("g_mean_"+tag_+sName,             "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*g_mean_slope,*g_mean_shift)));
       RooFormulaVar *g_sigma     ( new RooFormulaVar("g_sigma_"+tag_+sName,            "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*g_sigma_slope,*g_sigma_shift))); 
       RooGaussian *gaus          ( new RooGaussian("gaus_"+tag_+sName,                 "Mass component #1 " + sName, *recoMass, *g_mean, *g_sigma));
@@ -129,8 +126,23 @@ void MassMeasurement::InitModel()
       RooFormulaVar *l_mean      ( new RooFormulaVar("l_mean_"+tag_+sName,             "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*l_mean_slope,*l_mean_shift)));
       RooFormulaVar *l_sigma     ( new RooFormulaVar( "l_sigma_"+tag_+sName,           "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*l_sigma_slope,*l_sigma_shift))); 
       RooLandau *lan             ( new RooLandau("lan_"+tag_+sName,                    "Mass component #2" + sName, *recoMass, *l_mean, *l_sigma));  
+      RooRealVar *massfrac_shift ( new RooRealVar("#alpha(intercept)_"+tag_+sName,     "Sig Lan frac (int)"+sName,     fitPars_["#alpha(intercept)_"+sName]) );
+      RooRealVar *massfrac_slope ( new RooRealVar("#alpha(slope)_"+tag_+sName,         "Sig Lan frac (slope)"+sName,   fitPars_["#alpha(slope)_"+sName]) );
+      RooFormulaVar *massfrac    ( new RooFormulaVar("#alpha_"+tag_+sName,             "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*massfrac_slope,*massfrac_shift)));
 
+      //       RooRealVar *l2_sigma_shift ( new RooRealVar("#sigma_{L2}(intercept)_"+tag_+sName, "Sig Lan 2 width (int)"+sName,    fitPars_["#sigma_{L2}(intercept)_"+sName]));
+      //       RooRealVar *l2_sigma_slope ( new RooRealVar("#sigma_{L2}(slope)_"+tag_+sName,     "Sig Lan 2 width (slope)"+sName,  fitPars_["#sigma_{L2}(slope)_"+sName]));
+      //       RooRealVar *l2_mean_shift  ( new RooRealVar("mpv_{L2}(intercept)_"+tag_+sName,    "Sig Lan 2 mpv (int)"+sName,      fitPars_["mpv_{L2}(intercept)_"+sName]));
+      //       RooRealVar *l2_mean_slope  ( new RooRealVar("mpv_{L2}(slope)_"+tag_+sName,        "Sig Lan 2 mpv (slope)"+sName,    fitPars_["mpv_{L2}(slope)_"+sName]));
+      //       RooFormulaVar *l2_mean     ( new RooFormulaVar("l2_mean_"+tag_+sName,             "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*l2_mean_slope,*l2_mean_shift)));
+      //       RooFormulaVar *l2_sigma    ( new RooFormulaVar( "l2_sigma_"+tag_+sName,           "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*l2_sigma_slope,*l2_sigma_shift))); 
+      //       RooLandau *lan2            ( new RooLandau("lan2_"+tag_+sName,                    "Mass component #3" + sName, *recoMass, *l2_mean, *l2_sigma));  
+      //       RooRealVar *massfrac2_shift ( new RooRealVar("#beta(intercept)_"+tag_+sName,     "Sig Lan 2 frac (int)"+sName,     fitPars_["#beta(intercept)_"+sName]) );
+      //       RooRealVar *massfrac2_slope ( new RooRealVar("#beta(slope)_"+tag_+sName,         "Sig Lan 2 frac (slope)"+sName,   fitPars_["#beta(slope)_"+sName]) );
+      //       RooFormulaVar *massfrac2    ( new RooFormulaVar("#beta_"+tag_+sName,             "(@0-172)*@1+@2",   RooArgSet(*calibtopmass,*massfrac2_slope,*massfrac2_shift)));
+      
       RooAddPdf *signalmassmodel ( new RooAddPdf("signalmodel_"+tag_+sName,            "Signal Model " + sName, RooArgList(*lan,*gaus),*massfrac));     
+      //RooAddPdf *signalmassmodel ( new RooAddPdf("signalmodel_"+tag_+sName,            "Signal Model " + sName, RooArgList(*lan,*lan2,*gaus),RooArgList(*massfrac,*massfrac2)) );     
       signalpdfset.add(*signalmassmodel);
 
       //background components
@@ -175,6 +187,7 @@ void MassMeasurement::InitModel()
       else
 	model = new RooAddPdf("model_"+sName,"Signal Only Model",RooArgList(*lan,*gaus),*massfrac);
 
+      //      model->printCompactTree(cout);
       allPdfs.push_back( model );  
     }
 }
@@ -315,6 +328,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       minuit.setErrorLevel(0.5);
       minuit.hesse();
       minuit.minos();
+      minuit.save();
     }
 
   //save the result
@@ -330,7 +344,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
   if(debug)
     {
       setStyle();
-	  
+
       //mass distributions
       TCanvas *c = new TCanvas("massfitter","Fit Result",1200,600*ncategs/2);
       c->SetWindowSize(1200,600*ncategs/2);
@@ -339,11 +353,14 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
 	{
 	  TString sName("s"); sName += icat;
 	  c->cd(icat+1);
-	  topMass->setVal(result.iTmass[icat]);
+
+	  float uncalibTopMass=(result.iTmass[icat]-fitPars_["resbias_"+sName])/fitPars_["resslope_"+sName];
+	  //topMass->setVal(result.iTmass[icat]);
+	  topMass->setVal(uncalibTopMass);
 	  RooPlot* frame = recoMass->frame(Title(sName));
 	  allData[icat]->plotOn(frame,Binning(20),DrawOption("pz"));
 	  allPdfs[icat]->plotOn(frame,Components("bckgmodel*"),DrawOption("lf"),FillStyle(1001),FillColor(kGray),LineColor(kGray),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
-	  allPdfs[icat]->plotOn(frame,Components("bckgmodel*,signalmodel*"),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
+	  allPdfs[icat]->plotOn(frame,Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
 	  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
 	  frame->GetXaxis()->SetTitleOffset(1.2);
 	  frame->GetYaxis()->SetTitle("Events");
@@ -357,6 +374,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       delete c;
 
       //likelihoods
+      
       topMass->setVal(result.tMass);
       float minForLL=topMass->getVal()-5*topMass->getError();
       float maxForLL=topMass->getVal()+5*topMass->getError();
@@ -419,7 +437,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       c = new TCanvas("incmassfitter","Inclusive Fit Result",600,600);
       c->SetWindowSize(600,600);
       frame = recoMass->frame(Title("inclusivesample"));
-      inclusiveData->plotOn(frame,Binning(10),DrawOption("pz"));
+      inclusiveData->plotOn(frame,Binning(20),DrawOption("pz"));
 
       RooAddPdf incbckgmassmodel("incbckg"+tag_,"Inclusive Background Model",bckgpdfset,constrParams);
       incbckgmassmodel.plotOn(frame,DrawOption("lf"),FillStyle(1001),FillColor(kGray),LineColor(kGray),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());

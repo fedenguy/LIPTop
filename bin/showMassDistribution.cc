@@ -42,6 +42,38 @@ struct ptSorter{
 
 
 //
+stringstream report;
+void displayKinResults(TH1 *h1,TH1 *h2,Int_t run, Int_t lumi, Int_t event)
+{
+  setStyle();
+  TCanvas* c= new TCanvas("kinres","kinres",600,600);
+  c->SetWindowSize(600,600);
+
+  h1->SetLineWidth(2);
+  h1->SetMarkerStyle(20);
+  h1->SetFillStyle(0);
+  h1->DrawClone("hist");
+
+  h2->SetFillStyle(3472);
+  h2->SetFillColor(2);
+  h2->SetMarkerStyle(21);
+  h2->DrawClone("histsame");
+
+  TString label(""); label+=run; label+=event; label+=lumi;
+  TString title("#splitline{CMS preliminary}{");
+  title += run; title +=":"; title += lumi; title+=":"; title += event;
+  title +="}";
+  
+  TLegend *leg=c->BuildLegend();
+  formatForCmsPublic(c,leg,title,2);
+  c->Modified();
+  c->Update();
+  c->SaveAs("/tmp/psilva/"+label+".C");
+  c->SaveAs("/tmp/psilva/"+label+".png");
+  report << "<tr><td><img src=\"" << label << "\".png\"/></td></tr>" << endl;
+}
+
+//
 int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=100)
 {
   int prefComb(-1);
@@ -74,6 +106,7 @@ int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=100)
 //
 int main(int argc, char* argv[])
 {
+  bool dumpDataSolutions(true);
   SelectionMonitor controlHistos; //plot storage
   HistogramAnalyzer histoAnalyzer; 
 
@@ -156,8 +189,18 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsnvtx", "; m_{Top} [GeV/c^{2}]; Vertices; Events", 100, 0.,500.,30,0,30) );
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
+
+  h=new TH1F ("correctcombs", "; Correct combinations; Events;", 6,0,6);
+  h->GetXaxis()->SetBinLabel(1,"0 b");
+  h->GetXaxis()->SetBinLabel(2,"0 b | correct");
+  h->GetXaxis()->SetBinLabel(3,"1 b");
+  h->GetXaxis()->SetBinLabel(4,"1 b | correct");
+  h->GetXaxis()->SetBinLabel(5,"2 b");
+  h->GetXaxis()->SetBinLabel(6,"2 b | correct");
+  controlHistos.addHistogram(h); 
   
-  TString cats[]={"ee","mumu","emu"};//"etau","mutau"};
+  TString cats[]={"ee","mumu","emu"};
+  //TString cats[]={"etau","mutau"};
 
   size_t ncats=sizeof(cats)/sizeof(TString);
   TString subcats[]={"","eq0btags","eq1btags","geq2btags","zcands","ss"};
@@ -409,9 +452,10 @@ int main(int argc, char* argv[])
       // get preferred combination and the top mass measurement from the MPV fit
       //
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-      //h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
+      h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
       Int_t icomb=getPreferredCombination(h1,h2);
       if(icomb<0) continue;
+
       TH1F *mpref=kinHandler.getHisto("mt",icomb);
       double mtop = kinHandler.getMPVEstimate(mpref) [1];
       if(mtop<=0) continue;
@@ -421,6 +465,8 @@ int main(int argc, char* argv[])
       //      double afb = kinHandler.getMPVEstimate(afbpref)[1];
       LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
       LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
+      
+      if(!isZcand && !isSS && nbtagscor>=2 && !isMC && dumpDataSolutions) displayKinResults(icomb==1?h1:h2,icomb==1?h2:h1,irun,ilumi,ievent);
       
       //now fill the control plots
       for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
@@ -434,6 +480,9 @@ int main(int argc, char* argv[])
 	      controlHistos.fillHisto("taupt",ctf,tauP4.pt(),weight);
 	      controlHistos.fillHisto("taueta",ctf,fabs(tauP4.eta()),weight);
 	      
+	      controlHistos.fillHisto("correctcombs",ctf,nRecoBs*2,weight);
+	      controlHistos.fillHisto("correctcombs",ctf,nRecoBs*2+1,weight*(icomb==iCorrectComb));
+
 	      controlHistos.fillHisto("njets",ctf,prunedJets.size(),weight);
 	      controlHistos.fillHisto("btags",ctf,nbtagscor,weight);
 	      controlHistos.fillHisto("btagsraw",ctf,nbtags,weight);
@@ -577,5 +626,13 @@ int main(int argc, char* argv[])
       spyEvents->getTree()->Write();
       spyFile->Write();
       spyFile->Close();
+    }
+
+  if(dumpDataSolutions)
+    {
+      ofstream myfile;
+      myfile.open ("/tmp/psilva/index.html",ios::app);
+      myfile << report.str();
+      myfile.close();
     }
 }  

@@ -105,7 +105,6 @@ void HFCMeasurement::initHFCModel()
   else if(fitType_==FIT_R_AND_EB)        model.r = new RooRealVar("r","R",1.0,0.96,1.06);
   else if(fitType_==FIT_R_CONSTRAINED)   model.r = new RooRealVar("r","R",1.0,0.,1.0);
   else                                   model.r = new RooRealVar("r","R",1.0,0.,2.0);
-	
 
   //b-tagging effiency
   model.abseb                = new RooRealVar("abseb","abs#varepsilon_{b}",effb_);
@@ -453,10 +452,12 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
   std::vector<RooNLLVar *> likelihoods;
   std::vector<TString> lltitles; 
   TGraphAsymmErrors *exclusiveRgr=0;
+  TGraphAsymmErrors *incRgr=0;
   std::vector<TPaveText *> exclusiveFitNames;
   if(runMode==FITEXCLUSIVECATEGORIES)
     {
       exclusiveRgr = new TGraphAsymmErrors;
+      incRgr=new TGraphAsymmErrors;
       icat=0;
       for(std::set<TString>::iterator cIt = categoryKeys_.begin(); cIt != categoryKeys_.end(); cIt++, icat++)
 	{
@@ -511,6 +512,38 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	  tit=tit.ReplaceAll("mu","#mu");
 	  lltitles.push_back(tit);
 	}
+
+      //inclusive fit to two jets bin
+      TString cut2inc("sample==sample::n0btags_ee2 || sample==sample::n1btags_ee2 || sample==sample::n2btags_ee2 ||"
+		      "sample==sample::n0btags_mumu2 || sample==sample::n1btags_mumu2 || sample==sample::n2btags_mumu2 ||"
+		      "sample==sample::n0btags_emu2 || sample==sample::n1btags_emu2 || sample==sample::n2btags_emu2");
+      RooDataSet *dataslice = (RooDataSet *) data->reduce(cut2inc);
+      model.constrPdf->fitTo(*dataslice,
+			     Constrain(model.pdfConstrains),
+			     RooFit::Save(),
+			     RooFit::Hesse(kTRUE),
+			     RooFit::Minos(kTRUE),
+			     RooFit::SumW2Error(kTRUE),
+			     RooFit::PrintLevel(-1),
+			     RooFit::Verbose(kFALSE));
+      incRgr->SetPoint(0,1,model.r->getVal());
+      incRgr->SetPointError(0,0,0,fabs(model.r->getAsymErrorLo()),fabs(model.r->getAsymErrorHi()));
+
+      //inclusive fit to two jets bin
+      TString cut3inc("sample==sample::n0btags_ee3   || sample==sample::n1btags_ee3   || sample==sample::n2btags_ee3   || sample==sample::n3btags_ee3 ||"
+		      "sample==sample::n0btags_mumu3 || sample==sample::n1btags_mumu3 || sample==sample::n2btags_mumu3 || sample==sample::n3btags_mumu3 ||"
+		      "sample==sample::n0btags_emu3  || sample==sample::n1btags_emu3  || sample==sample::n2btags_emu3  || sample==sample::n3btags_mumu3");
+      dataslice = (RooDataSet *) data->reduce(cut3inc);
+      model.constrPdf->fitTo(*dataslice,
+			     Constrain(model.pdfConstrains),
+			     RooFit::Save(),
+			     RooFit::Hesse(kTRUE),
+			     RooFit::Minos(kTRUE),
+			     RooFit::SumW2Error(kTRUE),
+			     RooFit::PrintLevel(-1),
+			     RooFit::Verbose(kFALSE));
+      incRgr->SetPoint(1,4,model.r->getVal());
+      incRgr->SetPointError(1,0,0,fabs(model.r->getAsymErrorLo()),fabs(model.r->getAsymErrorHi()));
     }
 
   //
@@ -648,6 +681,11 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       l->SetLineStyle(9);
       l->Draw("same");
       for(size_t i=0; i<exclusiveFitNames.size(); i++)  exclusiveFitNames[i]->Draw();
+      incRgr->SetFillStyle(0);
+      incRgr->SetLineColor(kBlue);
+      incRgr->SetMarkerStyle(24);
+      incRgr->SetMarkerColor(kBlue);
+      incRgr->Draw("p");
       c->SaveAs("HFCMeasurementResults.png");
       c->SaveAs("HFCMeasurementResults.pdf");
       c->SaveAs("HFCMeasurementResults.C");

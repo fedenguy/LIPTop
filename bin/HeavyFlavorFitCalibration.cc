@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
       if(arg.find("--iLumi")!=string::npos && i+1<argc) { sscanf(argv[i+1],"%lf",&dataLumi);                          i++;  printf("lumi    = %f\n", dataLumi);          }
       if(arg.find("--in")!=string::npos && i+1<argc)    { url=argv[i+1];         gSystem->ExpandPathName(url);        i++;  printf("in      = %s\n", url.Data());        }
       if(arg.find("--par")!=string::npos && i+1<argc)   { fitParFile=argv[i+1];  gSystem->ExpandPathName(fitParFile); i++;  printf("parFile = %s\n", fitParFile.Data()); }
-      if(arg.find("--syst")!=string::npos && i+1<argc)  { syst=argv[i+1];                                             i++;  printf("syst    = %s\n", syst.Data());       }
+      if(arg.find("--syst")!=string::npos)              { syst=argv[i+1];                                                   printf("syst    = %s\n", syst.Data());       }
       if(arg.find("--npe")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&maxPE);                              i++;  printf("N_{PE}  = %d\n", maxPE);             }
       if(arg.find("--fit")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&fitType);                            i++;  printf("fitType  = %d\n", fitType);          }
       if(arg.find("--nui")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&nuisanceType);                       i++;  printf("nuisanceType = %d\n", nuisanceType); }

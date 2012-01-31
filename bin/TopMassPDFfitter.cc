@@ -16,6 +16,7 @@
 #include "RooFitResult.h"
 #include "RooChi2Var.h"
 #include "RooNovosibirsk.h"
+#include "RooCBShape.h"
 #include "RooGamma.h"
 #include "RooLognormal.h"
 #include "RooExponential.h"
@@ -30,6 +31,7 @@
 #include "TRandom.h"
 #include "TFile.h"
 #include "TGraphAsymmErrors.h"
+#include "TGraphErrors.h"
 #include "TF1.h"
 #include "TSystem.h"
 #include "TProfile.h"
@@ -53,58 +55,97 @@ FitResults_t BckgPDFs(TString url="MassPDFs.root",int channel=INCLUSIVE);
 FitResults_t DYBckgPDFs(TString url,int channel=INCLUSIVE);
 
 //
+void printHelp()
+{
+  printf("--help    --> print this\n");
+  printf("--in      --> input file with the summary trees\n");
+  printf("--sig     --> run signal fitter\n");
+  printf("--bkg     --> run bckg fitter\n");
+}
+
+
+//
 int main(int argc, char* argv[])
 {
+  //parse command line
+  TString url("");
+  bool fitSignal(false), fitBckg(false);
+  for(int i=1;i<argc;i++)
+    {
+      string arg(argv[i]);
+      if(arg.find("--help")!=string::npos) { printHelp();    return 0; }
+      if(arg.find("--in")!=string::npos && i+1<argc)  { url=argv[i+1];         gSystem->ExpandPathName(url);        i++;  printf("in      = %s\n", url.Data()); }
+      if(arg.find("--sig")!=string::npos)             { fitSignal=true;                                                   printf("signal PDF will be fit\n"); }
+      if(arg.find("--bkg")!=string::npos)             { fitBckg=true;                                                     printf("bckg   PDF will be fit\n"); }
+    }
+  if(url=="" || (!fitSignal && !fitBckg) ) { printHelp(); return 0; }
+
+  //prepare to report
   stringstream report;
+
+  //keep RooFit quiet                                                                                                                                                                              
+  RooMsgService::instance().setSilentMode(true);
+  RooMsgService::instance().getStream(0).removeTopic(Minimization);
+  RooMsgService::instance().getStream(1).removeTopic(Minimization);
+  RooMsgService::instance().getStream(0).removeTopic(Fitting);
+  RooMsgService::instance().getStream(1).removeTopic(Fitting);
+  RooMsgService::instance().getStream(0).removeTopic(Eval);
+  RooMsgService::instance().getStream(1).removeTopic(Eval);
+  RooMsgService::instance().getStream(1).removeTopic(Integration);
+  RooMsgService::instance().getStream(1).removeTopic(NumIntegration);
+
 
   // load framework libraries                                                                                                                                                            
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
-
-  TString url=argv[1];
-  
-  
+    
   //fit the templates
   int ch[]={INCLUSIVE,SAMEFLAVOR,OPFLAVOR};
   TString chName[]={"inclusive","same flavor","op. flavor"};
 
   //signal fit
-  for(size_t i=0; i<3;i++)
+  if(fitSignal)
     {
-      std::map<string,FitResults_t> sigFitResults;
-      sigFitResults["[CATEGORY #1]"]       = SignalPDFs(url,1,ch[i]);
-      sigFitResults["[CATEGORY #2]"]       = SignalPDFs(url,2,ch[i]);
-      
-      //display the results
-      report << " *************** TopMassPDFfitter signal results for " << chName[i] << " channel *********************** " << endl;
-      int catCtr(0);
-      for(std::map<string,FitResults_t>::iterator it = sigFitResults.begin(); it != sigFitResults.end(); it++,catCtr++)
+      for(size_t i=0; i<3;i++)
 	{
-	  report << it->first << endl;
-	  TString catPostFix("_s"); catPostFix += catCtr;
-	  for(FitResults_t::iterator itt = it->second.begin(); itt != it->second.end(); itt++)
-	    report << itt->first << catPostFix << ":" << itt->second.first  << "\t +/-" << itt->second.second << endl;
+	  std::map<string,FitResults_t> sigFitResults;
+	  sigFitResults["[CATEGORY #1]"]       = SignalPDFs(url,1,ch[i]);
+	  sigFitResults["[CATEGORY #2]"]       = SignalPDFs(url,2,ch[i]);
+	  
+	  //display the results
+	  report << " *************** TopMassPDFfitter signal results for " << chName[i] << " channel *********************** " << endl;
+	  int catCtr(0);
+	  for(std::map<string,FitResults_t>::iterator it = sigFitResults.begin(); it != sigFitResults.end(); it++,catCtr++)
+	    {
+	      report << it->first << endl;
+	      TString catPostFix("_s"); catPostFix += catCtr;
+	      for(FitResults_t::iterator itt = it->second.begin(); itt != it->second.end(); itt++)
+		report << itt->first << catPostFix << ":" << itt->second.first  << "\t +/-" << itt->second.second << endl;
+	    }
 	}
     }
-  
 
   //background fits
-  for(size_t i=0; i<3;i++)
+  if(fitBckg)
     {
-      std::map<string,FitResults_t> bckgFitResults;
-      bckgFitResults["[NON DY]"] = BckgPDFs(url,ch[i]);      
-      bckgFitResults["[DY    ]"] = DYBckgPDFs(url,ch[i]);      
-      report << " *************** TopMassPDFfitter bckg results for " << chName[i] << " channel *********************** " << endl;
-      for(std::map<string,FitResults_t>::iterator it = bckgFitResults.begin(); it != bckgFitResults.end(); it++)
-	{ 
-	  for(FitResults_t::iterator itt = it->second.begin(); itt!= it->second.end(); itt++)
-	    report << itt->first << ":" << itt->second.first << "\t +/-" << itt->second.second << endl;
+      for(size_t i=0; i<3;i++)
+	{
+	  std::map<string,FitResults_t> bckgFitResults;
+	  bckgFitResults["[NON DY]"] = BckgPDFs(url,ch[i]);      
+	  bckgFitResults["[DY    ]"] = DYBckgPDFs(url,ch[i]);      
+	  report << " *************** TopMassPDFfitter bckg results for " << chName[i] << " channel *********************** " << endl;
+	  for(std::map<string,FitResults_t>::iterator it = bckgFitResults.begin(); it != bckgFitResults.end(); it++)
+	    { 
+	      for(FitResults_t::iterator itt = it->second.begin(); itt!= it->second.end(); itt++)
+		report << itt->first << ":" << itt->second.first << "\t +/-" << itt->second.second << endl;
+	    }
+	  report << endl;
 	}
-      report << endl;
     }
-  
-  cout << report.str() << endl;
 
+  //all done
+  cout << report.str() << endl;
+  return -1;
 }
 
 
@@ -195,7 +236,8 @@ FitResults_t BckgPDFs(TString url,int channel)
   RooRealVar sigma_g("#sigma_{g}","Sigma of gaus",20,10,25);
   RooGaussian gaus("bgauss","Mass component 2",mass,mean_g,sigma_g);   
   RooRealVar massfrac("#alpha","Fraction of component 1",0.1,0.0,0.2);
-  RooAddPdf massmodel("model","Model",RooArgList(gaus,lan),massfrac);
+  RooLandau massmodel(lan);
+  //  RooAddPdf massmodel("model","Model",RooArgList(gaus,lan),massfrac);
   //  RooNumConvPdf massmodel("model","Model",mass,lan,gaus);
   massmodel.fitTo(dh,Save(kTRUE),Range(100.,300.),SumW2Error(kTRUE));
   RooDataHist binnedData("binnedData","binned version of dh",RooArgSet(mass),dh);
@@ -259,9 +301,9 @@ FitResults_t BckgPDFs(TString url,int channel)
   FitResults_t fitPars;
   fitPars["bckgmpv_{l}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
   fitPars["bckg#sigma_{l}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
-  fitPars["bckg#mu_{g}"]    = Value_t(mean_g.getVal(),mean_g.getError());
-  fitPars["bckg#sigma_{g}"] = Value_t(sigma_g.getVal(),sigma_g.getError());
-  fitPars["bckg#alpha"]     = Value_t(massfrac.getVal(),massfrac.getError()); 
+  //  fitPars["bckg#mu_{g}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+  // fitPars["bckg#sigma_{g}"] = Value_t(sigma_g.getVal(),sigma_g.getError());
+  // fitPars["bckg#alpha"]     = Value_t(massfrac.getVal(),massfrac.getError()); 
   return fitPars;
 }
 
@@ -389,7 +431,8 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   RooGaussian mcgauss("mcgaus","Gaussian component",mass,mean_g,sigma_g);
 
   RooRealVar frac("frac","Model fraction",0.6,0,1.);
-  RooAddPdf mcmodel("mcmodel","Mass model",RooArgList(mcgauss,mclan),frac);
+  //RooAddPdf mcmodel("mcmodel","Mass model",RooArgList(mcgauss,mclan),frac);
+  RooLandau mcmodel(mclan);
  
   if(channel==SAMEFLAVOR)
     {
@@ -400,9 +443,9 @@ FitResults_t DYBckgPDFs(TString url,int channel)
       m.hesse() ;
       fitPars["dybckgmpv_{l}^{ctrl MC}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
       fitPars["dybckg#sigma_{l}^{ctrl MC}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
-      fitPars["dybckmean_{g}^{ctrl MC}"]    = Value_t(mean_g.getVal(),mean_g.getError());
-      fitPars["dybckg#sigma_{g}^{ctrl MC}"] = Value_t(sigma_g.getVal(),sigma_g.getError()); 
-      fitPars["dybckgfrac^{ctrl MC}"]       = Value_t(frac.getVal(),frac.getError());
+      //    fitPars["dybckmean_{g}^{ctrl MC}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+      // fitPars["dybckg#sigma_{g}^{ctrl MC}"] = Value_t(sigma_g.getVal(),sigma_g.getError()); 
+      // fitPars["dybckgfrac^{ctrl MC}"]       = Value_t(frac.getVal(),frac.getError());
     }
   
   RooDataHist binnedMC("binnedMC","binned version of mch",RooArgSet(mass),mch);
@@ -412,9 +455,9 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   m.hesse() ;
   fitPars["dybckgmpv_{l}^{MC}"]    = Value_t(mpv_l.getVal(),mpv_l.getError());
   fitPars["dybckg#sigma_{l}^{MC}"] = Value_t(sigma_l.getVal(),sigma_l.getError());
-  fitPars["dybckmean_{g}^{MC}"]    = Value_t(mean_g.getVal(),mean_g.getError());
-  fitPars["dybckg#sigma_{g}^{MC}"] = Value_t(sigma_g.getVal(),sigma_g.getError()); 
-  fitPars["dybckgfrac^{MC}"]       = Value_t(frac.getVal(),frac.getError());
+  //  fitPars["dybckmean_{g}^{MC}"]    = Value_t(mean_g.getVal(),mean_g.getError());
+  //  fitPars["dybckg#sigma_{g}^{MC}"] = Value_t(sigma_g.getVal(),sigma_g.getError()); 
+  // fitPars["dybckgfrac^{MC}"]       = Value_t(frac.getVal(),frac.getError());
 
   //fit the data-driven template
   RooRealVar dmpv_l("mpv_{l}","Mpv of landau",140,100,165);
@@ -435,7 +478,8 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   //RooFFTConvPdf datamodel("datamodel","Mass model",mass,dlan,dgauss);
 
   RooRealVar dfrac("frac","Model fraction",0.1,0.0,0.2);
-  RooAddPdf datamodel("datamodel","Mass model",RooArgList(dgauss,dlan),dfrac);
+  //  RooAddPdf datamodel("datamodel","Mass model",RooArgList(dgauss,dlan),dfrac);
+  RooLandau datamodel(dlan);
    
   datamodel.fitTo(dh,Save(kTRUE),Range(100.,300.));
   //   RooDataHist binnedData("binnedData","binned version of dh",RooArgSet(mass),dh);
@@ -446,9 +490,9 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   
   fitPars["dybckgmpv_{l}"]         = Value_t(dmpv_l.getVal(),dmpv_l.getError());
   fitPars["dybckg#sigma_{l}"]      = Value_t(dsigma_l.getVal(),dsigma_l.getError());
-  fitPars["dybckmean_{g}"]         = Value_t(dmean_g.getVal(),dmean_g.getError());
-  fitPars["dybckg#sigma_{g}"]      = Value_t(dsigma_g.getVal(),dsigma_g.getError());
-  fitPars["dybckgfrac"]            = Value_t(dfrac.getVal(),dfrac.getError());
+  //fitPars["dybckmean_{g}"]         = Value_t(dmean_g.getVal(),dmean_g.getError());
+  //fitPars["dybckg#sigma_{g}"]      = Value_t(dsigma_g.getVal(),dsigma_g.getError());
+  // fitPars["dybckgfrac"]            = Value_t(dfrac.getVal(),dfrac.getError());
 
   //show the results of the fit
   setStyle();
@@ -519,6 +563,7 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
   //define the fit range and the main variable
   float rangeMin(100), rangeMax(500);
   RooRealVar mass("m","Reconstructed Mass [GeV/c^{2}]", rangeMin,rangeMax);
+  RooRealVar evWeight("w","Event weight",0,20);
 
   //define the dataset categorized per top quark mass point
   RooCategory massCategory("cat","cat") ;
@@ -531,9 +576,8 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
   
   //fill the dataset
   TFile *f = TFile::Open(url);
-  TProfile *massProfile = new TProfile("massprof",";Top quark mass [GeV/c^{2}];<Reconstructed mass> [GeV/c^{2}]",MassPointCollection.size(),0,MassPointCollection.size(),0,1000);
-  massProfile->SetDirectory(0);
-
+  TGraphErrors *massProfile = new TGraphErrors;
+  map<string,TH1*> hmap;
   for(size_t ipt=0; ipt<MassPointCollection.size(); ipt++)
     {
       TString tname=MassPointCollection[ipt].first + "/data";
@@ -542,14 +586,16 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
       
       TString cName("m"); cName += (ipt+1);      
       massCategory.setLabel(cName.Data());
-      char buf[20];
-      sprintf(buf,"%3.1f",MassPointCollection[ipt].second);
-      massProfile->GetXaxis()->SetBinLabel(ipt+1,buf);
+      TH1F *h = new TH1F(cName,cName,20,rangeMin,rangeMax);
+      h -> SetDirectory(0);
+      hmap[cName.Data()] = h;
+     
       Int_t cat;
-      Float_t normWeight;
+      Float_t normWeight,weight;
       Float_t evmeasurements[10];
       t->GetBranch("cat")->SetAddress(&cat);
       t->GetBranch("normWeight")->SetAddress(&normWeight);
+      t->GetBranch("weight")->SetAddress(&weight);
       t->GetBranch("evmeasurements")->SetAddress(evmeasurements);
       for(Int_t i=0; i<t->GetEntriesFast(); i++)
 	{
@@ -559,40 +605,58 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
 	  if(nbtags==0 && evmeasurements[5]!=0) continue;
 	  if(nbtags==1 && evmeasurements[5]!=1) continue;
 	  if(nbtags==2 && evmeasurements[5]<1) continue;
-	  if(normWeight!=0) continue;
+	  if(normWeight==0) continue;
 	  mass=evmeasurements[0];
+	  if(mass.getVal()<rangeMin || mass.getVal() > rangeMax) continue;
+	  evWeight=weight;
 	  combData.add(RooArgSet(mass,massCategory));
-	  massProfile->Fill(ipt,mass.getVal());
+	  h->Fill(mass.getVal(),evWeight.getVal());
 	}
+      massProfile->SetPoint(ipt,MassPointCollection[ipt].second,h->GetMean());
+      massProfile->SetPointError(ipt,0,h->GetMeanError());
     }    
   f->Close();
 
+  //RooDataHist combData("combData", "combined data",RooArgList(mass), massCategory, hmap );
 
   //define the combined pdf as function of the top quark mass
   RooRealVar topmass("mtop","m_{top} [GeV/c^{2}]",rangeMin,rangeMax);  
   
-  //the parameters to fit and the variable
-  RooRealVar g_mean_slope("#mu_{G}(slope)","g_mean_slope",0.01,0.,1.);    
+  //core is the resolution
+  RooRealVar g_mean_slope("#mu_{G}(slope)","g_mean_slope",0.4,0.0,0.7);    
   RooRealVar g_mean_shift("#mu_{G}(intercept)","g_mean_shift",162,100,180); 
-  RooRealVar g_sigma_slope("#sigma_{G}(slope)","g_sigma_slope",0.01,0.,1.);
-  RooRealVar g_sigma_shift("#sigma_{G}(intercept)","g_sigma_shift",10,0.,30);//25);
-  RooRealVar l_mean_slope("mpv_{L}(slope)","l_mean_slope",0.,0.,1.);
-  RooRealVar l_mean_shift("mpv_{L}(intercept)","l_mean_shift",140,100,250);//0212,150,250); 
-  RooRealVar l_sigma_slope("#sigma_{L}(slope)","l_sigma_slope",0.,0.,1.);
-  RooRealVar l_sigma_shift("#sigma_{L}(intercept)","l_sigma_shift",10,0,25);
-  RooRealVar massfrac_slope("#alpha(slope)","massfrac_slope",0,0,0.01);
-  RooRealVar massfrac_shift("#alpha(intercept)","massfrac_shift",0.38,0.,1.);
-
-  //build the prototype pdf
   RooFormulaVar g_mean(  "g_mean",  "(@0-172)*@1+@2",   RooArgSet(topmass,g_mean_slope,g_mean_shift));
-  RooFormulaVar g_sigma( "g_sigma", "(@0-172)*@1+@2",   RooArgSet(topmass,g_sigma_slope,g_sigma_shift)); 
-  RooGaussian gaus("gaus", "Mass component 1", mass, g_mean, g_sigma);
-  RooFormulaVar l_mean(  "l_mean",  "(@0-172)*@1+@2",   RooArgSet(topmass,l_mean_slope,l_mean_shift));
-  RooFormulaVar l_sigma( "l_sigma", "(@0-172)*@1+@2",   RooArgSet(topmass,l_sigma_slope,l_sigma_shift)); 
-  RooLandau lan("lan", "Mass component 2", mass, l_mean, l_sigma);  
-  RooFormulaVar massfrac( "#alpha", "(@0-172)*@1+@2", RooArgSet(topmass,massfrac_slope,massfrac_shift)); 
-  RooAddPdf massmodel("model","model",RooArgList(lan,gaus),massfrac);
 
+  RooRealVar g_sigma_slope("#sigma_{G}(slope)","g_sigma_slope",0.1,0.,1.);
+  RooRealVar g_sigma_shift("#sigma_{G}(intercept)","g_sigma_shift",20,0.,30);//30);
+  RooFormulaVar g_sigma( "g_sigma", "(@0-172)*@1+@2",   RooArgSet(topmass,g_sigma_slope,g_sigma_shift)); 
+
+  RooGaussian gaus("gaus", "Mass component 1", mass, g_mean, g_sigma);
+  
+  //   RooRealVar cb_alpha_slope("#alpha_{CB}(slope)","cb_alpha_slope",0.4,0.0,1.5);    
+  //   RooRealVar cb_alpha_shift("#alpha_{CB}(intercept)","cb_alpha_shift",10,0,50); 
+  //   RooFormulaVar cb_alpha(  "cb_alpha",  "(@0-172)*@1+@2",   RooArgSet(topmass,cb_alpha_slope,cb_alpha_shift));
+  //   RooRealVar cb_n_slope("n_{CB}(slope)","cb_n_slope",0.4,0.0,1.5);    
+  //   RooRealVar cb_n_shift("n_{CB}(intercept)","cb_n_shift",120,100,160); 
+  //   RooFormulaVar cb_n(  "cb_mean",  "(@0-172)*@1+@2",   RooArgSet(topmass,cb_n_slope,cb_n_shift));
+  //   RooCBShape  cball("cball", "Mass component 1", mass, g_mean, g_sigma,cb_alpha,cb_n);
+ 
+
+  RooRealVar l_mean_slope("mpv_{L}(slope)","l_mean_slope",0.,0.,1.0);
+  RooRealVar l_mean_shift("mpv_{L}(intercept)","l_mean_shift",140,100,250);
+  RooFormulaVar l_mean(  "l_mean",  "(@0-172)*@1+@2",   RooArgSet(topmass,l_mean_slope,l_mean_shift));
+  RooRealVar l_sigma_slope("#sigma_{L}(slope)","l_sigma_slope",0.,0.,1.);
+  RooRealVar l_sigma_shift("#sigma_{L}(intercept)","l_sigma_shift",20,0,25);
+  RooFormulaVar l_sigma( "l_sigma", "(@0-172)*@1+@2",   RooArgSet(topmass,l_sigma_slope,l_sigma_shift)); 
+  RooRealVar massfrac_slope("#alpha(slope)","massfrac_slope",0.0,0,0.01);
+  RooRealVar massfrac_shift("#alpha(intercept)","massfrac_shift",0.38,0.,1.0);
+  RooFormulaVar massfrac( "#alpha", "(@0-172)*@1+@2", RooArgSet(topmass,massfrac_slope,massfrac_shift)); 
+  RooLandau lan("lan", "Mass component 2", mass, l_mean, l_sigma);  
+
+  RooAddPdf massmodel("model","model",RooArgList(lan,gaus),massfrac);
+  //RooAddPdf massmodel("model","model",RooArgList(lan,cball),massfrac);
+
+  
   //now split per categories with fixed top mass
   RooSimPdfBuilder builder(massmodel) ;
   RooArgSet* config = builder.createProtoBuildConfig() ;
@@ -611,8 +675,8 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
   config->writeToStream(cout,false);
 
   //fit to data
-  simPdf->fitTo(combData,Range(rangeMin,rangeMax));
-  
+  simPdf->fitTo(combData,Range(rangeMin,rangeMax),SumW2Error(kTRUE));//,Hesse(),Minos());
+
   //display
   setStyle();
   int ny=MassPointCollection.size()/4+1;
@@ -631,18 +695,16 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
       TPad *p = (TPad *)c->cd(ipt+1);
       //p->SetGridx();
       //p->SetGridy();
-      RooPlot* frame = mass.frame(Range(100,300),Bins(40));
+      RooPlot* frame = mass.frame(Range(100,300),Bins(20));
       RooDataSet* dataslice = (RooDataSet *)combData.reduce("cat==cat::"+cName);
       dataslice->plotOn(frame,DataError(RooAbsData::SumW2));
 
       RooCategory theCategory(cName,cName);
-      //simPdf->plotOn(frame,Slice(theCategory),ProjWData(mass,*dataslice),Components("lan"),LineColor(kGray));
       simPdf->plotOn(frame,Slice(theCategory),ProjWData(mass,*dataslice));
       frame->GetYaxis()->SetTitleOffset(1.3);
       frame->GetYaxis()->SetTitle("Events");
       frame->GetXaxis()->SetTitleOffset(1.0);
       frame->Draw();
-
       TPaveText *pave = new TPaveText(0.55,0.65,0.85,0.8,"NDC");
       pave->SetBorderSize(0);
       pave->SetFillStyle(0);
@@ -668,7 +730,10 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
     }
 
   c->cd(MassPointCollection.size()+1);
-  massProfile->Draw("e1");
+  massProfile->SetMarkerStyle(20);
+  massProfile->Draw("ap");
+  massProfile->GetXaxis()->SetTitle("Generated top mass [GeV/c^{2}]");
+  massProfile->GetYaxis()->SetTitle("<Reconstructed top mass> [GeV/c^{2}]");
   
   c->Modified();
   c->Update();
@@ -682,12 +747,22 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
   fitPars["#mu_{G}(intercept)"]=Value_t(g_mean_shift.getVal(),g_mean_shift.getError());
   fitPars["#sigma_{G}(slope)"]=Value_t(g_sigma_slope.getVal(),g_sigma_slope.getError());
   fitPars["#sigma_{G}(intercept)"]=Value_t(g_sigma_shift.getVal(),g_sigma_shift.getError());
+  // fitPars["#alpha_{CB}(slope)"]=Value_t(cb_alpha_slope.getVal(),cb_alpha_slope.getError());
+  // fitPars["#alpha_{CB}(intercept)"]=Value_t(cb_alpha_shift.getVal(),cb_alpha_shift.getError());
+  //  fitPars["n_{CB}(slope)"]=Value_t(cb_n_slope.getVal(),cb_n_slope.getError());
+  // fitPars["n_{CB}(intercept)"]=Value_t(cb_n_shift.getVal(),cb_n_shift.getError());
   fitPars["mpv_{L}(slope)"]=Value_t(l_mean_slope.getVal(),l_mean_slope.getError());
   fitPars["mpv_{L}(intercept)"]=Value_t(l_mean_shift.getVal(),l_mean_shift.getError());
   fitPars["#sigma_{L}(slope)"]=Value_t(l_sigma_slope.getVal(),l_sigma_slope.getError());
   fitPars["#sigma_{L}(intercept)"]=Value_t(l_sigma_shift.getVal(),l_sigma_shift.getError());
+  //  fitPars["mpv_{L2}(slope)"]=Value_t(l2_mean_slope.getVal(),l2_mean_slope.getError());
+  //  fitPars["mpv_{L2}(intercept)"]=Value_t(l2_mean_shift.getVal(),l2_mean_shift.getError());
+  //  fitPars["#sigma_{L2}(slope)"]=Value_t(l2_sigma_slope.getVal(),l2_sigma_slope.getError());
+  //  fitPars["#sigma_{L2}(intercept)"]=Value_t(l2_sigma_shift.getVal(),l2_sigma_shift.getError());
   fitPars["#alpha(slope)"]=Value_t(massfrac_slope.getVal(),massfrac_slope.getError());
   fitPars["#alpha(intercept)"]=Value_t(massfrac_shift.getVal(),massfrac_shift.getError());
+  //  fitPars["#beta(slope)"]=Value_t(massfrac2_slope.getVal(),massfrac2_slope.getError());
+  //  fitPars["#beta(intercept)"]=Value_t(massfrac2_shift.getVal(),massfrac2_shift.getError());
   return fitPars;
 }
 

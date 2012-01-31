@@ -23,7 +23,9 @@
 using namespace std; 
 using namespace RooFit ;
 
-int maxPE=500;
+int maxPE=1;
+TString url(""), massParsUrl(""), syst("std"), calibrationList(""), outDir("");
+bool doDebug=false;
 
 std::map<TString,std::vector<Float_t> > evtYields;
 typedef std::vector<TString> Proc_t;
@@ -32,9 +34,23 @@ typedef std::vector<TH1D *> ProcHistos_t;
 std::map<TString,ProcHistos_t> allHistos;
 std::vector<TString> signalPts;
 
-TString url,massParsUrl, syst;
 
 TObjArray calibrate(TString mpoint);
+void printHelp();
+
+
+//
+void printHelp()
+{
+  printf("--help    --> print this\n");
+  printf("--in      --> input file with the summary trees\n");
+  printf("--par     --> txt file with the fit parameters\n");
+  printf("--syst    --> systematic to be evaluated (dyup/down, puup/down, jesup/down, jer, lesup,down, btagup/down, mistagup/down, scaleup/down, matchingup/down\n");
+  printf("--calib   --> csv list with mass points to calibrate\n");
+  printf("--out     --> output directory for the plots\n");
+  printf("--npe     --> number of pseudo-experiments to generate\n");
+  printf("--debug   --> produce plots for each pseudo-experiment\n");
+}
 
 //
 int main(int argc, char* argv[])
@@ -45,22 +61,22 @@ int main(int argc, char* argv[])
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
 
-  url=argv[1];
-  gSystem->ExpandPathName(url);
-  massParsUrl=argv[2];
-  gSystem->ExpandPathName(massParsUrl);
-  syst=argv[3];
-  TString calibrationList="";
-  if(argc>4)
+
+
+
+  for(int i=1;i<argc;i++)
     {
-      calibrationList=argv[4];
-      cout << "Calibrating for: " << calibrationList << endl;
+      string arg(argv[i]);
+      if(arg.find("--help")!=string::npos) { printHelp();    return 0; }
+      if(arg.find("--in")!=string::npos && i+1<argc)   { url=argv[i+1];         gSystem->ExpandPathName(url);         i++;  printf("in      = %s\n", url.Data()); }
+      if(arg.find("--par")!=string::npos && i+1<argc)  { massParsUrl=argv[i+1]; gSystem->ExpandPathName(massParsUrl); i++;  printf("pars    = %s\n", massParsUrl.Data()); }
+      if(arg.find("--syst")!=string::npos && i+1<argc) { syst=argv[i+1];                                              i++;  printf("syst    = %s\n", syst.Data()); }
+      if(arg.find("--calib")!=string::npos && i+1<argc){ calibrationList=argv[i+1];                                   i++;  printf("calib   = %s\n", calibrationList.Data()); }
+      if(arg.find("--out")!=string::npos && i+1<argc)  { outDir=argv[i+1];                                            i++;  printf("out     = %s\n", outDir.Data()); }
+      if(arg.find("--npe")!=string::npos && i+1<argc)  { TString npe=argv[i+1]; maxPE=npe.Atoi();                     i++;  printf("n pe    = %d\n", maxPE); }
+      if(arg.find("--debug")!=string::npos)            { doDebug=true; }
     }
-  else
-    cout  << "Calibrating for all mass points" << endl;
-  TString outDir("");
-  if(argc>5)  outDir=argv[5];
-  
+  if(url=="" || massParsUrl=="") { printHelp(); return 0;}
 
   //
   // map the samples per type
@@ -68,10 +84,10 @@ int main(int argc, char* argv[])
   std::vector<Float_t> procYields(4,0);    
 
   //signal samples first (all share the same yields)
-  procYields[MassMeasurement::SF_EQ1BTAGS]=577.1;
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=1137.0;
-  procYields[MassMeasurement::OF_EQ1BTAGS]=792.7;
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=1478.6;
+  procYields[MassMeasurement::SF_EQ1BTAGS]=573.3;
+  procYields[MassMeasurement::SF_GEQ2BTAGS]=1121.1;
+  procYields[MassMeasurement::OF_EQ1BTAGS]=785.2;
+  procYields[MassMeasurement::OF_GEQ2BTAGS]=1460.6;
   evtYields["Signal"]=procYields;
   if(syst=="baresignal" || syst=="puup" || syst=="pudown")
     {
@@ -124,19 +140,19 @@ int main(int argc, char* argv[])
       SingleTop.push_back("SingleTbar_s");
       SingleTop.push_back("SingleT_s");
       allSamples["SingleTop"]=SingleTop;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=38.5; 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=33.2; 
-      procYields[MassMeasurement::OF_EQ1BTAGS]=49.5; 
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=43.1;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=38.1; 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=32.4; 
+      procYields[MassMeasurement::OF_EQ1BTAGS]=49.0; 
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=42.8;
       evtYields["SingleTop"]=procYields;
       
       Proc_t OtherTTbar;
       OtherTTbar.push_back("TTJets");
       allSamples["OtherTTbar"]=OtherTTbar;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=4.7+2.0; 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=4.6+0.7; 
-      procYields[MassMeasurement::OF_EQ1BTAGS]=6.3+4.7; 
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=8.4;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=4.5+0.0;    //yields include w+jets 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=4.9+0.0;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=6.1+7.6;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=8.7+0.0;
       evtYields["OtherTTbar"]=procYields;
       
       Proc_t DiBosons;
@@ -144,22 +160,22 @@ int main(int argc, char* argv[])
       DiBosons.push_back("ZZ");
       DiBosons.push_back("WZ");
       allSamples["DiBosons"]=DiBosons;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=8.1;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=1.7;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=2.0;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=1.9;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=7.1;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=2.2;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=9.3;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=1.4;
       evtYields["DiBosons"]=procYields;
       
       Proc_t DY;
       DY.push_back("DYJetsToLL");
       allSamples["DY"]=DY;
       float uncScaleFactor(1.0);
-      if(syst=="dyup")   uncScaleFactor *= 1.3;
-      if(syst=="dydown") uncScaleFactor *= 0.7;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=207.5*uncScaleFactor;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=56.8*uncScaleFactor;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=29.3*uncScaleFactor;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=5.1*uncScaleFactor;
+      if(syst=="dyup")   uncScaleFactor *= 1.15;
+      if(syst=="dydown") uncScaleFactor *= 0.85;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=188.7*uncScaleFactor;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=40.8*uncScaleFactor;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=36.9*uncScaleFactor;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=6.0*uncScaleFactor;
       evtYields["DY"]=procYields;
     }
 
@@ -170,10 +186,18 @@ int main(int argc, char* argv[])
   if(syst=="effqup")   newLightFlavorCut-=0.02;
   if(syst=="effqdown") newLightFlavorCut+=0.02;
   
+  //pileup variations
   reweight::PoissonMeanShifter *puShifter=0;
-  if(syst=="puup") puShifter = new reweight::PoissonMeanShifter(+0.6);
-  if(syst=="pudown") puShifter = new reweight::PoissonMeanShifter(-0.6);
-  
+  if(syst=="puup")       puShifter = new reweight::PoissonMeanShifter(+0.6);
+  else if(syst=="pudown") puShifter = new reweight::PoissonMeanShifter(-0.6);
+  else if(syst.Contains("pushift")) 
+    {
+      double pushift(0);
+      sscanf(syst.Data(),"pushift%lf",&pushift);
+      puShifter = new reweight::PoissonMeanShifter(pushift);
+
+    }
+
   //
   // build the base histograms to sample for the pseudo-experiments
   //
@@ -367,7 +391,7 @@ TObjArray calibrate(TString mpoint)
 	}
 
       //now fit and monitor the bias, stat. uncertainty and pull
-      MassFitResults_t result=mFitter.DoMassFit(ensemble,false);
+      MassFitResults_t result=mFitter.DoMassFit(ensemble,doDebug);
       for(int i=0; i<=nCategories; i++)
 	{
 	  float mass    = (i==0 ? result.tMass    : result.iTmass[i-1]);
