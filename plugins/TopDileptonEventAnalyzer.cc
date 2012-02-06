@@ -23,6 +23,7 @@
 #include "DataFormats/FWLite/interface/Event.h"
 #include "FWCore/Framework/interface/LuminosityBlock.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenRunInfoProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
@@ -110,7 +111,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.addHistogram("cutflow", ";Step; Events",nselsteps,0,nselsteps);
     for(int ibin=1; ibin<=controlHistos_.getHisto("cutflow","all")->GetXaxis()->GetNbins(); ibin++)
       controlHistos_.getHisto("cutflow","all")->GetXaxis()->SetBinLabel(ibin,selSteps[ibin-1]);
-    
+
     //vertex control
     controlHistos_.addHistogram("ngoodvertex", ";Vertices; Events", 25, 0.,25.); 
     controlHistos_.addHistogram("vertex-sumpt", ";#Sigma_{tracks} p_{T} [GeV/c]; Events", 100, 0.,300.);
@@ -127,7 +128,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.addHistogram("muchhadroniso", "; Isolation; Events", 100, 0.,0.5);
     controlHistos_.addHistogram("muneuhadroniso", "; Isolation; Events", 100, 0.,0.5);
     controlHistos_.addHistogram("mureliso", "; Isolation; Events", 100, 0.,1.);
-    
+
     //dilepton control
     controlHistos_.addHistogram("dilepton-mass", ";Invariant Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,300.);
     controlHistos_.addHistogram("dilepton-sumpt", ";#Sigma |#vec{p}_{T}| [GeV/c]; Events", 100, 0.,300.);
@@ -150,7 +151,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.addHistogram("ss-chargedhadetfrac", ";f_{charged had} E_{T} [GeV]; Events", 100,  0.,1.);
     controlHistos_.addHistogram("ss-muonetfrac", ";f_{muons} E_{T} [GeV]; Events", 100,  0.,1.);
     controlHistos_.addHistogram("ss-njets",";Jet multiplicity; Events",4,0,4);
-	
+
     //jets
     controlHistos_.addHistogram("jetchhadenfrac",";f_{charged hadrons}; Jets",50,0,1);
     controlHistos_.addHistogram("jetneuthadenfrac",";f_{neutral hadrons}; Jets",50,0,1);
@@ -175,7 +176,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
 	controlHistos_.getHisto("bmultfinal","all")->GetXaxis()->SetBinLabel(ibin,ilabel);
       }
 
-    //MET
+    //MET    
     controlHistos_.addHistogram("met", ";#slash{E}_{T} [GeV]; Events", 30,  0.,300.);
     controlHistos_.addHistogram("neutralhadetfrac", ";f_{neutral had} E_{T} [GeV]; Events", 100,  0.,1.);
     controlHistos_.addHistogram("neutralemetfrac", ";f_{neutral em} E_{T} [GeV]; Events", 100,  0.,1.);
@@ -187,7 +188,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     controlHistos_.initMonitorForStep("ee");
     controlHistos_.initMonitorForStep("emu");
     controlHistos_.initMonitorForStep("mumu");
-    
+
 //    controlHistos_.initMonitorForStep("ss-all");
 //    controlHistos_.initMonitorForStep("ss-ee");
 //    controlHistos_.initMonitorForStep("ss-emu");
@@ -200,6 +201,7 @@ TopDileptonEventAnalyzer::TopDileptonEventAnalyzer(const edm::ParameterSet& cfg)
     for(int n0=0; n0<=30; n0++) maxPuWeight_ = max( LumiWeights_->weight(n0) , maxPuWeight_);
 
   }catch(std::exception &e){
+    std::cout << e.what() << std::endl;
     LumiWeights_=0;
   }  
 }
@@ -240,6 +242,7 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 	    else                           npuOOTp1 += it->getPU_NumInteractions();
 	  }
 	summaryHandler_.evSummary_.ngenpu=npuIT;
+
 	controlHistos_.fillHisto("pileup","all",npuIT);
 	summaryHandler_.evSummary_.ngenootpum1=npuOOTm1;
 	summaryHandler_.evSummary_.ngenootpup1=npuOOTp1;
@@ -267,15 +270,14 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 						gentteventcode == gen::top::Event::MUMU ); 
 	
 	//save the generator level event
-	std::map<std::string, std::list<reco::CandidatePtr> > genParticles;
+	std::map<std::string, std::vector<reco::CandidatePtr> > genParticles;
 	genParticles["top"] = genEvent_.tops;
 	genParticles["quarks"] = genEvent_.quarks;
 	genParticles["leptons"] = genEvent_.leptons;
 	genParticles["neutrinos"]  = genEvent_.neutrinos;
-	for(std::map<std::string,std::list<reco::CandidatePtr> >::iterator it = genParticles.begin();
-	    it != genParticles.end(); it++)
+	for(std::map<std::string,std::vector<reco::CandidatePtr> >::iterator it = genParticles.begin(); it != genParticles.end(); it++)
 	  {
-	    for(std::list<reco::CandidatePtr>::iterator itt = it->second.begin();
+	    for(std::vector<reco::CandidatePtr>::iterator itt = it->second.begin();
 		itt != it->second.end();
 		itt++)
 	      {
@@ -286,7 +288,25 @@ void TopDileptonEventAnalyzer::analyze(const edm::Event& event,const edm::EventS
 		summaryHandler_.evSummary_.mcen[ipart]=itt->get()->energy();
 		summaryHandler_.evSummary_.mcid[ipart]=itt->get()->pdgId();
 		summaryHandler_.evSummary_.nmcparticles++;
-	    }
+	      }
+	  }
+	
+	//save pdf info
+	edm::Handle<GenEventInfoProduct> genEventInfoProd;
+	event.getByType( genEventInfoProd );
+	if(genEventInfoProd.isValid())
+	  {
+	    summaryHandler_.evSummary_.genWeight = genEventInfoProd->weight();
+	    summaryHandler_.evSummary_.qscale = genEventInfoProd->qScale();
+	    if(genEventInfoProd->pdf())
+	      {
+		summaryHandler_.evSummary_.x1  = genEventInfoProd->pdf()->x.first;
+		summaryHandler_.evSummary_.x2  = genEventInfoProd->pdf()->x.second;
+		summaryHandler_.evSummary_.id1 = genEventInfoProd->pdf()->id.first;
+		summaryHandler_.evSummary_.id2 = genEventInfoProd->pdf()->id.second;
+	      }
+	    if(genEventInfoProd->binningValues().size()>0) summaryHandler_.evSummary_.pthat = genEventInfoProd->binningValues()[0];
+	    for(int i=0; i<44; i++) summaryHandler_.evSummary_.pdfWgts[i]=1.0;
 	  }
       }
 
@@ -727,3 +747,5 @@ void TopDileptonEventAnalyzer::initJetEnergyCorrector(const edm::EventSetup &iSe
 DEFINE_FWK_MODULE(TopDileptonEventAnalyzer);
 
 
+
+//  LocalWords:  isValid

@@ -1,9 +1,4 @@
-#ifndef liptop_toolslinkdef_h
-#define liptop_toolslinkdef_h
-
 #include "LIP/Top/interface/EventSummaryHandler.h"
-#include "LIP/Top/interface/HeavyFlavorPDF.h"
-#include "LIP/Top/interface/HeavyFlavorDiffPDF.h"
 #include "LIP/Top/interface/TopKinSolver.h"
 #include "LIP/Top/interface/KinAnalysis.h"
 #include "LIP/Top/interface/HFCMeasurement.h"
@@ -48,8 +43,6 @@
 #pragma link C++ typedef top::PhysicsObjectJetCollection;
 #pragma link C++ class top::PhysicsEvent_t;
 #pragma link C++ function top::getPhysicsEventFrom;
-#pragma link C++ class HeavyFlavorPDF;
-#pragma link C++ class HeavyFlavorDiffPDF;
 #pragma link C++ struct TTbarSolution_t;
 #pragma link C++ typedef TTbarSolutionCollection_t;
 #pragma link C++ function mTTbarOrder;
@@ -64,8 +57,6 @@
 #pragma link C++ struct EnsembleMeasurement_t;
 #pragma link C++ struct MassFitResults_t;
 #pragma link C++ class MassMeasurement;
-
-#endif
 
 #endif
 

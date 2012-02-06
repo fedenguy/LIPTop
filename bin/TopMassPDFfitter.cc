@@ -419,7 +419,7 @@ FitResults_t DYBckgPDFs(TString url,int channel)
     }
   f->Close();
 
-  mass.setBins(20);
+  mass.setBins(10);
 
   //fit the MC template
   RooRealVar mpv_l("mpv_{l}^{MC}","Mpv of landau",140,100,165);
@@ -605,12 +605,12 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
 	  if(nbtags==0 && evmeasurements[5]!=0) continue;
 	  if(nbtags==1 && evmeasurements[5]!=1) continue;
 	  if(nbtags==2 && evmeasurements[5]<1) continue;
-	  if(normWeight==0) continue;
 	  mass=evmeasurements[0];
+	  h->Fill(mass.getVal(),weight);
+	  if(normWeight==0) continue;
 	  if(mass.getVal()<rangeMin || mass.getVal() > rangeMax) continue;
 	  evWeight=weight;
 	  combData.add(RooArgSet(mass,massCategory));
-	  h->Fill(mass.getVal(),evWeight.getVal());
 	}
       massProfile->SetPoint(ipt,MassPointCollection[ipt].second,h->GetMean());
       massProfile->SetPointError(ipt,0,h->GetMeanError());

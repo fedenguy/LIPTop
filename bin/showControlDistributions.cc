@@ -14,6 +14,7 @@
 
 #include "CondFormats/JetMETObjects/interface/JetResolution.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
@@ -167,6 +168,29 @@ int main(int argc, char* argv[])
   JetResolution stdPtResol(ptFileName.Data(),true);
   JetCorrectionUncertainty jecUnc(uncFile.Data());
     
+  // Instantiate uncertainty sources
+  TString srcnames[] =
+    {"Absolute", "HighPtExtra", "SinglePion", "Time", "Flavor",
+     "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF","RelativeStatEC2", "RelativeStatHF", "RelativeFSR", 
+     "PileUpDataMC", "PileUpOOT", "PileUpPt", "PileUpBias", "PileUpJetRate"
+    };
+  const int nsrc=sizeof(srcnames)/sizeof(TString);
+  std::map<TString, std::vector<JetCorrectionUncertainty*> > vsrc;
+  TString jesUncSourcesUrl("${CMSSW_BASE}/src/LIP/Top/data/JEC11_V12_AK5PF_UncertaintySources.txt");
+  gSystem->ExpandPathName(jesUncSourcesUrl);
+  for (int isrc = 0; isrc<nsrc; ++isrc) 
+    {
+      TString src=srcnames[isrc];
+      JetCorrectorParameters *p = new JetCorrectorParameters(jesUncSourcesUrl.Data(),src.Data());
+      JetCorrectionUncertainty *unc = new JetCorrectionUncertainty(*p);
+      if(src.Contains("PileUp"))                                                    vsrc["SubTotalPileUp"].push_back(unc);
+      if(src.Contains("Relative"))                                                  vsrc["SubTotalRelative"].push_back(unc);
+      if(src=="Absolute" || src=="HighPtExtra" || src=="SinglePion" || src=="Time") vsrc["SubTotalPt"].push_back(unc);
+      if(src=="Flavor")                                                             vsrc["SubTotalFlavor"].push_back(unc);
+    }  
+  JetCorrectionUncertainty *totalUnc = new JetCorrectionUncertainty(*(new JetCorrectorParameters(jesUncSourcesUrl.Data(), "Total")));
+
+
   //
   // control histograms
   //
@@ -197,6 +221,9 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("ljet", "; udscg jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
+  for(std::map<TString, std::vector<JetCorrectionUncertainty*> >::iterator it = vsrc.begin(); it != vsrc.end(); it++)
+    controlHistos.addHistogram( new TProfile (it->first+"jesunc", "; p_{T} [GeV/c]; Uncertainty % / (10 GeV/c)", 50, 0.,500.,0,10) );
+  controlHistos.addHistogram( new TProfile ("jesunc", "; p_{T} [GeV/c]; Uncertainty % / (10 GeV/c)", 50, 0.,500.,0,10) );
   controlHistos.addHistogram( new TH1F ("mjj", "; M(lead jet,sub-lead jet) [GeV/c^{2}]; Events / (25 GeV/c^{2})", 10, 0.,250.) );
   controlHistos.addHistogram( new TH1F("btagdownvar",";b-tag multiplicity;Events", 3, 0.,3.) );
   controlHistos.addHistogram( new TH1F("btagcenvar",";b-tag multiplicity;Events", 3, 0.,3.) );
@@ -467,7 +494,7 @@ int main(int argc, char* argv[])
 	      float pt=jetColl[ijet].pt();
 	      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
 	      ptOrderedJets.push_back( orderedJetColl[ijet] );
-
+	      
 	      float csv=orderedJetColl[ijet].btag7;
 	      nbtags += (csv>0.244);
 	      float tche=orderedJetColl[ijet].btag1;
@@ -608,16 +635,49 @@ int main(int argc, char* argv[])
 			  for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
 			    {
 			      float pt=jetColl[ijet].pt();
-			      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
+			      float eta=jetColl[ijet].eta();
+			      if(pt<=30 || fabs(eta)>=2.5) continue;
 			      float btagdisc=orderedJetColl[ijet].btag7;
 			      float btagdisctche=orderedJetColl[ijet].btag1;
 			      bool isMatchedToB( fabs(orderedJetColl[ijet].flavid)==5 );
 			      controlHistos.fillHisto( (isMatchedToB ? "csvb" : "csvlight") ,     ctf, btagdisc,     weight);
 			      controlHistos.fillHisto( (isMatchedToB ? "tcheb" : "tchelight") ,   ctf, btagdisctche, weight);
 			      if(isMC) controlHistos.fillHisto( (isMatchedToB ? "bjet" : "ljet") ,ctf, pt,           weight);
-			    }	 
+
+			      //jes uncertainties
+			      if(ijet<=2)
+				{	
+				  std::map<TString,float> uncContribs;
+				  float checkTotal(0);
+				  for(std::map<TString, std::vector<JetCorrectionUncertainty*> >::iterator it = vsrc.begin(); it != vsrc.end(); it++)
+				    {
+				      float sum2_up(0),sum2_dw(0);
+				      for(std::vector<JetCorrectionUncertainty*>::iterator itt = it->second.begin(); itt != it->second.end(); itt++)
+					{
+					  (*itt)->setJetPt(pt); (*itt)->setJetEta(eta);
+					  double sup = (*itt)->getUncertainty(true);
+					  (*itt)->setJetPt(pt); (*itt)->setJetEta(eta);
+					  double sdw = (*itt)->getUncertainty(false);
+					  sum2_up += pow(max(sup,sdw),2); 
+					  sum2_dw += pow(min(sup,sdw),2); 
+					}
+				      uncContribs[it->first]=sqrt(sum2_up);
+				      checkTotal += sum2_up;
+				    }
+				  totalUnc->setJetPt(pt);
+				  totalUnc->setJetEta(eta);
+				  double totalJESUnc = totalUnc->getUncertainty(true);
+				  for(std::map<TString,float>::iterator it = uncContribs.begin(); it != uncContribs.end(); it++)
+				    {
+				      controlHistos.fillHisto(it->first+"jesunc",ctf,pt,it->second*100);
+				      controlHistos.fillHisto(it->first+"jesunc",ctf,10.,it->second*100);
+				    }
+				  controlHistos.fillHisto("jesunc",ctf,pt,totalJESUnc*100);
+				  controlHistos.fillHisto("jesunc",ctf,10.,totalJESUnc*100);
+				}
+			    } 
 			}
-			  
+		      
   		      controlHistos.fillHisto("nbtags",ctf,nbtags,weight);
   		      controlHistos.fillHisto("nbtagstche",ctf,nbtagstche,weight);
 		      if(nseljetsLoose>=2 && nseljetsLoose<=3)

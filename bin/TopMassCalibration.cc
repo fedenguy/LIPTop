@@ -89,15 +89,20 @@ int main(int argc, char* argv[])
   procYields[MassMeasurement::OF_EQ1BTAGS]=785.2;
   procYields[MassMeasurement::OF_GEQ2BTAGS]=1460.6;
   evtYields["Signal"]=procYields;
-  if(syst=="baresignal" || syst=="puup" || syst=="pudown")
+  if(syst=="baresignal" || syst=="puup" || syst=="pudown" || syst.Contains("pushift") )
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
       allSamples["172.5"].push_back("TTJets");
     }
-  if(syst=="jesup" || syst=="jesdown" || syst=="jer"  || syst=="lesup" || syst=="lesdown")
+  if(syst=="jesup" || syst=="jesdown" || syst=="jer"  || syst=="lesup" || syst=="lesdown" || syst=="unclustup" || syst=="unclustdown")
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal_"+syst);
       allSamples["172.5"].push_back("TTJets_"+syst);
+    }
+  if(syst=="mcgen")
+    {
+      allSamples["172.5"]=Proc_t(1,"TT2l_Powheg");
+      allSamples["172.5"].push_back("TTJets");
     }
   if(syst=="matchingdown")
     {
@@ -195,7 +200,7 @@ int main(int argc, char* argv[])
       double pushift(0);
       sscanf(syst.Data(),"pushift%lf",&pushift);
       puShifter = new reweight::PoissonMeanShifter(pushift);
-
+      cout << "PU shift is " << pushift << endl;
     }
 
   //

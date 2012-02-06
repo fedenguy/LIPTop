@@ -60,6 +60,14 @@ runLocalAnalysisOverSamples.py -e showMassDistribution -j data/samples-signal.js
 runLocalAnalysisOverSamples.py -e showMassDistribution -j data/mass-samples.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
 runLocalAnalysisOverSamples.py -e showMassDistribution -j data/syst-samples.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
 
+# to run PDF weights...
+for i in `seq 0 29`; do \
+let a=100*$i;\
+let b=100*$i+100;\
+runLocalAnalysisOverSamples.py -e showMassDistribution -j ../data/samples-signal.json -d ../store/Top/ntuples_14Jan/merged -o /tmp/psilva -c ../test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std @runSystematics=True @saveSummaryTree=True @evStart=$a @evEnd=$b" -t signal &\
+sleep 10
+done
+
 #
 # DY control
 #

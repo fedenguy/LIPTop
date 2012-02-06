@@ -35,6 +35,9 @@ namespace top
       info6[MAXCANDIDATES],info7[MAXCANDIDATES],info8[MAXCANDIDATES],info9[MAXCANDIDATES];
     Float_t mcpx[MAXCANDIDATES], mcpy[MAXCANDIDATES], mcpz[MAXCANDIDATES], mcen[MAXCANDIDATES];
     Int_t mcid[MAXCANDIDATES];
+    Float_t pthat,genWeight, qscale, x1,x2;
+    Int_t id1,id2;
+    Float_t pdfWgts[44];
     Int_t nmeasurements;
     Float_t evmeasurements[MAXMEASUREMENTS];
   };

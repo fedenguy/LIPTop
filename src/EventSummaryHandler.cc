@@ -49,8 +49,16 @@ namespace top
     t_->Branch("info7",      evSummary_.info7,       "info7[nparticles]/F");
     t_->Branch("info8",      evSummary_.info8,       "info8[nparticles]/F");
     t_->Branch("info9",      evSummary_.info9,       "info9[nparticles]/F");
-
-
+    
+    t_->Branch("pthat",      &evSummary_.pthat,      "pthat/F");
+    t_->Branch("genWeight",  &evSummary_.genWeight,  "genWeight/F");
+    t_->Branch("qscale",     &evSummary_.qscale,     "qscale/F");
+    t_->Branch("x1",         &evSummary_.x1,         "x1/F");
+    t_->Branch("x2",         &evSummary_.x2,         "x2/F");
+    t_->Branch("id1",        &evSummary_.id1,        "id1/I");
+    t_->Branch("id2",        &evSummary_.id2,        "id2/I");
+    t_->Branch("pdfWgts",    evSummary_.pdfWgts,     "pdfWgts[44]/F");
+    
     t_->Branch("nmcparticles", &evSummary_.nmcparticles, "nmcparticles/I");
     t_->Branch("mcpx",         evSummary_.mcpx,          "mcpx[nmcparticles]/F");
     t_->Branch("mcpy",         evSummary_.mcpy,          "mcpy[nmcparticles]/F");
@@ -101,6 +109,15 @@ namespace top
     if(t_->GetBranch("info7")) t_->GetBranch("info7")->SetAddress(evSummary_.info7);
     if(t_->GetBranch("info8")) t_->GetBranch("info8")->SetAddress(evSummary_.info8);
     if(t_->GetBranch("info9")) t_->GetBranch("info9")->SetAddress(evSummary_.info9);
+
+    if(t_->GetBranch("pthat"))     t_->GetBranch("pthat")->SetAddress(&evSummary_.pthat);
+    if(t_->GetBranch("genWeight")) t_->GetBranch("genWeight")->SetAddress(&evSummary_.genWeight);
+    if(t_->GetBranch("qscale"))    t_->GetBranch("qscale")->SetAddress(&evSummary_.qscale);
+    if(t_->GetBranch("x1"))        t_->GetBranch("x1")->SetAddress(&evSummary_.x1);
+    if(t_->GetBranch("x2"))        t_->GetBranch("x2")->SetAddress(&evSummary_.x2);
+    if(t_->GetBranch("id1"))       t_->GetBranch("id1")->SetAddress(&evSummary_.id1);
+    if(t_->GetBranch("id2"))       t_->GetBranch("id2")->SetAddress(&evSummary_.id2);
+    if(t_->GetBranch("pdfWgts"))   t_->GetBranch("pdfWgts")->SetAddress(evSummary_.pdfWgts);
 
     if(t_->GetBranch("nmcparticles"))
       {

@@ -21,11 +21,11 @@ namespace gen
       ~Event() { };
       
       enum TTChannel { UNKNOWN=0, ALLJETS, EJETS, MUJETS, TAUJETS, EE, EMU, ETAU, MUMU, MUTAU, TAUTAU };
-
-      std::list<reco::CandidatePtr > tops;
-      std::list<reco::CandidatePtr > neutrinos;
-      std::list<reco::CandidatePtr > leptons;
-      std::list<reco::CandidatePtr > quarks;
+      
+      std::vector<reco::CandidatePtr > tops;
+      std::vector<reco::CandidatePtr > neutrinos;
+      std::vector<reco::CandidatePtr > leptons;
+      std::vector<reco::CandidatePtr > quarks;
       edm::InputTag genLabel_;
 
       /**

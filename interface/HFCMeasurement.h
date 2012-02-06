@@ -5,7 +5,6 @@
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
 
 #include "LIP/Top/interface/EventSummaryHandler.h"
-#include "LIP/Top/interface/HeavyFlavorPDF.h"
 
 #include "TFile.h"
 #include "TRandom2.h"

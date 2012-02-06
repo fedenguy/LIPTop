@@ -27,6 +27,20 @@
 #include "TString.h"
 #include "TDirectory.h"
 
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+namespace LHAPDF {
+  void initPDFSet(int nset, const std::string& filename, int member=0);
+  int numberPDF(int nset);
+  void usePDFMember(int nset, int member);
+  double xfx(int nset, double x, double Q, int fl);
+  double getXmin(int nset, int member);
+  double getXmax(int nset, int member);
+  double getQ2min(int nset, int member);
+  double getQ2max(int nset, int member);
+  void extrapolate(bool extrapolate=true);
+}
+
+
 using namespace std;
 using namespace top;
 
@@ -106,7 +120,7 @@ int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=100)
 //
 int main(int argc, char* argv[])
 {
-  bool dumpDataSolutions(true);
+  bool dumpDataSolutions(false);
   SelectionMonitor controlHistos; //plot storage
   HistogramAnalyzer histoAnalyzer; 
 
@@ -129,10 +143,13 @@ int main(int argc, char* argv[])
   TString kindir              = runProcess.getParameter<std::string>("kindir");
   bool isMC                   = runProcess.getParameter<bool>("isMC");
   int mcTruthMode             = runProcess.getParameter<int>("mctruthmode");
+  int evStart                 = runProcess.getParameter<int>("evStart");
+  int evEnd                   = runProcess.getParameter<int>("evEnd");
   TString dirname             = runProcess.getParameter<std::string>("dirName");
   bool saveSummaryTree        = runProcess.getParameter<bool>("saveSummaryTree");
   double xsec                 = runProcess.getParameter<double>("xsec");
-
+  bool runSystematics = runProcess.getParameter<bool>("runSystematics");
+  
   //pileup reweighter                                                        
   TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
   edm::LumiReWeighting *LumiWeights=0;
@@ -184,7 +201,8 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("ptttbar", "; p_{t#bar{t}} [GeV/c]; Events / (40 GeV/c)", 25, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (100 GeV/c^{2})", 30, 0.,3000.) );
   controlHistos.addHistogram( new TH2F ("mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
-  controlHistos.addHistogram( new TH2F ("mtopvsmlj", "; m_{Top} [GeV/c^{2}]; Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
+  controlHistos.addHistogram( new TH2F ("mtopvsminmlj", "; m_{Top} [GeV/c^{2}]; min Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
+  controlHistos.addHistogram( new TH2F ("mtopvsmaxmlj", "; m_{Top} [GeV/c^{2}]; max Mass(l,j) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsmttbar", "; m_{Top} [GeV/c^{2}]; Mass(t,#bar{t}) [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,2000.) );
   controlHistos.addHistogram( new TH2F ("mtopvsnvtx", "; m_{Top} [GeV/c^{2}]; Vertices; Events", 100, 0.,500.,30,0,30) );
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
@@ -247,7 +265,12 @@ int main(int argc, char* argv[])
       if(cutflowH)    cnorm=cutflowH->GetBinContent(1);
     }
 
-
+  //compute PDF weights if required
+  if(runSystematics)
+    {
+      LHAPDF::initPDFSet(1, "cteq66.LHgrid");
+      cout << "[showMassDistribution] computing PDF weights.... this will take time" << endl;
+    }
 
   //init event spy
   EventSummaryHandler *spyEvents=0;
@@ -257,11 +280,18 @@ int main(int argc, char* argv[])
   if(saveSummaryTree)
     {
       spyEvents = new EventSummaryHandler;
-      spyFile = TFile::Open("EventSummaries.root","UPDATE");
+      TString spyFileUrl("EventSummaries.root");
+      if(evStart!=0 || evEnd!=-1)
+	{
+	  spyFileUrl = "EventSummaries_"; 
+	  spyFileUrl += evStart; spyFileUrl += "_"; spyFileUrl +=  evEnd;
+	  spyFileUrl += ".root";
+	}
+      spyFile = TFile::Open(spyFileUrl,"UPDATE");
       TString evtag=gSystem->BaseName(evurl);
-      //      evtag.ReplaceAll("_summary.root","");
       evtag.ReplaceAll(".root","");
       if(kindir!="std") evtag += "_" + kindir;
+      if(runSystematics) evtag+= "_pdf";
       spyFile->rmdir(evtag);
       spyDir = spyFile->mkdir(evtag);
       TTree *outT = new TTree("data","Event summary");
@@ -330,7 +360,15 @@ int main(int argc, char* argv[])
   for (int inum=0; inum < t->GetEntries(); ++inum)
     {
       t->GetEvent(inum);
-      
+      if(inum<evStart) continue;
+      if(evEnd>=0 && inum>evEnd) break;
+
+      if(inum%50==0)
+	{
+	  printf("\r[%3.2f/100]",float(100*inum)/float(t->GetEntries()));
+	  cout << flush;
+	}
+
       //get original event
       Int_t irun,ievent,ilumi;
       kinHandler.getEventInfo(irun,ievent,ilumi);
@@ -414,12 +452,6 @@ int main(int argc, char* argv[])
 	  int assignCode=(phys.leptons[0].genid*prunedJets[0].flavid);
 	  if(assignCode<0) iCorrectComb=1;
 	  else             iCorrectComb=2;
-	  //  cout << iCorrectComb << " | " 
-	  // 	       << phys.leptons[0].genid << " (" << phys.leptons[0].pt() << ") "
-	  // 	       << phys.leptons[1].genid << " (" << phys.leptons[1].pt() << ") |"
-	  // 	       << prunedJets[0].flavid << " (" << prunedJets[0].btag1 << ") "
-	  // 	       << prunedJets[1].flavid << " (" << prunedJets[1].btag1 << ") |"
-	  // 	       << endl;
 	}
       
       //define the event category
@@ -429,9 +461,9 @@ int main(int argc, char* argv[])
       if(!isZcand && !isSS)
 	{
 	  subcats.push_back("");
-	  if(nbtagscor==0) subcats.push_back("eq0btags");
-	  else if(nbtagscor==1) subcats.push_back("eq1btags");
-	  else if(nbtagscor>=2) subcats.push_back("geq2btags");
+	  if(nbtagscor==0)      { subcats.push_back("eq0btags"); categs.push_back(""); }
+	  else if(nbtagscor==1) { subcats.push_back("eq1btags"); categs.push_back(""); }
+	  else if(nbtagscor>=2) { subcats.push_back("geq2btags"); categs.push_back(""); }
 	}
       else if(isZcand && !isSS) subcats.push_back("zcands");
       else                      subcats.push_back("ss");
@@ -502,8 +534,8 @@ int main(int argc, char* argv[])
 	      
 	      controlHistos.fillHisto("dilmass",ctf,dilmass,weight);
 	      controlHistos.fill2DHisto("mtopvsdilmass",ctf,mtop,dilmass,weight);
-	      controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj1.mass(),weight);
-	      controlHistos.fill2DHisto("mtopvsmlj",ctf,mtop,lj2.mass(),weight);
+	      controlHistos.fill2DHisto("mtopvsminmlj",ctf,mtop,min(lj1.mass(),lj2.mass()),weight);
+	      controlHistos.fill2DHisto("mtopvsmaxmlj",ctf,mtop,max(lj1.mass(),lj2.mass()),weight);
 	      controlHistos.fill2DHisto("mtopvsmttbar",ctf,mtop,mttbar,weight);
 	      
 	      //resolution plots
@@ -544,7 +576,28 @@ int main(int argc, char* argv[])
 	  measurements.push_back(nbtags);
 	  measurements.push_back(nbtagscor);
 	  measurements.push_back(prunedJets.size());
+	  
+	  if(runSystematics)
+	    {
+	      //compute and save the PDF weights
+	      LHAPDF::usePDFMember(1,0);
+	      double xpdf1 = LHAPDF::xfx(1, ev.x1, ev.qscale, ev.id1);
+	      double xpdf2 = LHAPDF::xfx(1, ev.x2, ev.qscale, ev.id2);
+	      double w0 = xpdf1 * xpdf2;
+	      for(int i=1; i <=44; ++i){
+		LHAPDF::usePDFMember(1,i);
+		double xpdf1_new = LHAPDF::xfx(1, ev.x1, ev.qscale, ev.id1);
+		double xpdf2_new = LHAPDF::xfx(1, ev.x2, ev.qscale, ev.id2);
+		ev.pdfWgts[i-1]=xpdf1_new * xpdf2_new / w0;
+	      }
+	    }
 	  spyEvents->fillTreeWithEvent( ev, measurements );
+
+	  if(runSystematics && spyEvents->getTree()->GetEntriesFast()>500) 
+	    {
+	      cout << "2000 events should be enough to evaluate the PDF uncertainty, no?" << endl;
+	      break;
+	    }
 	}
 
       //for data only

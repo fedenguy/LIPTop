@@ -84,6 +84,7 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
     
     KinCandidateCollection_t leptons, jets, mets;
     TLorentzVectorCollection leptonsp4,jetsp4;
+    TLorentzVector clusteredP4(0,0,0,0), unclusteredP4(0,0,0,0);
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
@@ -94,9 +95,9 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 	    mets.push_back( KinCandidate_t(p4,p4.Pt()) );
 	    break;
 	  case 1:
+	    if(p4.Pt()>15 && fabs(p4.Eta())<5.0) clusteredP4 += p4;
 	    if(p4.Pt()>30 && fabs(p4.Eta())<2.5)
 	      {
-		//order by CSV
 		jets.push_back( KinCandidate_t(p4, ev.info7[ipart]) );
 		jetsp4.push_back(p4);
 	      }
@@ -115,10 +116,23 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
 		leptonsp4.push_back(p4);
 	      }
+	    clusteredP4+=p4;
 	    break;
 	  }
       }
     if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
+
+    //vary by 10% the unclustered component the MET
+    unclusteredP4 = -mets[0].first-clusteredP4;
+    if(scheme_=="unclustup" || scheme_=="unclustdown")
+      {
+	float sf=1.1;
+	if(scheme_=="unclustdown") sf=0.9;
+	unclusteredP4 *= sf;
+	TLorentzVector p4 = -clusteredP4 -unclusteredP4;
+	mets[0].first = p4;
+      }
+    if(mets[0].first.Pt()<30) return;
 
     //random rotation of leptons
     if(scheme_=="randrot") 

@@ -59,12 +59,12 @@ namespace gen
     const reco::Candidate * Event::getCandidateFor(const reco::Candidate * recoCandidate, int id, double matchCone)
     {
       if(recoCandidate==0) return 0;
-      std::list<reco::CandidatePtr > &candList = (abs(id)>6 ? leptons : quarks );
+      std::vector<reco::CandidatePtr > &candList = (abs(id)>6 ? leptons : quarks );
 	
       //find the closest candidate (compare also with the final state)
       double minDeltaR(100.);
       const reco::Candidate * matchCandidate=0;
-      for(std::list<reco::CandidatePtr >::iterator it = candList.begin();
+      for(std::vector<reco::CandidatePtr >::iterator it = candList.begin();
 	  it != candList.end();
 	  it++)
 	{
@@ -87,12 +87,12 @@ namespace gen
     //
     const reco::Candidate * Event::getNearestCandidateFor(double eta, double phi, int id, double matchCone)
     {
-      std::list<reco::CandidatePtr > &candList = (abs(id)>6 ? leptons : quarks );
+      std::vector<reco::CandidatePtr > &candList = (abs(id)>6 ? leptons : quarks );
 	
       //find the closest candidate (compare also with the final state)
       double minDeltaR(100.);
       const reco::Candidate * matchCandidate=0;
-      for(std::list<reco::CandidatePtr >::iterator it = candList.begin();
+      for(std::vector<reco::CandidatePtr >::iterator it = candList.begin();
 	  it != candList.end();
 	  it++)
 	{
@@ -117,7 +117,7 @@ namespace gen
       //reset all
       int quarkCounter(0),chLeptonCounter(0),electronCounter(0),muonCounter(0),tauCounter(0);  
       tops.clear(); leptons.clear();  neutrinos.clear(); quarks.clear();         
-	
+      
       //retrieve the generator level particle collection      
       edm::Handle<edm::View<reco::Candidate> > genParticles;
       iEvent.getByLabel(genLabel_, genParticles);
@@ -223,11 +223,15 @@ namespace gen
       else if(quarkCounter == 0 && muonCounter == 1 && tauCounter == 1) {ttChannel = MUTAU;}
       else if(quarkCounter == 0 && tauCounter == 2) {ttChannel = TAUTAU;}
 	
-      tops.sort();      tops.unique();
-      leptons.sort();   leptons.unique();
-      quarks.sort();    quarks.unique();
-      neutrinos.sort(); neutrinos.unique();
-	
+      sort( tops.begin(), tops.end() );               tops.erase( unique( tops.begin(), tops.end() ), tops.end() );
+      sort( leptons.begin(), leptons.end() );         leptons.erase( unique( leptons.begin(), leptons.end() ), leptons.end() );
+      sort( quarks.begin(), quarks.end() );           quarks.erase( unique( quarks.begin(), quarks.end() ), quarks.end() );
+      sort( neutrinos.begin(), neutrinos.end() );     neutrinos.erase( unique( neutrinos.begin(), neutrinos.end() ), neutrinos.end() );
+      //       tops.sort();      tops.unique();
+      //       leptons.sort();   leptons.unique();
+      //       quarks.sort();    quarks.unique();
+      //       neutrinos.sort(); neutrinos.unique();
+      
       return ttChannel;
     }
     

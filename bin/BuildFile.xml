@@ -1,4 +1,5 @@
 <use name="LIP/Top"/>
+<use name="lhapdf"/>
 <environment>
   <bin name="runKinAnalysis"            file="runKinAnalysis.cc"></bin>
   <bin name="displayKinResults"         file="displayKinResults.cc"></bin>  

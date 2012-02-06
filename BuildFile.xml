@@ -5,12 +5,12 @@
 <use name="JetMETCorrections/Objects"/>
 <use name="CMGTools/HtoZZ2l2nu"/>
 <use name="root"/>
+<use name="rootmath"/>
 <use name="roottmva"/>
 <use name="rootrflx"/>
 <use name="roofit"/>
 <use name="roostats"/>
 <use name="boost"/>
-<use name="rootmath"/>
 <export>
   <lib name="1"/>
 </export>

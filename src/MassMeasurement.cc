@@ -360,7 +360,8 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
 	  RooPlot* frame = recoMass->frame(Title(sName));
 	  allData[icat]->plotOn(frame,Binning(20),DrawOption("pz"));
 	  allPdfs[icat]->plotOn(frame,Components("bckgmodel*"),DrawOption("lf"),FillStyle(1001),FillColor(kGray),LineColor(kGray),Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
-	  allPdfs[icat]->plotOn(frame,Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
+	  //allPdfs[icat]->plotOn(frame,Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
+	  allPdfs[icat]->plotOn(frame,NumEvents(allData[icat]->sumEntries()),MoveToBack());
 	  frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
 	  frame->GetXaxis()->SetTitleOffset(1.2);
 	  frame->GetYaxis()->SetTitle("Events");
@@ -444,7 +445,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
       signalpdfset.add(bckgpdfset);
       sigYieldParams.add(constrParams);
       RooAddPdf incmassmodel("incmodel"+tag_,"Inclusive Model",signalpdfset,sigYieldParams);
-      incmassmodel.plotOn(frame,Normalization(1.0,RooAbsReal::RelativeExpected),MoveToBack());
+      incmassmodel.plotOn(frame,NumEvents(inclusiveData->sumEntries()),MoveToBack());
       frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
       frame->GetXaxis()->SetTitleOffset(1.2);
       frame->GetYaxis()->SetTitle("Events");
