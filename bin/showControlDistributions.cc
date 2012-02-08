@@ -134,6 +134,9 @@ int main(int argc, char* argv[])
   TString ptFileName  = runProcess.getParameter<std::string>("ptResolFileName");  gSystem->ExpandPathName(ptFileName);
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
 
+  //
+  bool sampleHasTop(evurl.Contains("TTJets") || evurl.Contains("SingleT"));
+
   //pileup reweighter
   TString proctag=gSystem->BaseName(evurl); 
   //proctag=proctag.ReplaceAll(".root","");
@@ -217,6 +220,7 @@ int main(int argc, char* argv[])
 
   //jet control
   controlHistos.addHistogram( new TH1F ("jet", "; Jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jeteta", "; Jet #eta; Events", 30, 0.,3.) );
   controlHistos.addHistogram( new TH1F ("bjet", "; b jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("ljet", "; udscg jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
@@ -255,6 +259,8 @@ int main(int argc, char* argv[])
   double massAxis[]={10,20,30,40,50,60,70,80,90,100,115,130,145,160,185,200,250,300,400,500,1000,2000};
   int nMassBins=sizeof(massAxis)/sizeof(double)-1;
   controlHistos.addHistogram( new TH1D("mlj","Lepton-jet spectrum;Invariant Mass(l,j) [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );
+  controlHistos.addHistogram( new TH1D("correctmlj","Lepton-jet spectrum;Invariant Mass(l,j) [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );
+  controlHistos.addHistogram( new TH1D("wrongmlj","Lepton-jet spectrum;Invariant Mass(l,j) [GeV/c^{2}];Lepton-jet pairs",nMassBins,massAxis) );
   controlHistos.addHistogram( new TH1D("drlj","Lepton-jet spectrum;#Delta R(l,j);Lepton-jet pairs",50,0,6) );
   controlHistos.addHistogram( new TH1D("mindrlj","Lepton-jet spectrum;min #Delta R(l,j);Events",50,0,6) );
 
@@ -530,19 +536,22 @@ int main(int argc, char* argv[])
 	  //lepton-jet pairs (inclusive)
 	  float mindrlj(99999.);
 	  std::vector<float> mljs, drljs;
-	  for(size_t ijet=0; ijet<jetColl.size(); ijet++)
+	  std::vector<bool> correctmljs;
+	  for(size_t ijet=0; ijet<ptOrderedJets.size(); ijet++)
 	    {
-	      LorentzVector lj1=phys.leptons[0]+jetColl[ijet];
+	      LorentzVector lj1=phys.leptons[0]+ptOrderedJets[ijet];
 	      float mlj1=lj1.mass();
-	      float drlj1=deltaR(phys.leptons[0],jetColl[ijet]);
+	      float drlj1=deltaR(phys.leptons[0],ptOrderedJets[ijet]);
 	      mljs.push_back(mlj1);
 	      drljs.push_back(drlj1);
-	      
-	      LorentzVector lj2=phys.leptons[1]+jetColl[ijet];
+	      correctmljs.push_back( (sampleHasTop && phys.leptons[0].genid*ptOrderedJets[ijet].genid<0 && fabs(ptOrderedJets[ijet].flavid)==5) );
+
+	      LorentzVector lj2=phys.leptons[1]+ptOrderedJets[ijet];
 	      float mlj2=lj2.mass();
-	      float drlj2=deltaR(phys.leptons[1],jetColl[ijet]);
+	      float drlj2=deltaR(phys.leptons[1],ptOrderedJets[ijet]);
 	      mljs.push_back(mlj2);
 	      drljs.push_back(drlj2);
+	      correctmljs.push_back( (sampleHasTop && phys.leptons[1].genid*ptOrderedJets[ijet].genid<0 && fabs(ptOrderedJets[ijet].flavid)==5) );
 	      
 	      mindrlj=min(mindrlj,min(drlj1,drlj2));
 	    }
@@ -707,7 +716,11 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("tche" ,ctf,ptOrderedJets[0].btag1,weight);
 
 			  //just for the leading pT jets
-			  if(ijet<2)  controlHistos.fillHisto("jet",ctf,ptOrderedJets[ijet].pt(),weight);
+			  if(ijet<2) 
+			    {
+			      controlHistos.fillHisto("jet",ctf,ptOrderedJets[ijet].pt(),weight);
+			      controlHistos.fillHisto("jeteta",ctf,fabs(ptOrderedJets[ijet].eta()),weight);
+			    }
 			}
 
 		      controlHistos.fillHisto("leadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),weight);
@@ -720,6 +733,7 @@ int main(int argc, char* argv[])
 		      for(size_t ilj=0; ilj<mljs.size(); ilj++)
 			{
 			  controlHistos.fillHisto("mlj",ctf,mljs[ilj],weight,true);
+			  if(isMC) controlHistos.fillHisto(correctmljs[ilj]? "correctmlj" : "wrongmlj" ,ctf,mljs[ilj],weight,true);
 			  controlHistos.fillHisto("drlj",ctf,drljs[ilj],weight,true);
 			}
 		    }
