@@ -368,6 +368,10 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
 	  frame->GetYaxis()->SetTitle("Events");
 	  frame->GetYaxis()->SetTitleOffset(1.2);
 	  frame->Draw();
+	  float chi2 = frame->chiSquare(3);
+	  float myndof = frame->GetNbinsX() - 3;
+	  std::cout << "-------------------------------------->>>>> CHI2/NDOF <<<<<------------------------------------------" << endl;
+	  std::cout << "chi^2/NDOF = " << chi2 << " / " << myndof << endl;
 	  allCaptions[icat]->Draw();
 	}
       c->SaveAs("MassFitResults.C");
