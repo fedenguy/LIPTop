@@ -31,7 +31,7 @@ runOverSamples.py -j data/samples.json -p "-cfg=${HOME}/scratch0/CMSSW_4_2_4/src
 # it will run an executable and store the outputs in root files named after each sample
 #
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json -p "@saveSummaryTree=True @runSystematics=True"  -c test/runAnalysis_cfg.py.templ -s 2nd
-runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-nosyst -d /store/cmst3/user/psilva/Top_ntuples -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ  -p "@saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ  -p "@saveSummaryTree=True" -s 8nh
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -s 8nh
 runLocalAnalysisOverSamples.py -e showControlDistributions -o ${HOME}/scratch0/top-newjec -d /store/cmst3/user/psilva/Top_ntuples_14Jan -j data/samples-signal.json  -c test/runAnalysis_cfg.py.templ -p "@saveSummaryTree=True @runSystematics=True" -s 8nh
 #
@@ -56,14 +56,16 @@ runKinOverSamples.py -j data/tau-mass-samples.json -e 10 -d /store/cmst3/user/ps
 
 
 # generate plots for signal templates
-runLocalAnalysisOverSamples.py -e showMassDistribution -j data/samples-signal.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
-runLocalAnalysisOverSamples.py -e showMassDistribution -j data/mass-samples.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
-runLocalAnalysisOverSamples.py -e showMassDistribution -j data/syst-samples.json -d store/Top/kin -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std"
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/samples-signal.json -d store/Top/ntuples_14Jan/merged/ -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std @saveSummaryTree=True"
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/mass-samples.json -d store/Top/ntuples_14Jan/merged/ -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std @saveSummaryTree=True"
+runLocalAnalysisOverSamples.py -e showMassDistribution -j data/syst-samples.json -d store/Top/ntuples_14Jan/merged/ -o /tmp/psilva -c test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std @saveSummaryTree=True"
 
 # to run PDF weights...
-for i in `seq 0 29`; do \
-let a=100*$i;\
-let b=100*$i+100;\
+#for i in `seq 0 99`; do \
+#for i in `seq 100 199`; do \
+for i in `seq 250 299`; do \
+let a=50*$i;\
+let b=50*$i+50;\
 runLocalAnalysisOverSamples.py -e showMassDistribution -j ../data/samples-signal.json -d ../store/Top/ntuples_14Jan/merged -o /tmp/psilva -c ../test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std @runSystematics=True @saveSummaryTree=True @evStart=$a @evEnd=$b" -t signal &\
 sleep 10
 done

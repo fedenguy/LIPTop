@@ -332,7 +332,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
     }
 
   //save the result
-  //cout << " ***** Total events used: " << totalEventsUsed << endl;
+  
   result.tMass        = topMass->getVal();  
   result.tMassErr     = topMass->getError(); 
   result.tMassErrHigh = topMass->getAsymErrorHi(); 
@@ -344,6 +344,7 @@ MassFitResults_t MassMeasurement::CombinedMassFitter(bool debug)
   if(debug)
     {
       setStyle();
+      cout << " ***** Total events used: " << totalEventsUsed << endl;
 
       //mass distributions
       TCanvas *c = new TCanvas("massfitter","Fit Result",1200,600*ncategs/2);

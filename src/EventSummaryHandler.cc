@@ -202,6 +202,12 @@ namespace top
 	evSummary_.evmeasurements[i]=addMeasurements[i];
 	evSummary_.nmeasurements++;
       }
+
+    evSummary_.x1=ev.x1;    evSummary_.id1=ev.id1;
+    evSummary_.x2=ev.x2;    evSummary_.id2=ev.id2;
+    evSummary_.qscale=ev.qscale;
+    for(size_t i=0; i<44; i++) evSummary_.pdfWgts[i-1]=ev.pdfWgts[i-1];
+    
     fillTree();
   }
 

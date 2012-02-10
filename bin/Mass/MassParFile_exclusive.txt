@@ -15,22 +15,22 @@ resbias_s3:-11.7655
 resslope_s3:1.07305
 
 [YIELDS]
-#mu_{background}_s0:238.3
-#sigma_{background}_s0:21.3
-sfdybckg#alpha_{l}_s0:0.79
+#mu_{background}_s0:252.4
+#sigma_{background}_s0:21.6
+sfdybckg#alpha_{l}_s0:0.80
 ofdybckg#alpha_{l}_s0:0
-#mu_{background}_s1:80.3
-#sigma_{background}_s1:10.5
+#mu_{background}_s1:81.2
+#sigma_{background}_s1:9.8
 sfdybckg#alpha_{l}_s1:0.51
 ofdybckg#alpha_{l}_s1:0
-#mu_{background}_s2:108.9
-#sigma_{background}_s2:8.3
+#mu_{background}_s2:110.2
+#sigma_{background}_s2:7.9
 sfdybckg#alpha_{l}_s2:0.0
-ofdybckg#alpha_{l}_s2:0.30
-#mu_{background}_s3:58.8
-#sigma_{background}_s3:3.0
-sfdybckg#alpha_{l}_s3:0.10
-ofdybckg#alpha_{l}_s3:0.04
+ofdybckg#alpha_{l}_s2:0.32
+#mu_{background}_s3:60.3
+#sigma_{background}_s3:2.8
+sfdybckg#alpha_{l}_s3:0.0
+ofdybckg#alpha_{l}_s3:0.10
 
 
 [CATEGORY #1]

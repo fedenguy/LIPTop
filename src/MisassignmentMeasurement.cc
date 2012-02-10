@@ -205,6 +205,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 
 	  //save local event
 	  PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+	  if((syst=="metcut") && ((ev.cat==EE || ev.cat==MUMU) && phys.met.pt()<40)) continue;
 
 	  PhysicsObjectLeptonCollection ileptons = phys.leptons;
 

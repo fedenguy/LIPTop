@@ -219,12 +219,23 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1D("drll",";#Delta R(l^{(1)},l^{(2)});Events",100,0,6) );
 
   //jet control
-  controlHistos.addHistogram( new TH1F ("jet", "; Jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
-  controlHistos.addHistogram( new TH1F ("jeteta", "; Jet #eta; Events", 30, 0.,3.) );
+  TH1F *h=new TH1F ("jetflavor", "; Jet flavor per event; Events", 10*3,0,10*3);
+  for(int i=1; i<=h->GetXaxis()->GetNbins(); i++)
+    {
+      TString label(""); label+=(i-1)%10;
+      h->GetXaxis()->SetBinLabel(i,label);
+    }
+  controlHistos.addHistogram( h );
+  controlHistos.addHistogram( new TH1F ("jet1", "; Jet #1 p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jet1eta", "; Jet #1 #eta; Events", 30, 0.,3.) );
+  controlHistos.addHistogram( new TH1F ("jet2", "; Jet #2 p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jet2eta", "; Jet #2 #eta; Events", 30, 0.,3.) );
+  controlHistos.addHistogram( new TH1F ("jet3", "; Jet #3 p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jet3eta", "; Jet #3 #eta; Events", 30, 0.,3.) );
+  controlHistos.addHistogram( new TH1F ("jet4", "; Jet #3 p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
+  controlHistos.addHistogram( new TH1F ("jet4eta", "; Jet #3 #eta; Events", 30, 0.,3.) );
   controlHistos.addHistogram( new TH1F ("bjet", "; b jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("ljet", "; udscg jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
-  controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
-  controlHistos.addHistogram( new TH1F ("subleadjet", "; Sub-leading jet p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   for(std::map<TString, std::vector<JetCorrectionUncertainty*> >::iterator it = vsrc.begin(); it != vsrc.end(); it++)
     controlHistos.addHistogram( new TProfile (it->first+"jesunc", "; p_{T} [GeV/c]; Uncertainty % / (10 GeV/c)", 50, 0.,500.,0,10) );
   controlHistos.addHistogram( new TProfile ("jesunc", "; p_{T} [GeV/c]; Uncertainty % / (10 GeV/c)", 50, 0.,500.,0,10) );
@@ -641,6 +652,7 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("btagcenvar",ctf,1,weight*p1btags);
 			  controlHistos.fillHisto("btagcenvar",ctf,2,weight*p2btags);
 
+			  int nbs(0),ncs(0),nudsg(0);
 			  for(size_t ijet=0; ijet<jetColl.size(); ijet++) 
 			    {
 			      float pt=jetColl[ijet].pt();
@@ -648,7 +660,11 @@ int main(int argc, char* argv[])
 			      if(pt<=30 || fabs(eta)>=2.5) continue;
 			      float btagdisc=orderedJetColl[ijet].btag7;
 			      float btagdisctche=orderedJetColl[ijet].btag1;
-			      bool isMatchedToB( fabs(orderedJetColl[ijet].flavid)==5 );
+			      bool isMatchedToB(false);
+			      if(fabs(orderedJetColl[ijet].flavid)==5)      { nbs++; isMatchedToB=true; }
+			      else if(fabs(orderedJetColl[ijet].flavid)==4)   ncs++;
+			      else                                            nudsg++;
+			      
 			      controlHistos.fillHisto( (isMatchedToB ? "csvb" : "csvlight") ,     ctf, btagdisc,     weight);
 			      controlHistos.fillHisto( (isMatchedToB ? "tcheb" : "tchelight") ,   ctf, btagdisctche, weight);
 			      if(isMC) controlHistos.fillHisto( (isMatchedToB ? "bjet" : "ljet") ,ctf, pt,           weight);
@@ -685,6 +701,10 @@ int main(int argc, char* argv[])
 				  controlHistos.fillHisto("jesunc",ctf,10.,totalJESUnc*100);
 				}
 			    } 
+			  
+			  controlHistos.fillHisto("jetflavor",ctf,nudsg,weight);		      
+			  controlHistos.fillHisto("jetflavor",ctf,ncs+10,weight);		      
+			  controlHistos.fillHisto("jetflavor",ctf,nbs+20,weight);		      
 			}
 		      
   		      controlHistos.fillHisto("nbtags",ctf,nbtags,weight);
@@ -716,16 +736,11 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("tche" ,ctf,ptOrderedJets[0].btag1,weight);
 
 			  //just for the leading pT jets
-			  if(ijet<2) 
-			    {
-			      controlHistos.fillHisto("jet",ctf,ptOrderedJets[ijet].pt(),weight);
-			      controlHistos.fillHisto("jeteta",ctf,fabs(ptOrderedJets[ijet].eta()),weight);
-			    }
+			  TString jetstr(""); jetstr+=(ijet+1);
+			  controlHistos.fillHisto("jet"+jetstr,ctf,ptOrderedJets[ijet].pt(),weight);
+			  controlHistos.fillHisto("jet"+jetstr+"eta",ctf,fabs(ptOrderedJets[ijet].eta()),weight);
 			}
 
-		      controlHistos.fillHisto("leadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),weight);
-		      controlHistos.fillHisto("subleadjet",ctf,min(jetColl[0].pt(),jetColl[1].pt()),weight);
-		      controlHistos.fill2DHisto("leadjetvssubleadjet",ctf,max(jetColl[0].pt(),jetColl[0].pt()),min(jetColl[0].pt(),jetColl[1].pt()),weight);
 		      controlHistos.fillHisto("leadlepton",ctf,max(phys.leptons[0].pt(),phys.leptons[1].pt()),weight);
 		      controlHistos.fillHisto("subleadlepton",ctf,min(phys.leptons[0].pt(),phys.leptons[1].pt()),weight);
 		      controlHistos.fillHisto("drll",ctf,drll,weight);

@@ -44,7 +44,6 @@ void printHelp()
 {
   printf("--help    --> print this\n");
   printf("--in      --> input file with the summary trees\n");
-  printf("--par     --> txt file with the fit parameters\n");
   printf("--syst    --> systematic to be evaluated (dyup/down, puup/down, jesup/down, jer, lesup,down, btagup/down, mistagup/down, scaleup/down, matchingup/down\n");
   printf("--calib   --> csv list with mass points to calibrate\n");
   printf("--out     --> output directory for the plots\n");
@@ -60,8 +59,6 @@ int main(int argc, char* argv[])
   // load framework libraries                                                                                          
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
-
-
 
 
   for(int i=1;i<argc;i++)
@@ -89,7 +86,13 @@ int main(int argc, char* argv[])
   procYields[MassMeasurement::OF_EQ1BTAGS]=785.2;
   procYields[MassMeasurement::OF_GEQ2BTAGS]=1460.6;
   evtYields["Signal"]=procYields;
-  if(syst=="baresignal" || syst=="puup" || syst=="pudown" || syst.Contains("pushift") )
+  Int_t pdfVar(0);
+  if(syst.Contains("pdf")) sscanf(syst.Data(),"pdf%d",&pdfVar);
+  if(syst.Contains("pdf"))
+    {
+      allSamples["172.5"]=Proc_t(1,"TTJets_signal_pdf");
+    }
+  if(syst=="baresignal" || syst=="puup" || syst=="pudown" || syst.Contains("pushift"))
     {
       allSamples["172.5"]=Proc_t(1,"TTJets_signal");
       allSamples["172.5"].push_back("TTJets");
@@ -208,7 +211,6 @@ int main(int argc, char* argv[])
   //
   TFile *f = TFile::Open(url);
   int ipt(1);
-  cout << "[Filling templates]" << flush;
   for(std::map<TString,Proc_t>::iterator it = allSamples.begin(); it!= allSamples.end(); it++)
     {
       cout << "." << flush;
@@ -272,6 +274,7 @@ int main(int argc, char* argv[])
 	      //fill the histograms
 	      float evWeight=ev.weight*ev.xsecWeight;
 	      if(puShifter) evWeight *= puShifter->ShiftWeight( ev.ngenpu );
+	      if(pdfVar)    evWeight *= ev.pdfWgts[pdfVar-1];
 	      ihistos[ catToFill ]->Fill(mtop,evWeight);
 	    }
 	}
