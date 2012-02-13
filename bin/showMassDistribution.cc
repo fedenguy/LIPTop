@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
   h->GetXaxis()->SetBinLabel(6,"2 b | correct");
   controlHistos.addHistogram(h); 
   
-  TString cats[]={"ee","mumu","emu"};
+  TString cats[]={"", "ee","mumu","emu"};
   //TString cats[]={"etau","mutau"};
 
   size_t ncats=sizeof(cats)/sizeof(TString);
