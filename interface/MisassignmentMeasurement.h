@@ -76,7 +76,7 @@ class MisassignmentMeasurement
   /**
      @short getters
   */
-  std::vector<double> getCorrectPairsFraction(TString cat="all") 
+  std::vector<double> getCorrectPairsFraction(TString cat="all")
     {
       std::vector<double> res(2,0);
       res[0]=fCorrectPairsEst[cat];
@@ -92,10 +92,10 @@ class MisassignmentMeasurement
     }
   void setBiasCorrections(TString cat,double val) {bias[cat]=val; }
   double getNorm(TString cat="all") { return kNorm[cat]; }
-  std::vector<double> getTrueCorrectPairsFraction(TString cat="all") 
+  std::vector<double> getTrueCorrectPairsFraction(TString cat="all",bool sigOnly=false) 
     {
       std::vector<double> res(2,0);
-      TH1 *h=controlHistos.getHisto("truefcorr",cat);
+      TH1 *h=controlHistos.getHisto(sigOnly ? "sigonlytruefcorr" : "truefcorr",cat);
       res[0]=h->GetMean();
       res[1]=h->GetMeanError();
       return res;

@@ -52,18 +52,18 @@ struct CombinedHFCModel_t
   RooRealVar *bmult, *bmultObs, *eventYields;
   RooRealVar *acc1,*acc05,*acc0;
   RooFormulaVar *alpha[MAXCATEGORIES], *alpha2[MAXCATEGORIES], *alpha1[MAXCATEGORIES], *alpha0[MAXCATEGORIES];
-  RooRealVar *abseb,*sfeb;
+  RooRealVar *abseb,*sfeb,*sfebExp;
   RooFormulaVar *eb,*ebcorr[MAXCATEGORIES];
   RooGaussian *sfeb_constrain;
-  RooRealVar *abseq,*sfeq;
+  RooRealVar *abseq,*sfeq,*sfeqExp;
   RooFormulaVar *eq,*eqcorr[MAXCATEGORIES];
   RooGaussian *sfeq_constrain;
   RooRealVar *jetocc[MAXCATEGORIES];
-  RooRealVar *fcorrect[MAXCATEGORIES];
+  RooRealVar *fcorrect[MAXCATEGORIES],*fcorrectExp[MAXCATEGORIES];
   RooAbsPdf *fcorrect_constrain[MAXCATEGORIES];
-  RooRealVar *fttbar[MAXCATEGORIES];
+  RooRealVar *fttbar[MAXCATEGORIES], *fttbarExp[MAXCATEGORIES];
   RooAbsPdf *fttbar_constrain[MAXCATEGORIES];
-  RooRealVar *fsingletop[MAXCATEGORIES];
+  RooRealVar *fsingletop[MAXCATEGORIES], *fsingletopExp[MAXCATEGORIES];
   RooAbsPdf *fsingletop_constrain[MAXCATEGORIES];
 
   RooWorkspace *ws;

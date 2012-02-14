@@ -38,6 +38,7 @@ void MisassignmentMeasurement::bookMonitoringHistograms()
   controlHistos.addHistogram( new TH1D("staterr",";#sigma_{stat}/f_{correct assignments};Pseudo-experiments",50,0,1) );
   controlHistos.addHistogram( new TH1D("fcorr",";f_{correct};Pseudo-experiments",200,0,0.5) );
   controlHistos.addHistogram( new TH1D("truefcorr",";f_{correct} (MC truth);Pseudo-experiments",200,0,0.5) );
+  controlHistos.addHistogram( new TH1D("sigonlytruefcorr",";f_{correct} (MC truth);Pseudo-experiments",200,0,0.5) );
   controlHistos.addHistogram( new TH1D("fcorrsf",";SF=f_{correct}/f_{correct}^{M>y} (MC truth);Pseudo-experiments",200,0,1.2) );
   controlHistos.addHistogram( new TH1D("knorm",";Model k-factor;Pseudo-experiments",200,0,1.5) );
 
@@ -79,6 +80,7 @@ void MisassignmentMeasurement::resetHistograms(bool fullReset)
 	    if(hname.Contains("staterr")) continue; 
 	    if(hname.Contains("fcorr")) continue; 
 	    if(hname.Contains("truefcorr")) continue; 
+	    if(hname.Contains("sigonlytruefcorr")) continue; 
 	    if(hname.Contains("jetflavor")) continue;
 	    if(hname.Contains("knorm")) continue;
 	  }
@@ -219,7 +221,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	    }
 	  
 	  //vary and reset if required a systematic variation
-	  if(syst!="")
+	  if(syst!="" && syst !="metcut")
 	    {
 	      std::vector<LorentzVectorCollection> jetsVar;
 	      LorentzVectorCollection metsVar;
@@ -272,7 +274,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	    for(size_t ijet=0; ijet<mixphys.jets.size(); ijet++) mixjetColl.push_back(mixphys.jets[ijet]);
 	  
 	    //vary and reset if required a systematic variation
-	    if(syst!="")
+	    if(syst!="" && syst !="metcut")
 	      {
 		std::vector<LorentzVectorCollection> mixjetsVar;
 		LorentzVectorCollection mixmetsVar;
@@ -410,12 +412,14 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 
       //inclusive spectrum
       TH1 *mljInclusiveH=controlHistos.getHisto("inclusivemlj", ctf);
-
+      TH1 *mljCorrectH=controlHistos.getHisto("correctmlj", ctf);
+      TH1 *mljWrongH=controlHistos.getHisto("wrongmlj", ctf);
+      
       //estimate of alpha from the model
       double massCut = mcut;
       int nBins  = mljWrongModelH->GetXaxis()->GetNbins();
-      double nPairsTotal(0), nPairsAboveCut(0),nPairsBelowCut(0), nPairsTotalModel(0), nPairsModelAboveCut(0);
-      double nPairsTotalErr(0), nPairsAboveCutErr(0), nPairsBelowCutErr(0), nPairsTotalModelErr(0), nPairsModelAboveCutErr(0);
+      double nPairsTotal(0), nPairsAboveCut(0),nPairsBelowCut(0), nPairsTotalModel(0), nPairsModelAboveCut(0), nPairsTotalSigOnly(0);
+      double nPairsTotalErr(0), nPairsAboveCutErr(0), nPairsBelowCutErr(0), nPairsTotalModelErr(0), nPairsModelAboveCutErr(0), nPairsTotalSigOnlyErr(0);
       for(int ibin=1; ibin<=nBins; ibin++)
 	{
 	  double imass=mljWrongModelH->GetXaxis()->GetBinLowEdge(ibin);
@@ -431,7 +435,9 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	  nPairsTotalErr      += pow(mljInclusiveH->GetBinError(ibin)*dM,2);
 	  nPairsTotalModel    += mljWrongModelH->GetBinContent(ibin)*dM;
 	  nPairsTotalModelErr += pow(mljWrongModelH->GetBinError(ibin)*dM,2);
-	      
+	  nPairsTotalSigOnly  += (mljCorrectH->GetBinContent(ibin)+mljWrongH->GetBinContent(ibin))*dM;
+	  nPairsTotalSigOnlyErr  += pow(mljCorrectH->GetBinError(ibin)*dM,2)+pow(mljWrongH->GetBinError(ibin)*dM,2);
+	  
 	  if(imass<massCut) continue;
 	  nPairsAboveCut         += mljInclusiveH->GetBinContent(ibin)*dM;
 	  nPairsAboveCutErr      += pow(mljInclusiveH->GetBinError(ibin)*dM,2);
@@ -443,6 +449,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       nPairsAboveCutErr      = sqrt(nPairsAboveCutErr);
       nPairsTotalModelErr    = sqrt(nPairsTotalModelErr);
       nPairsModelAboveCutErr = sqrt(nPairsModelAboveCutErr);
+      nPairsTotalSigOnlyErr  = sqrt(nPairsTotalSigOnlyErr);
             
       double a = nPairsTotal;
       double b = totalEventsUsed[ctf];
@@ -484,7 +491,9 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
       if(!isData)
 	{
 	  double fCorrectMCTruth=double(nCorrectAssignments[ctf])/double(nPairsTotal);
+	  double fCorrectMCTruthSigOnly=double(nCorrectAssignments[ctf])/double(nPairsTotalSigOnly);
 	  controlHistos.fillHisto("truefcorr", ctf, fCorrectMCTruth);
+	  controlHistos.fillHisto("sigonlytruefcorr", ctf, fCorrectMCTruthSigOnly);
 	  controlHistos.fillHisto("fcorrsf", ctf, sfmc);
 	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst[ctf]);
 	  controlHistos.fillHisto("knorm",ctf,kNorm[ctf]);

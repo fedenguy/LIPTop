@@ -63,11 +63,12 @@ runLocalAnalysisOverSamples.py -e showMassDistribution -j data/syst-samples.json
 # to run PDF weights...
 #for i in `seq 0 99`; do \
 #for i in `seq 100 199`; do \
-for i in `seq 250 299`; do \
+#for i in `seq 250 299`; do \
+for i in `seq 300 499`; do \
 let a=50*$i;\
 let b=50*$i+50;\
 runLocalAnalysisOverSamples.py -e showMassDistribution -j ../data/samples-signal.json -d ../store/Top/ntuples_14Jan/merged -o /tmp/psilva -c ../test/runAnalysis_cfg.py.templ -l 2165 -p "@kindir=std @runSystematics=True @saveSummaryTree=True @evStart=$a @evEnd=$b" -t signal &\
-sleep 10
+sleep 50
 done
 
 #

@@ -6,6 +6,8 @@
 #include "RooConstVar.h"
 #include "RooExtendPdf.h"
 
+#include "RooStats/ProfileLikelihoodTestStat.h"
+
 #include  "TGraphErrors.h"
 
 using namespace RooFit;
@@ -103,24 +105,27 @@ void HFCMeasurement::initHFCModel()
   //R=B(t->Wb)/B(t->Wq)
   if(!fitR)                              model.r = new RooRealVar("r","R",smR_);
   else if(fitType_==FIT_R_AND_EB)        model.r = new RooRealVar("r","R",1.0,0.96,1.06);
-  else if(fitType_==FIT_R_CONSTRAINED)   model.r = new RooRealVar("r","R",1.0,0.,1.0);
+  // else if(fitType_==FIT_R_CONSTRAINED)   model.r = new RooRealVar("r","R",1.0,0.,1.0);
   else                                   model.r = new RooRealVar("r","R",1.0,0.,2.0);
 
   //b-tagging effiency
   model.abseb                = new RooRealVar("abseb","abs#varepsilon_{b}",effb_);
-  if(fitType_==FIT_R_AND_EB) model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.90,1.1); 
+  if(fitType_==FIT_R_AND_EB || fitType_==FIT_R_CONSTRAINED) model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.90,1.1); 
   else if(fitEb)             model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.7,min(1./effb_,1.3));
   else                     { model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_);                          model.sfeb->setError( sfbUnc_ );  }
-  model.sfeb_constrain       = new RooGaussian("sfeb_constrain","#varepsilon_{b} constrain",*model.sfeb,RooConst(sfb_),RooConst(sfbUnc_));
+  model.sfebExp              = new RooRealVar("sfebexp","<SF #varepsilon_{b}>",sfb_);
+  model.sfeb_constrain       = new RooGaussian("sfeb_constrain","#varepsilon_{b} constrain",*model.sfeb,*model.sfebExp,RooConst(sfbUnc_));
   model.eb                   = new RooFormulaVar("eb","@0*@1",RooArgSet(*model.abseb,*model.sfeb));
+  if(fitType_==FIT_R_CONSTRAINED) model.pdfConstrains.add(*model.sfeb_constrain);
   
   //mistag efficiency 
   model.abseq = new RooRealVar("abseq","abs#varepsilon_{q}",effq_);
-  if(fitEq)   model.sfeq       = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_,0.5,min(1./effq_,1.5));
+  if(fitEq || fitType_==FIT_R_CONSTRAINED)   model.sfeq       = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_,0.5,min(1./effq_,1.5));
   else      { model.sfeq       = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_);                                      model.sfeq->setError(sfqUnc_); }
-  model.sfeq_constrain         = new RooGaussian("sfeq_constrain","#varepsilon_{q} constrain",*model.sfeq,RooConst(sfq_),RooConst(sfqUnc_));
+  model.sfeqExp                = new RooRealVar("sfeqexp","<SF #varepsilon_{q}>",sfq_); 
+  model.sfeq_constrain         = new RooGaussian("sfeq_constrain","#varepsilon_{q} constrain",*model.sfeq,*model.sfeqExp,RooConst(sfqUnc_));
   model.eq                     = new RooFormulaVar("eq","@0*@1",RooArgSet(*model.abseq,*model.sfeq));
-  if(fitType_==FIT_EB_AND_EQ)    model.pdfConstrains.add(*model.sfeq_constrain);
+  if(fitType_==FIT_EB_AND_EQ || fitType_==FIT_R_CONSTRAINED)    model.pdfConstrains.add(*model.sfeq_constrain);
 
   //this is a correction for acceptance (keep constant for now)
   model.acc1  = new RooRealVar("accr1","A(R=1)",1.0);
@@ -156,16 +161,13 @@ void HFCMeasurement::initHFCModel()
       bool addFcorrectAsConstrain(true);
       if(fitEq || fitType_==FIT_R_AND_EB)  { model.fcorrect[icat] = new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag]); addFcorrectAsConstrain=false; }
       else                                 model.fcorrect[icat] = new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag],fcorrect_[tag]-3*fcorrectUnc_[tag],fcorrect_[tag]+3*fcorrectUnc_[tag]);
+      model.fcorrectExp[icat] = new RooRealVar("fcorrectexp_"+tag,"<f_{correct}^{"+tag+"}>",fcorrect_[tag]);
       if(nuisanceType_==GAUSSIAN)
 	{
-	  model.fcorrect_constrain[icat]       = new RooGaussian("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],RooConst(fcorrect_[tag]),RooConst(fcorrectUnc_[tag]));
+	  model.fcorrect_constrain[icat]       = new RooGaussian("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],*model.fcorrectExp[icat],RooConst(fcorrectUnc_[tag]));
 	}
       else if(nuisanceType_==UNIFORM)
 	{
-	  //	  double centralVal=fcorrect_[tag];
-	  //	  double sigma=fcorrectUnc_[tag];
-	  //	  model.fcorrect[icat]->setRange(max(0.,centralVal-sigma),min(centralVal-sigma,1.));
-	  //	  model.fcorrect_constrain[icat]       = new RooUniform("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat]);
 	  addFcorrectAsConstrain=false;
 	}
       else if(nuisanceType_==LOGNORMAL)
@@ -178,14 +180,16 @@ void HFCMeasurement::initHFCModel()
       bool addFttbarAsContrain(true);
       if(fttbar_[tag]==1.0 || fitEq ||  fitType_==FIT_R_AND_EB)  { model.fttbar[icat] = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag]); addFttbarAsContrain=false; }
       else                                                         model.fttbar[icat] = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag],fttbar_[tag]-3*fttbarUnc_[tag],fttbar_[tag]+3*fttbarUnc_[tag]);
-      model.fttbar_constrain[icat]         = new RooGaussian("ctr_fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"} constrain",*model.fttbar[icat],RooConst(fttbar_[tag]),RooConst(fttbarUnc_[tag]));
+      model.fttbarExp[icat] = new RooRealVar("fttbarexp_"+tag,"<f_{t#bar{t}}^{"+tag+"}>",fttbar_[tag]);
+      model.fttbar_constrain[icat]         = new RooGaussian("ctr_fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"} constrain",*model.fttbar[icat],*model.fttbarExp[icat],RooConst(fttbarUnc_[tag]));
       if(addFttbarAsContrain) model.pdfConstrains.add(*model.fttbar_constrain[icat]);
 
       //single top fraction in the sample
       bool addFsingleTopAsContrain(true);
       if(fsingletop_[tag]==0 || fitEq ||  fitType_==FIT_R_AND_EB)  { model.fsingletop[icat] = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag]); addFsingleTopAsContrain=false; }
       else                                                           model.fsingletop[icat] = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag],fsingletopUnc_[tag]-3*fsingletopUnc_[tag],fsingletop_[tag]+3*fsingletopUnc_[tag]);
-      model.fsingletop_constrain[icat]       = new RooGaussian("ctr_fsingletop_"+tag,"f_{t}^{"+tag+"} constrain",*model.fsingletop[icat],RooConst(fsingletop_[tag]),RooConst(fsingletopUnc_[tag]));
+      model.fsingletopExp[icat] = new RooRealVar("fsingletopexp_"+tag,"<f_{t}^{"+tag+"}>",fsingletop_[tag]);
+      model.fsingletop_constrain[icat]       = new RooGaussian("ctr_fsingletop_"+tag,"f_{t}^{"+tag+"} constrain",*model.fsingletop[icat],*model.fsingletopExp[icat],RooConst(fsingletopUnc_[tag]));
       if(addFsingleTopAsContrain) model.pdfConstrains.add(*model.fsingletop_constrain[icat]);
       
       //sample composition variables i.e. alpha and alpha_i
@@ -270,14 +274,22 @@ void HFCMeasurement::initHFCModel()
   RooArgSet argSet(*model.pdf);  argSet.add(model.pdfConstrains);
   model.constrPdf = new RooProdPdf("hfcconstrmodel","hfconstrmodel",argSet);
 
-
   //create a workspace
   model.ws = new RooWorkspace("w");
   model.modelConfig = new ModelConfig("hfcfit",model.ws);
   model.modelConfig->SetPdf(*model.constrPdf);
   model.modelConfig->SetParametersOfInterest(RooArgSet(*model.r));
   model.modelConfig->SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
-     
+  RooArgSet nuisPars(*model.sfebExp,*model.sfeqExp);
+  /*
+  for(size_t icat=0; icat<categoryKeys_.size(); icat++) 
+    {
+      nuisPars.add(*model.fcorrectExp[icat]);
+      nuisPars.add(*model.fttbarExp[icat]);
+      nuisPars.add(*model.fsingletopExp[icat]);
+    }
+  */
+  model.modelConfig->SetNuisanceParameters(nuisPars);
 
   //all done here
   isInit_=true;
@@ -584,7 +596,7 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       //configure FC
       if(fc_==0) fc_ = new RooStats::FeldmanCousins(*data,*model.modelConfig);
       RooDataSet poiToTest("poitotest","poitotest",RooArgSet(*model.r));
-      double rmin=max(double(0.),double(model.rFitResult+model.rFitResultAsymmErrLo*5));
+      double rmin=0.;//max(double(0.),double(model.rFitResult+model.rFitResultAsymmErrLo*5));
       double rmax=1.0;
       for(double r=rmin; r<=rmax; r+= (rmax-rmin)/20.)
 	{
@@ -597,6 +609,12 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       fc_->SetConfidenceLevel(0.95);       // 95% interval
       fc_->UseAdaptiveSampling(true);      // speed it up a bit
       fc_->CreateConfBelt(true);
+      fc_->SaveBeltToFile(true);
+
+      //set as one sided
+      //ToyMCSampler*  toymcsampler = (ToyMCSampler*) fc_->GetTestStatSampler(); 
+      //ProfileLikelihoodTestStat* testStat = dynamic_cast<ProfileLikelihoodTestStat*>(toymcsampler->GetTestStatistic());
+      //testStat->SetOneSided(true);
       
       cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
       PointSetInterval* interval = (PointSetInterval*)fc_->GetInterval();
@@ -607,15 +625,10 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       //get the thresholds
       if(debug)
 	{
-
 	  //save workspace to file
-	  TFile *debugF = TFile::Open("HeavyFlavorWS.root","RECREATE");
-	  debugF->cd();
 	  model.ws->import(*model.modelConfig);
 	  model.ws->import(*data);
-	  model.ws->Write();
-	  debugF->Close();
-	  debugF->Delete();
+	  model.ws->writeToFile("HeavyFlavorWS.root");
 	  
 	  //display in canvas
 	  TCanvas *c = new TCanvas("HFCIntervalForFeldmanCousins","HFCIntervalForFeldmanCousins",600,600);
@@ -832,6 +845,7 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       icat=0;
       TGraph *frameGr= new TGraph; frameGr->SetPoint(0,0,0); frameGr->SetPoint(1,1,1);  frameGr->SetMarkerStyle(1);
       Int_t modelColors[]={809,590,824,831};
+      std::vector<TGraph *> incPDF;
       for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
 	{
 	  TString tag=*cIt;
@@ -855,8 +869,7 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 
 	  TLegend *leg=0;
 	  if(icat%2==0) leg = new TLegend(0.2,0.65,0.45,0.9,NULL,"brNDC");
-	  
-	  for(int ibtags=0;ibtags<=maxJets_; ibtags++)
+	  for(size_t ibtags=0;ibtags<=size_t(maxJets_); ibtags++)
 	    {
 	      TString catname("n"); catname += ibtags; catname += "btags_" + tag;
 	      if(model.pdfForCategory.find(catname)==model.pdfForCategory.end()) continue;
@@ -866,11 +879,31 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	      modelgr->SetLineColor(modelColors[ibtags]);
 	      modelgr->SetFillStyle(0);
 	      modelgr->SetLineWidth(2);
-	      for(float ir=0; ir<=1.0; ir+=0.05)
+
+	      bool newIncPDF(false);
+	      if(incPDF.size()<=ibtags) 
+		{
+		  newIncPDF=true;
+		  incPDF.push_back( (TGraph *) modelgr->Clone() );
+		  TString ibtagsStr("btags_"); ibtagsStr+=ibtags;
+		  incPDF[ibtags]->SetName("inc"+ibtagsStr);
+		}
+	      
+	      //loop over R
+	      for(float ir=0; ir<=1.01; ir+=0.01)
 		{
 		  model.r->setVal(ir);
 		  int ipt=modelgr->GetN();
-		  modelgr->SetPoint(ipt,ir,model.pdfForCategory[catname]->getVal());
+		  Double_t ival=model.pdfForCategory[catname]->getVal();
+		  Double_t iocc=model.jetocc[icat]->getVal();
+		  modelgr->SetPoint(ipt,ir,ival);
+		  if(newIncPDF) incPDF[ibtags]->SetPoint(ipt,ir,ival*iocc);
+		  else
+		    {
+		      Double_t ix(0),iy(0);
+		      incPDF[ibtags]->GetPoint(ipt,ix,iy);
+		      incPDF[ibtags]->SetPoint(ipt,ir,iy+ival*iocc);
+		    }
 		}
 	      modelgr->Draw("l");
 	      if(leg)
@@ -895,6 +928,30 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	      c->SaveAs("HeavyFlavorModel_"+dilCh+".pdf");
 	    }
 	}
+
+      //inclusive model
+      c = new TCanvas("HeavyFlavorModelInclusive","HeavyFlavorContourInclusive");
+      c->SetCanvasSize(600,600);
+      c->SetWindowSize(600,600);
+      leg=new TLegend(0.2,0.65,0.45,0.9,NULL,"brNDC");      
+      for(size_t ibtags=0; ibtags<incPDF.size(); ibtags++) 
+	{
+	  incPDF[ibtags]->Draw(ibtags==0 ? "al" :"l" );
+	  
+	  TString tit("="); tit+=ibtags; tit+=" b-tags";
+	  leg->AddEntry(incPDF[ibtags]->GetName(),tit,"l");
+	  
+          incPDF[ibtags]->GetXaxis()->SetTitle("R=B(t#rightarrow Wb)/B(t#rightarrow Wq)");
+	  incPDF[ibtags]->GetYaxis()->SetTitle("Probability");
+	}
+      leg->Draw();
+      formatForCmsPublic(c,leg,"CMS preliminary",3);
+      c->cd();
+      c->Modified();
+      c->Update();
+      c->SaveAs("HeavyFlavorModelInclusive.C");
+      c->SaveAs("HeavyFlavorModelInclusive.pdf");
+      c->SaveAs("HeavyFlavorModelInclusive.png");
     }
 
   delete data;

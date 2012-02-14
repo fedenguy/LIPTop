@@ -214,6 +214,8 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( sslepMult );
   controlHistos.addHistogram( new TH1F ("leadlepton", "; Leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
   controlHistos.addHistogram( new TH1F ("subleadlepton", "; Sub-leading lepton p_{T} [GeV/c]; Events / (10 GeV/c)", 25, 0.,250.) );
+  controlHistos.addHistogram( new TH1F ("leadleptoneta", "; Leading lepton #eta; Events", 25, 0.,2.5) );
+  controlHistos.addHistogram( new TH1F ("subleadleptoneta", "; Sub-leading lepton #eta; Events", 25, 0.,2.5) );
   controlHistos.addHistogram( new TH1D("dilcharge",";Charge;Events",3,-1.5,1.5) );
   controlHistos.addHistogram( new TH1D("dphill",";#Delta#phi(l^{(1)},l^{(2)});Events",100,-3.2,3.2) );
   controlHistos.addHistogram( new TH1D("drll",";#Delta R(l^{(1)},l^{(2)});Events",100,0,6) );
@@ -741,8 +743,11 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("jet"+jetstr+"eta",ctf,fabs(ptOrderedJets[ijet].eta()),weight);
 			}
 
-		      controlHistos.fillHisto("leadlepton",ctf,max(phys.leptons[0].pt(),phys.leptons[1].pt()),weight);
-		      controlHistos.fillHisto("subleadlepton",ctf,min(phys.leptons[0].pt(),phys.leptons[1].pt()),weight);
+
+		      controlHistos.fillHisto("leadlepton",ctf,l1.pt(),weight);
+		      controlHistos.fillHisto("subleadlepton",ctf,l2.pt(),weight);
+		      controlHistos.fillHisto("leadleptoneta",ctf,fabs(l1.eta()),weight);
+		      controlHistos.fillHisto("subleadleptoneta",ctf,fabs(l2.eta()),weight);
 		      controlHistos.fillHisto("drll",ctf,drll,weight);
 		      controlHistos.fillHisto("dphill",ctf,dphill,weight);
 		      for(size_t ilj=0; ilj<mljs.size(); ilj++)
