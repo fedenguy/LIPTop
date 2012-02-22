@@ -19,7 +19,7 @@ runProcess = cms.PSet(
     phiResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PhiResolution_AK5PF.txt"),
     jesUncFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_Uncertainty_AK5PF.txt"),
     mcpileup = cms.string('/home/cms/vischia/public/Pileup/Summer11Observed.root'),
-    datapileup = cms.string('/home/cms/vischia/public/Pileup/Pileup2011A.root'),
+    datapileup = cms.string('/home/cms/vischia/public/Pileup/Pileup2011AplusB.root'),
     useMVA = cms.bool(False),
     tmvaInput =	chargedHiggsStudy
     )
