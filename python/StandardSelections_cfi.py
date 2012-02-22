@@ -17,7 +17,7 @@ BaseGeneratorSelection = cms.PSet( source = cms.InputTag("prunedGen"),
                                    normPuReweight=cms.InputTag("puWeights:renPuWeight"),
                                    filterDYmassWindow = cms.bool(False),
                                    mcpileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Summer11MC.root'),
-                                   datapileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Pileup2011A.root')
+                                   datapileup = cms.string('/afs/cern.ch/user/p/psilva/public/Pileup/Pileup2011AplusB.root')
                                    )
 
 
