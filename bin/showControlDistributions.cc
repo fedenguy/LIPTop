@@ -238,9 +238,13 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("jet4eta", "; Jet #3 #eta; Events", 30, 0.,3.) );
   controlHistos.addHistogram( new TH1F ("bjet", "; b jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("ljet", "; udscg jet p_{T} [GeV/c]; Events / (5 GeV/c)", 100, 0.,500.) );
-  for(std::map<TString, std::vector<JetCorrectionUncertainty*> >::iterator it = vsrc.begin(); it != vsrc.end(); it++)
+  for(std::map<TString, std::vector<JetCorrectionUncertainty*> >::iterator it = vsrc.begin(); it != vsrc.end(); it++){
     controlHistos.addHistogram( new TProfile (it->first+"jesunc", "; p_{T} [GeV/c]; Uncertainty % / (10 GeV/c)", 50, 0.,500.,0,10) );
+    controlHistos.addHistogram( new TProfile (it->first+"jesuncEta", "; |#eta|; Uncertainty % / (10 GeV/c)", 30, 0.,3.,0,10) );
+
+  }
   controlHistos.addHistogram( new TProfile ("jesunc", "; p_{T} [GeV/c]; Uncertainty % / (10 GeV/c)", 50, 0.,500.,0,10) );
+  controlHistos.addHistogram( new TProfile ("jesuncEta", "; |#eta|; Uncertainty % / (10 GeV/c)", 30, 0.,3.,0,10) );
   controlHistos.addHistogram( new TH1F ("mjj", "; M(lead jet,sub-lead jet) [GeV/c^{2}]; Events / (25 GeV/c^{2})", 10, 0.,250.) );
   controlHistos.addHistogram( new TH1F("btagdownvar",";b-tag multiplicity;Events", 3, 0.,3.) );
   controlHistos.addHistogram( new TH1F("btagcenvar",";b-tag multiplicity;Events", 3, 0.,3.) );
@@ -698,9 +702,15 @@ int main(int argc, char* argv[])
 				    {
 				      controlHistos.fillHisto(it->first+"jesunc",ctf,pt,it->second*100);
 				      controlHistos.fillHisto(it->first+"jesunc",ctf,10.,it->second*100);
+
+				      controlHistos.fillHisto(it->first+"jesuncEta",ctf,fabs(eta),it->second*100);
+				      controlHistos.fillHisto(it->first+"jesuncEta",ctf,10.,it->second*100);
 				    }
 				  controlHistos.fillHisto("jesunc",ctf,pt,totalJESUnc*100);
 				  controlHistos.fillHisto("jesunc",ctf,10.,totalJESUnc*100);
+
+				  controlHistos.fillHisto("jesuncEta",ctf,fabs(eta),totalJESUnc*100);
+				  controlHistos.fillHisto("jesuncEta",ctf,10.,totalJESUnc*100);
 				}
 			    } 
 			  
