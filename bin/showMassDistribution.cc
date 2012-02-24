@@ -88,9 +88,11 @@ void displayKinResults(TH1 *h1,TH1 *h2,Int_t run, Int_t lumi, Int_t event)
 }
 
 //
-int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=100)
+int getPreferredCombination(TH1F *h1,TH1F *h2, double& ncombs, double& combMax, bool& pass, int minCounts=100)
 {
   int prefComb(-1);
+  pass = false;
+
   if(h1==0 || h2==0) return prefComb;
 
   //assign the preferred combination 
@@ -102,15 +104,30 @@ int getPreferredCombination(TH1F *h1,TH1F *h2, int minCounts=100)
   if(prefCounts[0]>prefCounts[1]) 
     {
       prefComb=1;
-      if(prefCounts[0]<minCounts) prefComb=-1;
-      else if(prefCounts[1]/prefCounts[0]>0.90 && prefMax[1]>prefMax[0] && prefMax[1]>minCounts)  prefComb=2;
+      pass=true;
+      if(prefCounts[0]<minCounts){
+	pass=false;
+      }
+      else if(prefCounts[1]/prefCounts[0]>0.90 && prefMax[1]>prefMax[0] && prefMax[1]>minCounts){
+	prefComb=2;
+	pass=true;
+      }
     }           
   else if(prefCounts[1]>minCounts)
     {
       prefComb=2;
+      pass=true;
       if(prefCounts[0]/prefCounts[1]>0.90 && prefMax[0]>prefMax[1] && prefMax[0]>minCounts) prefComb=1;
     }
   
+  if(prefCounts[0]>prefCounts[1]){
+    ncombs = prefCounts[0];
+    combMax = prefMax[0];
+  }
+  else if(prefCounts[1]>prefCounts[0]){
+    ncombs = prefCounts[1];
+    combMax = prefMax[1];
+  }
   //all done
   return prefComb;
 }
@@ -178,13 +195,20 @@ int main(int argc, char* argv[])
     }
 
   controlHistos.addHistogram( new TH1F("totalMassLikelihood","M_{t} likelihood from KINb solutions;M_{t} [GeV/c^{2}];Likelihood / (2.5 GeV/c^{2})",800,0,2000) );
-  TH1F * h=new TH1F ("evtflow", "; Cutflow; Events", 5, 0.,5.);
+  TH1F * h=new TH1F ("evtflow", "; Cutflow; Events", 9, 0.,9.);
   h->GetXaxis()->SetBinLabel(1,"E_{T}^{miss}>30");
   h->GetXaxis()->SetBinLabel(2,"KIN");
   h->GetXaxis()->SetBinLabel(3,"=0 b-tags");
   h->GetXaxis()->SetBinLabel(4,"=1 b-tags");
   h->GetXaxis()->SetBinLabel(5,"#geq 2 b-tags");
+  h->GetXaxis()->SetBinLabel(6,"no KIN");
+  h->GetXaxis()->SetBinLabel(7,"no KIN, =0 b-tags");
+  h->GetXaxis()->SetBinLabel(8,"no KIN, =1 b-tags");
+  h->GetXaxis()->SetBinLabel(9,"no KIN, #geq 2 b-tags");
   controlHistos.addHistogram( h );
+
+  controlHistos.addHistogram( new TH1F ("nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
+  controlHistos.addHistogram( new TH1F ("solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
 
   controlHistos.addHistogram( new TH1F ("taupt", "; p_{T} (#tau); Events / (20 GeV/c)", 20, 0.,400.) );
   controlHistos.addHistogram( new TH1F ("taueta", "; #eta (#tau}; Events", 20, 0,2.5) );
@@ -509,8 +533,21 @@ int main(int argc, char* argv[])
       //
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
       h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
-      Int_t icomb=getPreferredCombination(h1,h2);
-      if(icomb<0){
+
+      double ncombs = -1;
+      double combMax = -1;
+      bool passKin=false;
+      Int_t icomb=getPreferredCombination(h1,h2,ncombs,combMax,passKin);
+
+      for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
+	for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
+	  {
+	    TString ctf=*cIt + *scIt;
+	    controlHistos.fillHisto("nSol",ctf,ncombs,weight);
+	    controlHistos.fillHisto("solMax",ctf,combMax,weight);
+	  }
+      
+      if(!passKin){
 
 
 	TH1F *mpref=kinHandler.getHisto("mt",icomb);
@@ -530,6 +567,10 @@ int main(int argc, char* argv[])
 	    for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
 	      {
 		TString ctf=*cIt + *scIt;
+
+		controlHistos.fillHisto("evtflow",ctf,5,weight);
+		controlHistos.fillHisto("evtflow",ctf,6+(nbtagscor>2?2:nbtagscor),weight);
+		
 		controlHistos.fillHisto("noKinSolutions_taupt",ctf,tauP4.pt(),weight);
 		controlHistos.fillHisto("noKinSolutions_taueta",ctf,fabs(tauP4.eta()),weight);
 		
@@ -587,6 +628,8 @@ int main(int argc, char* argv[])
 	      controlHistos.fillHisto("evtflow",ctf,1,weight);
 	      controlHistos.fillHisto("evtflow",ctf,2+(nbtagscor>2?2:nbtagscor),weight);
 	      
+
+
 	      controlHistos.fillHisto("taupt",ctf,tauP4.pt(),weight);
 	      controlHistos.fillHisto("taueta",ctf,fabs(tauP4.eta()),weight);
 	      
