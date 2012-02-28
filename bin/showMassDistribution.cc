@@ -222,6 +222,7 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("sumpt", "; #sum_{leptons} p_{T} [GeV/c]; Events / (20 GeV/c)",25, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("htlep", "; #sum_{jets,leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",70, 0.,1400.) );
   controlHistos.addHistogram( new TH1F ("mtop", "; m_{Top} [GeV/c^{2}]; Events / (20 GeV/c^{2})", 50, 0.,1000.) );
+  controlHistos.addHistogram( new TH1F ("threeleptonmtop", "; m_{Top} [GeV/c^{2}]; Events / (20 GeV/c^{2})", 50, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("ptttbar", "; p_{t#bar{t}} [GeV/c]; Events / (40 GeV/c)", 25, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (100 GeV/c^{2})", 30, 0.,3000.) );
   controlHistos.addHistogram( new TH2F ("mtopvsdilmass", "; m_{Top} [GeV/c^{2}]; Mass(l,l') [GeV/c^{2}]; Events", 100, 0.,500.,100, 0.,500.) );
@@ -263,8 +264,21 @@ int main(int argc, char* argv[])
   h->GetXaxis()->SetBinLabel(4,"1 b | correct");
   h->GetXaxis()->SetBinLabel(5,"2 b");
   h->GetXaxis()->SetBinLabel(6,"2 b | correct");
+
+
+
   controlHistos.addHistogram(h); 
-  
+
+  h=new TH1F ("noKinSolutions_correctcombs", "; RejEvts, Correct combinations; Events;", 6,0,6);
+  h->GetXaxis()->SetBinLabel(1,"no KIN, 0 b");
+  h->GetXaxis()->SetBinLabel(2,"no KIN, 0 b | correct");
+  h->GetXaxis()->SetBinLabel(3,"no KIN, 1 b");
+  h->GetXaxis()->SetBinLabel(4,"no KIN, 1 b | correct");
+  h->GetXaxis()->SetBinLabel(5,"no KIN, 2 b");
+  h->GetXaxis()->SetBinLabel(6,"no KIN, 2 b | correct");
+
+  controlHistos.addHistogram(h); 
+
   TString cats[]={"", "ee","mumu","emu"};
   //TString cats[]={"etau","mutau"};
 
@@ -651,6 +665,8 @@ int main(int argc, char* argv[])
 	      controlHistos.fillHisto("ptttbar",ctf,ptttbar.Pt(),weight);
 	      
 	      controlHistos.fillHisto("mtop",ctf,mtop,weight);
+	      if(phys.leptons.size()>2)
+		controlHistos.fillHisto("threeleptonmtop",ctf,mtop,weight);
 	      controlHistos.fillHisto("mttbar",ctf,mttbar,weight);
 	      
 	      controlHistos.fillHisto("dilmass",ctf,dilmass,weight);
