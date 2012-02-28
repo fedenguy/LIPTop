@@ -102,8 +102,7 @@
                "dtag":"DYJetsToLL_M10to50",
                "dset":"DYJetsToLL_M-10To50_TuneZ2_7TeV-madgraph",
                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/DYJetsToLL_M-10To50_TuneZ2_7TeV-madgraph"],
-               "xsec":9927,
-	       "br":[1.14]
+               "xsec":12321
               }
           ]
 	},
