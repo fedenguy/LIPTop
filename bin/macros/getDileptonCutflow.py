@@ -79,10 +79,10 @@ for o,a in opts:
     elif o in('-b'): ibinSummary = int(a)
     elif o in('-s'):
         sfactors=a.split('/')
-        for i in xrange(0,len(sfactors)-1) : dySfactors[evCats[i+1]]=float(i)
+        for i in xrange(0,len(sfactors)) : dySfactors[evCats[i+1]]=float(sfactors[i])
     elif o in ('-o'):
         treffs=a.split('/')
-        for i in xrange(0,len(treffs)-1) : trigEffs[evCats[i+1]]=float(i)
+        for i in xrange(0,len(treffs)) : trigEffs[evCats[i+1]]=float(treffs[i])
 
 #analysis specific configuration
 procs=[]
