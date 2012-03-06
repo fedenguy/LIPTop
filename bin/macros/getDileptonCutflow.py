@@ -17,6 +17,7 @@ def usage() :
     print '  -i : input file'
     print '  -c : counting histo (=evtflow by default)'
     print '  -b : bin to summarize'
+    print '  -l : lumi to be shown in the captions'
     print '  -m : mode=simple,std,chhiggs,syst'
     print '  -s : scale factors for DY emu/mumu/ee e.g. -s  1.0/1.9/2.1 to be applied'
     print '  -o : overall trigger efficiencies for emu/umu/ee e.g -o 0.946/0.920/0.966 to be applied'
@@ -67,6 +68,7 @@ evCats   = ['','emu','mumu','ee']
 mode='std'
 countHisto='evtflow'
 ibinSummary=5
+captionLumi=4564
 dySfactors = { "emu":1, "mumu":1, "ee":1 }
 trigEffs   = { "emu":1, "mumu":1, "ee":1 }
 for o,a in opts:
@@ -77,6 +79,7 @@ for o,a in opts:
     elif o in('-m'): mode=a
     elif o in('-c'): countHisto = a
     elif o in('-b'): ibinSummary = int(a)
+    elif o in('-l'): captionLumi = float(a)
     elif o in('-s'):
         sfactors=a.split('/')
         for i in xrange(0,len(sfactors)) : dySfactors[evCats[i+1]]=float(sfactors[i])
@@ -128,7 +131,7 @@ for iec in xrange(0,len(evCats)):
     tabtex += '\\usepackage[utf8]{inputenc}\n'
     tabtex += '\\begin{document}\n'
     tabtex += '\\begin{table}[htp]\n'
-    tabtex += '\\caption{'+evTitles[iec]+' yields for an integrated luminosity of $2165^{-1}$pb}\n'
+    tabtex += '\\caption{'+evTitles[iec]+' yields for an integrated luminosity of $'+captionLumi+'^{-1}$pb}\n'
     tabtex += '\\label{tab:'+ec+'yields}\n'
     tabtex += '\\hspace*{-0.9cm}\n'
     tabtex += '\\scalebox{0.45}{\n'
@@ -224,7 +227,7 @@ tabtex +='\\usepackage[utf8]{inputenc}\n'
 tabtex +='\\begin{document}\n'
 tabtex +='\\begin{table}[htp]\n'
 bintitle=href.GetXaxis().GetBinLabel(ibinSummary)
-tabtex +='\\caption{$'+bintitle+'$ summary events for $2165^{-1}$pb}\n'
+tabtex +='\\caption{$'+bintitle+'$ summary events for $'+captionLumi+'^{-1}$pb}\n'
 tabtex +='\\label{tab:summaryyields}\n'
 tabtex +='\\hspace*{-0.9cm}\n'
 tabtex +='\\scalebox{0.70}{\n'
