@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
 
   controlHistos.addHistogram( new TH1F("totalMassLikelihood","M_{t} likelihood from KINb solutions;M_{t} [GeV/c^{2}];Likelihood / (2.5 GeV/c^{2})",800,0,2000) );
   TH1F * h=new TH1F ("evtflow", "; Cutflow; Events", 9, 0.,9.);
-  h->GetXaxis()->SetBinLabel(1,"E_{T}^{miss}>30");
+  h->GetXaxis()->SetBinLabel(1,"E_{T}^{miss}>40");
   h->GetXaxis()->SetBinLabel(2,"KIN");
   h->GetXaxis()->SetBinLabel(3,"=0 b-tags");
   h->GetXaxis()->SetBinLabel(4,"=1 b-tags");
@@ -207,9 +207,12 @@ int main(int argc, char* argv[])
   h->GetXaxis()->SetBinLabel(9,"no KIN, #geq 2 b-tags");
   controlHistos.addHistogram( h );
 
+  controlHistos.addHistogram( new TH1F ("global_nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
+  controlHistos.addHistogram( new TH1F ("global_solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
+
   controlHistos.addHistogram( new TH1F ("nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
   controlHistos.addHistogram( new TH1F ("solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
-
+  controlHistos.addHistogram( new TH1F ("mtopRes", "; #sigma_{m_{Top}} / m_{Top}; Events / (20 GeV/c)", 50, 0.,1.) );
   controlHistos.addHistogram( new TH1F ("taupt", "; p_{T} (#tau); Events / (20 GeV/c)", 20, 0.,400.) );
   controlHistos.addHistogram( new TH1F ("taueta", "; #eta (#tau}; Events", 20, 0,2.5) );
   controlHistos.addHistogram( new TH1F ("leadjet", "; Leading jet p_{T} [GeV/c]; Events / (20 GeV/c)", 20, 0.,400.) );
@@ -233,6 +236,9 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
 
+  controlHistos.addHistogram( new TH1F ("noKinSolutions_nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
+  controlHistos.addHistogram( new TH1F ("noKinSolutions_solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
+  controlHistos.addHistogram( new TH1F ("noKinSolutions_mtopRes", "; #sigma_{m_{Top}} / m_{Top}; Events / (20 GeV/c)", 50, 0.,1.) );
   controlHistos.addHistogram( new TH1F ("noKinSolutions_taupt", "; p_{T} (#tau); Events / (20 GeV/c)", 20, 0.,400.) );
   controlHistos.addHistogram( new TH1F ("noKinSolutions_taueta", "; #eta (#tau}; Events", 20, 0,2.5) );
   controlHistos.addHistogram( new TH1F ("noKinSolutions_leadjet", "; Leading jet p_{T} [GeV/c]; Events / (20 GeV/c)", 20, 0.,400.) );
@@ -256,7 +262,6 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("noKinSolutions_mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
 
 
-
   h=new TH1F ("correctcombs", "; Correct combinations; Events;", 6,0,6);
   h->GetXaxis()->SetBinLabel(1,"0 b");
   h->GetXaxis()->SetBinLabel(2,"0 b | correct");
@@ -265,6 +270,9 @@ int main(int argc, char* argv[])
   h->GetXaxis()->SetBinLabel(5,"2 b");
   h->GetXaxis()->SetBinLabel(6,"2 b | correct");
 
+  controlHistos.addHistogram( new TH1F ("correctcombs_nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
+  controlHistos.addHistogram( new TH1F ("correctcombs_solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
+  controlHistos.addHistogram( new TH1F ("correctcombs_mtopRes", "; #sigma_{m_{Top}} / m_{Top}; Events / (20 GeV/c)", 50, 0.,1.) );  
 
 
   controlHistos.addHistogram(h); 
@@ -276,6 +284,10 @@ int main(int argc, char* argv[])
   h->GetXaxis()->SetBinLabel(4,"no KIN, 1 b | correct");
   h->GetXaxis()->SetBinLabel(5,"no KIN, 2 b");
   h->GetXaxis()->SetBinLabel(6,"no KIN, 2 b | correct");
+
+  controlHistos.addHistogram( new TH1F ("noKinSolutions_correctcombs_nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
+  controlHistos.addHistogram( new TH1F ("noKinSolutions_correctcombs_solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
+  controlHistos.addHistogram( new TH1F ("noKinSolutions_correctcombs_mtopRes", "; #sigma_{m_{Top}} / m_{Top}; Events / (20 GeV/c)", 50, 0.,1.) );  
 
   controlHistos.addHistogram(h); 
 
@@ -402,7 +414,7 @@ int main(int argc, char* argv[])
 	}
       if(njets<2 || ((ev.cat==ETAU || ev.cat==MUTAU) && nbjets==0) ) continue;
     
-      bool passMet( phys.met.pt()>30 );//(!isSameFlavor && phys.met.pt() > 30) || ( isSameFlavor && phys.met.pt()>30) );
+      bool passMet( phys.met.pt()>40 );//(!isSameFlavor && phys.met.pt() > 30) || ( isSameFlavor && phys.met.pt()>30) );
       if(!passMet) continue;
    
 
@@ -557,8 +569,8 @@ int main(int argc, char* argv[])
 	for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
 	  {
 	    TString ctf=*cIt + *scIt;
-	    controlHistos.fillHisto("nSol",ctf,ncombs,weight);
-	    controlHistos.fillHisto("solMax",ctf,combMax,weight);
+	    controlHistos.fillHisto("global_nSol",ctf,ncombs,weight);
+	    controlHistos.fillHisto("global_solMax",ctf,combMax,weight);
 	  }
       
       if(!passKin){
@@ -566,6 +578,9 @@ int main(int argc, char* argv[])
 
 	TH1F *mpref=kinHandler.getHisto("mt",icomb);
 	double mtop = kinHandler.getMPVEstimate(mpref) [1];
+	double sigmamtop = kinHandler.getMPVEstimate(mpref) [2];
+	double mtopres = sigmamtop/mtop;
+
 	if(mtop<=0) continue;
 	TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
 	double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
@@ -584,12 +599,19 @@ int main(int argc, char* argv[])
 
 		controlHistos.fillHisto("evtflow",ctf,5,weight);
 		controlHistos.fillHisto("evtflow",ctf,6+(nbtagscor>2?2:nbtagscor),weight);
-		
+
+		controlHistos.fillHisto("noKinSolutions_nSol",ctf,ncombs,weight);
+		controlHistos.fillHisto("noKinSolutions_solMax",ctf,combMax,weight);
+		controlHistos.fillHisto("noKinSolutions_mtopRes",ctf,mtopres,weight);
+	    
 		controlHistos.fillHisto("noKinSolutions_taupt",ctf,tauP4.pt(),weight);
 		controlHistos.fillHisto("noKinSolutions_taueta",ctf,fabs(tauP4.eta()),weight);
 		
 		controlHistos.fillHisto("noKinSolutions_correctcombs",ctf,nRecoBs*2,weight);
 		controlHistos.fillHisto("noKinSolutions_correctcombs",ctf,nRecoBs*2+1,weight*(icomb==iCorrectComb));
+		controlHistos.fillHisto("noKinSolutions_correctcombs_nSol",ctf,ncombs,weight*(icomb==iCorrectComb));
+		controlHistos.fillHisto("noKinSolutions_correctcombs_solMax",ctf,combMax,weight*(icomb==iCorrectComb));
+		controlHistos.fillHisto("noKinSolutions_correctcombs_mtopRes",ctf,mtopres,weight*(icomb==iCorrectComb));
 		
 		controlHistos.fillHisto("noKinSolutions_njets",ctf,prunedJets.size(),weight);
 		controlHistos.fillHisto("noKinSolutions_btags",ctf,nbtagscor,weight);
@@ -613,7 +635,7 @@ int main(int argc, char* argv[])
 		controlHistos.fill2DHisto("noKinSolutions_mtopvsminmlj",ctf,mtop,min(lj1.mass(),lj2.mass()),weight);
 		controlHistos.fill2DHisto("noKinSolutions_mtopvsmaxmlj",ctf,mtop,max(lj1.mass(),lj2.mass()),weight);
 		controlHistos.fill2DHisto("noKinSolutions_mtopvsmttbar",ctf,mtop,mttbar,weight);
-		
+
 		//resolution plots
 		controlHistos.fill2DHisto("noKinSolutions_mtopvsnvtx",ctf,mtop,ev.nvtx,weight);
 	      }
@@ -623,6 +645,8 @@ int main(int argc, char* argv[])
       }
       TH1F *mpref=kinHandler.getHisto("mt",icomb);
       double mtop = kinHandler.getMPVEstimate(mpref) [1];
+      double sigmamtop = kinHandler.getMPVEstimate(mpref) [2];
+      double mtopres = sigmamtop/mtop;
       if(mtop<=0) continue;
       TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
       double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
@@ -642,14 +666,19 @@ int main(int argc, char* argv[])
 	      controlHistos.fillHisto("evtflow",ctf,1,weight);
 	      controlHistos.fillHisto("evtflow",ctf,2+(nbtagscor>2?2:nbtagscor),weight);
 	      
-
-
+	      controlHistos.fillHisto("nSol",ctf,ncombs,weight);
+	      controlHistos.fillHisto("solMax",ctf,combMax,weight);
+	      controlHistos.fillHisto("mtopRes",ctf,mtopres,weight);
+	    
 	      controlHistos.fillHisto("taupt",ctf,tauP4.pt(),weight);
 	      controlHistos.fillHisto("taueta",ctf,fabs(tauP4.eta()),weight);
 	      
 	      controlHistos.fillHisto("correctcombs",ctf,nRecoBs*2,weight);
 	      controlHistos.fillHisto("correctcombs",ctf,nRecoBs*2+1,weight*(icomb==iCorrectComb));
-
+	      controlHistos.fillHisto("correctcombs_nSol",ctf,ncombs,weight*(icomb==iCorrectComb));
+	      controlHistos.fillHisto("correctcombs_solMax",ctf,combMax,weight*(icomb==iCorrectComb));
+	      controlHistos.fillHisto("correctcombs_mtopRes",ctf,mtopres,weight*(icomb==iCorrectComb));
+	      
 	      controlHistos.fillHisto("njets",ctf,prunedJets.size(),weight);
 	      controlHistos.fillHisto("btags",ctf,nbtagscor,weight);
 	      controlHistos.fillHisto("btagsraw",ctf,nbtags,weight);
@@ -759,7 +788,7 @@ int main(int argc, char* argv[])
   kinHandler.end();
   
   //if MC: rescale to number of selected events and to units of pb
-  cout << "From " << selEvents.size() << "original events found " << nresults << " kin results - used " << neventsused << endl; 
+  cout << "From " << selEvents.size() << " original events found " << nresults << " kin results - used " << neventsused << endl; 
   
   if(!isMC && outf!=0) 
     {
