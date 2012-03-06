@@ -81,10 +81,10 @@ int main(int argc, char* argv[])
   std::vector<Float_t> procYields(4,0);    
 
   //signal samples first (all share the same yields)
-  procYields[MassMeasurement::SF_EQ1BTAGS]=573.3;
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=1121.1;
-  procYields[MassMeasurement::OF_EQ1BTAGS]=785.2;
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=1460.6;
+  procYields[MassMeasurement::SF_EQ1BTAGS]=1077;
+  procYields[MassMeasurement::SF_GEQ2BTAGS]=2057;
+  procYields[MassMeasurement::OF_EQ1BTAGS]=1502;
+  procYields[MassMeasurement::OF_GEQ2BTAGS]=2787;
   evtYields["Signal"]=procYields;
   Int_t pdfVar(0);
   if(syst.Contains("pdf")) sscanf(syst.Data(),"pdf%d",&pdfVar);
@@ -148,19 +148,19 @@ int main(int argc, char* argv[])
       SingleTop.push_back("SingleTbar_s");
       SingleTop.push_back("SingleT_s");
       allSamples["SingleTop"]=SingleTop;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=38.1; 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=32.4; 
-      procYields[MassMeasurement::OF_EQ1BTAGS]=49.0; 
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=42.8;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=70; 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=59; 
+      procYields[MassMeasurement::OF_EQ1BTAGS]=95; 
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=86;
       evtYields["SingleTop"]=procYields;
       
       Proc_t OtherTTbar;
       OtherTTbar.push_back("TTJets");
       allSamples["OtherTTbar"]=OtherTTbar;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=4.5+0.0;    //yields include w+jets 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=4.9+0.0;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=6.1+7.6;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=8.7+0.0;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=9.0+0.0;    //yields include w+jets 
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=8.0+0.0;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=11.+14.;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=11.+0.0;
       evtYields["OtherTTbar"]=procYields;
       
       Proc_t DiBosons;
@@ -168,10 +168,10 @@ int main(int argc, char* argv[])
       DiBosons.push_back("ZZ");
       DiBosons.push_back("WZ");
       allSamples["DiBosons"]=DiBosons;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=7.1;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=2.2;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=9.3;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=1.4;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=13.;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=3.;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=18.;
+      procYields[MassMeasurement::OF_GEQ2BTAGS]=3.;
       evtYields["DiBosons"]=procYields;
       
       Proc_t DY;
@@ -180,9 +180,9 @@ int main(int argc, char* argv[])
       float uncScaleFactor(1.0);
       if(syst=="dyup")   uncScaleFactor *= 1.15;
       if(syst=="dydown") uncScaleFactor *= 0.85;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=188.7*uncScaleFactor;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=40.8*uncScaleFactor;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=36.9*uncScaleFactor;
+      procYields[MassMeasurement::SF_EQ1BTAGS]=249.*uncScaleFactor;
+      procYields[MassMeasurement::SF_GEQ2BTAGS]=42.*uncScaleFactor;
+      procYields[MassMeasurement::OF_EQ1BTAGS]=47.*uncScaleFactor;
       procYields[MassMeasurement::OF_GEQ2BTAGS]=6.0*uncScaleFactor;
       evtYields["DY"]=procYields;
     }
