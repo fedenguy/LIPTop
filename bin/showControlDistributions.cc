@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
   TString labels[]={"2 leptons",
 		    "M>12 #wedge |M-M_{Z}|>15",
 		    "#geq 2 jets",
-		    "E_{T}^{miss}>30/0",
+		    "E_{T}^{miss}>40/0",
 		    "op. sign",
 		    "=0 b-tags",
 		    "=1 b-tag",
@@ -319,6 +319,9 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( h );
 
       controlHistos.addHistogram( new TH1F ("met"+cats[ivar], "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 50, 0.,500.) );
+      controlHistos.addHistogram( new TH1F ("rho"+cats[ivar]  ,"; #rho [GeV]; Events / (10 GeV/c)", 50, 0., 25.) );
+      controlHistos.addHistogram( new TH1F ("rhoJ1"+cats[ivar],"; #rho / Jet #1 p_{T} [c]; Events / (10 GeV/c)", 50, 0., 1.) );
+      controlHistos.addHistogram( new TH1F ("rhoJ2"+cats[ivar],"; #rho / Jet #2 p_{T} [c]; Events / (10 GeV/c)", 50, 0., 1.) );
       
       TString thetallcats[]={"","eq0jets","eq1jets"};
       for(size_t k=0; k<sizeof(thetallcats)/sizeof(TString); k++)
@@ -578,7 +581,7 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( !isSameFlavor || theMET.pt()>30 );
+	  bool passMet( !isSameFlavor || theMET.pt()>40 );
 	  bool isOS(dilcharge<0);
 	  
 	  //fill selection histograms
@@ -598,7 +601,14 @@ int main(int argc, char* argv[])
 		  TString jetCat="";
 		  if(nseljetsLoose==0) jetCat="eq0jets";
 		  if(nseljetsLoose==1) jetCat="eq1jets"; 
-		  TString metCat( passMet ? "" : "lowmet");
+		  //		  TString metCat( passMet ? "" : "lowmet");
+		  TString metCat;
+		  if(passMet)
+		    metCat="";
+		  else if(theMET.pt()<=30)
+		    metCat="lowmet";
+		  else
+		    metCat="limbo";
 		  controlHistos.fillHisto(jetCat+metCat+"dilarccosine"+cats[ivar],ctf,acosine,weight);
 			      
 		  if(passMet)
@@ -613,6 +623,10 @@ int main(int argc, char* argv[])
 		{
 		  controlHistos.fillHisto("evtflow"+cats[ivar],ctf,SELJETS,weight);
 		  controlHistos.fillHisto("met"+cats[ivar],ctf,theMET.pt(),weight);
+		  
+		  controlHistos.fillHisto("rho"+cats[ivar],ctf,ev.rho,weight);
+		  controlHistos.fillHisto("rhoJ1"+cats[ivar],ctf,ev.rho/jetColl[0].pt(),weight);
+		  controlHistos.fillHisto("rhoJ2"+cats[ivar],ctf,ev.rho/jetColl[1].pt(),weight);
 		}
 	      
 	      //MET
