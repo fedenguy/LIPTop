@@ -79,7 +79,7 @@ for o,a in opts:
     elif o in('-m'): mode=a
     elif o in('-c'): countHisto = a
     elif o in('-b'): ibinSummary = int(a)
-    elif o in('-l'): captionLumi = float(a)
+    elif o in('-l'): captionLumi =a
     elif o in('-s'):
         sfactors=a.split('/')
         for i in xrange(0,len(sfactors)) : dySfactors[evCats[i+1]]=float(sfactors[i])
