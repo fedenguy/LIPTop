@@ -10,7 +10,7 @@ resslope_s0:0.743038
 resbias_s1:0.83145
 resslope_s1:1.0016
 resbias_s2:6.4758
-resslope_s2:1.0016
+resslope_s2:0.920981
 resbias_s3:-41.9659
 resslope_s3:1.24328
 resbias_s4:17.627
