@@ -54,6 +54,11 @@ struct ptSorter{
   bool operator() (PhysicsObject_Lepton a, PhysicsObject_Lepton b) {   return (a.pt()>b.pt()); }
 } sortByPt;
 
+//
+struct idSorter{
+  bool operator() (PhysicsObject_Lepton a, PhysicsObject_Lepton b) {   return (a.id>b.id); }
+} sortById;
+
 
 //
 stringstream report;
@@ -183,7 +188,9 @@ int main(int argc, char* argv[])
 
   //book histos
   controlHistos.addHistogram( new TH1F ("njets", ";Jets;Events", 6, 0.,6.) );
+  controlHistos.addHistogram( new TH1F ("njetsfailkin", ";Jets;Events", 6, 0.,6.) );
   controlHistos.addHistogram( new TH1F ("btags", ";b-tag multiplicity (CSVL);Events", 6, 0.,6.) );
+  controlHistos.addHistogram( new TH1F ("btagsfailkin", ";b-tag multiplicity (CSVL);Events", 6, 0.,6.) );
   controlHistos.addHistogram( new TH1F ("btagsraw", ";b-tag multiplicity (CSVL);Events", 6, 0.,6.) );
   for(int ibin=1; ibin<=controlHistos.getHisto("njets","all")->GetXaxis()->GetNbins(); ibin++)
     {
@@ -225,6 +232,7 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("sumpt", "; #sum_{leptons} p_{T} [GeV/c]; Events / (20 GeV/c)",25, 0.,500.) );
   controlHistos.addHistogram( new TH1F ("htlep", "; #sum_{jets,leptons,E_{T}^{miss}} [GeV/c]; Events / (20 GeV/c)",70, 0.,1400.) );
   controlHistos.addHistogram( new TH1F ("mtop", "; m_{Top} [GeV/c^{2}]; Events / (20 GeV/c^{2})", 50, 0.,1000.) );
+  controlHistos.addHistogram( new TH1F ("mtopfailkin", "; m_{Top} [GeV/c^{2}]; Events / (20 GeV/c^{2})", 50, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("threeleptonmtop", "; m_{Top} [GeV/c^{2}]; Events / (20 GeV/c^{2})", 50, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("ptttbar", "; p_{t#bar{t}} [GeV/c]; Events / (40 GeV/c)", 25, 0.,1000.) );
   controlHistos.addHistogram( new TH1F ("mttbar", "; Mass(t,#bar{t}) [GeV/c^{2}]; Events / (100 GeV/c^{2})", 30, 0.,3000.) );
@@ -235,6 +243,18 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("mtopvsnvtx", "; m_{Top} [GeV/c^{2}]; Vertices; Events", 100, 0.,500.,30,0,30) );
   controlHistos.addHistogram( new TH2F ("mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
+
+  controlHistos.addHistogram( new TH1F ("maxsolsfailkin", ";Max. solutions found/combination (%);Events", 100, 0.,10.) );
+  controlHistos.addHistogram( new TH1F ("maxfailkin", ";Peak max. /combination (%);Events", 100, 0.,10.) );
+
+  h=new TH1F ("kineffperbreco", ";Event cases;Events", 6, 0.,6);
+  h->GetXaxis()->SetBinLabel(1,"0 b");
+  h->GetXaxis()->SetBinLabel(2,"0 b | KIN");
+  h->GetXaxis()->SetBinLabel(3,"1 b");
+  h->GetXaxis()->SetBinLabel(4,"1 b | KIN");
+  h->GetXaxis()->SetBinLabel(5,"2 b");
+  h->GetXaxis()->SetBinLabel(6,"2 b | KIN");
+  controlHistos.addHistogram( h );
 
   controlHistos.addHistogram( new TH1F ("noKinSolutions_nSol", "; Number of solutions; Events / (20 GeV/c)", 2000, 0.,20000.) );
   controlHistos.addHistogram( new TH1F ("noKinSolutions_solMax", "; Maximum of the combination; Events / (20 GeV/c)", 500, 0.,5000.) );
@@ -260,7 +280,6 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH2F ("noKinSolutions_mtopvsnvtx", "; m_{Top} [GeV/c^{2}]; Vertices; Events", 100, 0.,500.,30,0,30) );
   controlHistos.addHistogram( new TH2F ("noKinSolutions_mtopvsmet", "; m_{Top} [GeV/c^{2}]; E_{T}^{miss} [GeV/c]; Events", 100, 0.,500.,10,0.,500.) );
   controlHistos.addHistogram( new TH2F ("noKinSolutions_mtopvsptjet", "; m_{Top} [GeV/c^{2}]; p_{T}^{jet}; Events", 100, 0.,500.,4,30.,50.) );
-
 
   h=new TH1F ("correctcombs", "; Correct combinations; Events;", 6,0,6);
   h->GetXaxis()->SetBinLabel(1,"0 b");
@@ -497,6 +516,8 @@ int main(int argc, char* argv[])
 	}
       sort(prunedJets.begin(),prunedJets.end(),sortByBtag);
       sort(phys.leptons.begin(),phys.leptons.end(),sortByPt);
+      top::PhysicsObjectLeptonCollection kinLeptons=phys.leptons; //stupid bug
+      sort(kinLeptons.begin(),kinLeptons.end(),sortById);
 
       //compute basic kinematics for the leptons / dileptons / dijet
       LorentzVector tauP4(0,0,0,0);
@@ -523,7 +544,7 @@ int main(int argc, char* argv[])
       if(nRecoBs>1)
 	{
 	  //the charge of the generator level matched particles must be opposite
-	  int assignCode=(phys.leptons[0].genid*prunedJets[0].flavid);
+	  int assignCode=(kinLeptons[0].genid*prunedJets[0].flavid);
 	  if(assignCode<0) iCorrectComb=1;
 	  else             iCorrectComb=2;
 	}
@@ -558,96 +579,103 @@ int main(int argc, char* argv[])
       // get preferred combination and the top mass measurement from the MPV fit
       //
       TH1F *h1=kinHandler.getHisto("mt",1), *h2=kinHandler.getHisto("mt",2);
-      h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
-
+      //      h1->Rebin(2); h2->Rebin(2);  //<- don't rebin you'll loose resolution
       double ncombs = -1;
       double combMax = -1;
       bool passKin=false;
       Int_t icomb=getPreferredCombination(h1,h2,ncombs,combMax,passKin);
 
-      for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
-	for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
-	  {
-	    TString ctf=*cIt + *scIt;
-	    controlHistos.fillHisto("global_nSol",ctf,ncombs,weight);
-	    controlHistos.fillHisto("global_solMax",ctf,combMax,weight);
-	  }
+      if(!isZcand && !isSS) 
+	{
+	  for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
+	    {
+	      for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
+		{
+		  TString ctf=*cIt + *scIt;
+		  
+		  controlHistos.fillHisto("kineffperbreco",ctf,2*nRecoBs,weight);
+		  controlHistos.fillHisto("kineffperbreco",ctf,2*nRecoBs+1,weight*(icomb>0));
+
+		  controlHistos.fillHisto("global_nSol",ctf,ncombs,weight);
+		  controlHistos.fillHisto("global_solMax",ctf,combMax,weight);
+		  
+		  if(!passKin)
+		    {
+		      controlHistos.fillHisto("njetsfailkin",ctf,prunedJets.size(),weight);
+		      controlHistos.fillHisto("btagsfailkin",ctf,nbtagscor,weight);
+		      controlHistos.fillHisto("maxsolsfailkin",ctf,(100./5e+04)*max(h1->Integral(),h2->Integral()),weight);
+		      controlHistos.fillHisto("maxfailkin",ctf,(100./5e+04)*max(h1->GetMaximum(),h2->GetMaximum()),weight);
+
+		      TH1F *mpref=kinHandler.getHisto("mt",icomb);
+		      double mtop = kinHandler.getMPVEstimate(mpref) [1];
+		      if(mtop<0) continue;
+		      double sigmamtop = kinHandler.getMPVEstimate(mpref) [2];
+		      double mtopres = sigmamtop/mtop;
+
+		      TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
+		      double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
+		      //      TH1F *afbpref=kinHandler.getHisto("afb",icomb);
+		      //      double afb = kinHandler.getMPVEstimate(afbpref)[1];
+		      LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
+		      LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
+
+		      controlHistos.fillHisto("mtopfailkin",ctf,mtop,weight);
+
+		      
+		      controlHistos.fillHisto("evtflow",ctf,5,weight);
+		      controlHistos.fillHisto("evtflow",ctf,6+(nbtagscor>2?2:nbtagscor),weight);
+		      
+		      controlHistos.fillHisto("noKinSolutions_nSol",ctf,ncombs,weight);
+		      controlHistos.fillHisto("noKinSolutions_solMax",ctf,combMax,weight);
+		      controlHistos.fillHisto("noKinSolutions_mtopRes",ctf,mtopres,weight);
+		      
+		      controlHistos.fillHisto("noKinSolutions_taupt",ctf,tauP4.pt(),weight);
+		      controlHistos.fillHisto("noKinSolutions_taueta",ctf,fabs(tauP4.eta()),weight);
+		      
+		      controlHistos.fillHisto("noKinSolutions_correctcombs",ctf,nRecoBs*2,weight);
+		      controlHistos.fillHisto("noKinSolutions_correctcombs",ctf,nRecoBs*2+1,weight*(icomb==iCorrectComb));
+		      controlHistos.fillHisto("noKinSolutions_correctcombs_nSol",ctf,ncombs,weight*(icomb==iCorrectComb));
+		      controlHistos.fillHisto("noKinSolutions_correctcombs_solMax",ctf,combMax,weight*(icomb==iCorrectComb));
+		      controlHistos.fillHisto("noKinSolutions_correctcombs_mtopRes",ctf,mtopres,weight*(icomb==iCorrectComb));
+		      
+		      controlHistos.fillHisto("noKinSolutions_njets",ctf,prunedJets.size(),weight);
+		      controlHistos.fillHisto("noKinSolutions_btags",ctf,nbtagscor,weight);
+		      controlHistos.fillHisto("noKinSolutions_btagsraw",ctf,nbtags,weight);
+		      controlHistos.fillHisto("noKinSolutions_leadjet",ctf,ptjet1,weight);
+		      controlHistos.fillHisto("noKinSolutions_subleadjet",ctf,ptjet2,weight);
+		      controlHistos.fillHisto("noKinSolutions_leadlepton",ctf,ptlep1,weight);
+		      controlHistos.fillHisto("noKinSolutions_subleadlepton",ctf,ptlep2,weight);
+		      controlHistos.fillHisto("noKinSolutions_met",ctf,phys.met.pt(),weight);
+		      controlHistos.fillHisto("noKinSolutions_ht",ctf,ht,weight);
+		      controlHistos.fillHisto("noKinSolutions_st",ctf,st,weight);
+		      controlHistos.fillHisto("noKinSolutions_sumpt",ctf,sumptlep,weight);
+		      controlHistos.fillHisto("noKinSolutions_htlep",ctf,htlep,weight);
+		      controlHistos.fillHisto("noKinSolutions_ptttbar",ctf,ptttbar.Pt(),weight);
+		      
+		      controlHistos.fillHisto("noKinSolutions_mtop",ctf,mtop,weight);
+		      controlHistos.fillHisto("noKinSolutions_mttbar",ctf,mttbar,weight);
+		      
+		      controlHistos.fillHisto("noKinSolutions_dilmass",ctf,dilmass,weight);
+		      controlHistos.fill2DHisto("noKinSolutions_mtopvsdilmass",ctf,mtop,dilmass,weight);
+		      controlHistos.fill2DHisto("noKinSolutions_mtopvsminmlj",ctf,mtop,min(lj1.mass(),lj2.mass()),weight);
+		      controlHistos.fill2DHisto("noKinSolutions_mtopvsmaxmlj",ctf,mtop,max(lj1.mass(),lj2.mass()),weight);
+		      controlHistos.fill2DHisto("noKinSolutions_mtopvsmttbar",ctf,mtop,mttbar,weight);
+		      
+		      //resolution plots
+		      controlHistos.fill2DHisto("noKinSolutions_mtopvsnvtx",ctf,mtop,ev.nvtx,weight);
+		    }
+		}
+	    }
+	}
       
-      if(!passKin){
-
-
-	TH1F *mpref=kinHandler.getHisto("mt",icomb);
-	double mtop = kinHandler.getMPVEstimate(mpref) [1];
-	double sigmamtop = kinHandler.getMPVEstimate(mpref) [2];
-	double mtopres = sigmamtop/mtop;
-
-	if(mtop<=0) continue;
-	TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
-	double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
-	//      TH1F *afbpref=kinHandler.getHisto("afb",icomb);
-	//      double afb = kinHandler.getMPVEstimate(afbpref)[1];
-	LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
-	LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
-	
-	if(!isZcand && !isSS && nbtagscor>=2 && !isMC && dumpDataSolutions) displayKinResults(icomb==1?h1:h2,icomb==1?h2:h1,irun,ilumi,ievent);	
-	
-	for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
-	  {
-	    for(std::vector<TString>::iterator scIt = subcats.begin(); scIt != subcats.end(); scIt++)
-	      {
-		TString ctf=*cIt + *scIt;
-
-		controlHistos.fillHisto("evtflow",ctf,5,weight);
-		controlHistos.fillHisto("evtflow",ctf,6+(nbtagscor>2?2:nbtagscor),weight);
-
-		controlHistos.fillHisto("noKinSolutions_nSol",ctf,ncombs,weight);
-		controlHistos.fillHisto("noKinSolutions_solMax",ctf,combMax,weight);
-		controlHistos.fillHisto("noKinSolutions_mtopRes",ctf,mtopres,weight);
-	    
-		controlHistos.fillHisto("noKinSolutions_taupt",ctf,tauP4.pt(),weight);
-		controlHistos.fillHisto("noKinSolutions_taueta",ctf,fabs(tauP4.eta()),weight);
-		
-		controlHistos.fillHisto("noKinSolutions_correctcombs",ctf,nRecoBs*2,weight);
-		controlHistos.fillHisto("noKinSolutions_correctcombs",ctf,nRecoBs*2+1,weight*(icomb==iCorrectComb));
-		controlHistos.fillHisto("noKinSolutions_correctcombs_nSol",ctf,ncombs,weight*(icomb==iCorrectComb));
-		controlHistos.fillHisto("noKinSolutions_correctcombs_solMax",ctf,combMax,weight*(icomb==iCorrectComb));
-		controlHistos.fillHisto("noKinSolutions_correctcombs_mtopRes",ctf,mtopres,weight*(icomb==iCorrectComb));
-		
-		controlHistos.fillHisto("noKinSolutions_njets",ctf,prunedJets.size(),weight);
-		controlHistos.fillHisto("noKinSolutions_btags",ctf,nbtagscor,weight);
-		controlHistos.fillHisto("noKinSolutions_btagsraw",ctf,nbtags,weight);
-		controlHistos.fillHisto("noKinSolutions_leadjet",ctf,ptjet1,weight);
-		controlHistos.fillHisto("noKinSolutions_subleadjet",ctf,ptjet2,weight);
-		controlHistos.fillHisto("noKinSolutions_leadlepton",ctf,ptlep1,weight);
-		controlHistos.fillHisto("noKinSolutions_subleadlepton",ctf,ptlep2,weight);
-		controlHistos.fillHisto("noKinSolutions_met",ctf,phys.met.pt(),weight);
-		controlHistos.fillHisto("noKinSolutions_ht",ctf,ht,weight);
-		controlHistos.fillHisto("noKinSolutions_st",ctf,st,weight);
-		controlHistos.fillHisto("noKinSolutions_sumpt",ctf,sumptlep,weight);
-		controlHistos.fillHisto("noKinSolutions_htlep",ctf,htlep,weight);
-		controlHistos.fillHisto("noKinSolutions_ptttbar",ctf,ptttbar.Pt(),weight);
-		
-		controlHistos.fillHisto("noKinSolutions_mtop",ctf,mtop,weight);
-		controlHistos.fillHisto("noKinSolutions_mttbar",ctf,mttbar,weight);
-		
-		controlHistos.fillHisto("noKinSolutions_dilmass",ctf,dilmass,weight);
-		controlHistos.fill2DHisto("noKinSolutions_mtopvsdilmass",ctf,mtop,dilmass,weight);
-		controlHistos.fill2DHisto("noKinSolutions_mtopvsminmlj",ctf,mtop,min(lj1.mass(),lj2.mass()),weight);
-		controlHistos.fill2DHisto("noKinSolutions_mtopvsmaxmlj",ctf,mtop,max(lj1.mass(),lj2.mass()),weight);
-		controlHistos.fill2DHisto("noKinSolutions_mtopvsmttbar",ctf,mtop,mttbar,weight);
-
-		//resolution plots
-		controlHistos.fill2DHisto("noKinSolutions_mtopvsnvtx",ctf,mtop,ev.nvtx,weight);
-	      }
-	  }
-	
-	continue;
-      }
+      if(!passKin) continue;
+      
+      //good events for analysis 
       TH1F *mpref=kinHandler.getHisto("mt",icomb);
       double mtop = kinHandler.getMPVEstimate(mpref) [1];
+      if(mtop<=0) continue;
       double sigmamtop = kinHandler.getMPVEstimate(mpref) [2];
       double mtopres = sigmamtop/mtop;
-      if(mtop<=0) continue;
       TH1F *mttbarpref=kinHandler.getHisto("mttbar",icomb);
       double mttbar = kinHandler.getMPVEstimate(mttbarpref)[1];
       //      TH1F *afbpref=kinHandler.getHisto("afb",icomb);
@@ -655,7 +683,7 @@ int main(int argc, char* argv[])
       LorentzVector lj1=phys.leptons[0]+prunedJets[icomb==1?0:1];
       LorentzVector lj2=phys.leptons[1]+prunedJets[icomb==1?1:0];
       
-      if(!isZcand && !isSS && nbtagscor>=2 && !isMC && dumpDataSolutions) displayKinResults(icomb==1?h1:h2,icomb==1?h2:h1,irun,ilumi,ievent);
+      if(!isZcand && !isSS && nbtagscor>=2 && !isMC && dumpDataSolutions && fabs(mtop-172)<5) displayKinResults(icomb==1?h1:h2,icomb==1?h2:h1,irun,ilumi,ievent);
       
       //now fill the control plots
       for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)

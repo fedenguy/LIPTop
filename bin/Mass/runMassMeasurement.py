@@ -95,7 +95,8 @@ for proc in procList :
                 isZcand=evHandler.evSummary_.evmeasurements[2]
                 if(isZcand) : continue
                 catToFill=nbtags-1
-                if(evHandler.evSummary_.cat==3) : catToFill+=2
+                if(evHandler.evSummary_.cat==1) : catToFill+=2
+                if(evHandler.evSummary_.cat==3) : catToFill+=4
                 ensemble.evMasses.__setitem__(evtCtr,mtop)
                 ensemble.evCategories.__setitem__(evtCtr,catToFill)
                 evtCtr+=1                                                     

@@ -82,7 +82,7 @@ fitParamsFile = open('hfcFitter_cfg.json','r')
 fitParams=json.load(fitParamsFile,encoding='utf-8')
 
 vareb=0
-vareq=0
+vareq=-1
 varfcorrect=0
 varttbar=0
 varst=0
@@ -155,9 +155,14 @@ ensembleHandler.attachToTree( ensembleHandler.getTree() )
 
 #run the fitter
 hfcFitter.fitHFCtoEnsemble( ensembleHandler,1,True) #True )
-print str(hfcFitter.model.rFitResult) + ' +' + str(hfcFitter.model.rFitResultAsymmErrHi) + ' ' + str(hfcFitter.model.rFitResultAsymmErrLo)
+print "Dilepton exclusive"
 for icat in xrange(0,6):
     print str(icat) + ' ' + str(hfcFitter.model.rFit[icat]) + ' +' + str(hfcFitter.model.rFitAsymmErrHi[icat]) + ' ' + str(hfcFitter.model.rFitAsymmErrLo[icat])
+print "Dilepton combined"
+for icat in xrange(0,3):
+    print str(icat) + ' ' + str(hfcFitter.model.rCombFit[icat*2]) + ' +' + str(hfcFitter.model.rCombFitAsymmErrHi[icat*2]) + ' ' + str(hfcFitter.model.rCombFitAsymmErrLo[icat*2])
+print "All combined"
+print str(hfcFitter.model.rFitResult) + ' +' + str(hfcFitter.model.rFitResultAsymmErrHi) + ' ' + str(hfcFitter.model.rFitResultAsymmErrLo)
 print "Feldman-Cousins: " +str(hfcFitter.model.rFitLowerLimit) + ' - ' + str(hfcFitter.model.rFitUpperLimit)
 
 raw_input('*********************************')

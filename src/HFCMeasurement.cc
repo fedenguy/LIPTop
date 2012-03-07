@@ -281,14 +281,12 @@ void HFCMeasurement::initHFCModel()
   model.modelConfig->SetParametersOfInterest(RooArgSet(*model.r));
   model.modelConfig->SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
   RooArgSet nuisPars(*model.sfebExp,*model.sfeqExp);
-  /*
   for(size_t icat=0; icat<categoryKeys_.size(); icat++) 
     {
       nuisPars.add(*model.fcorrectExp[icat]);
       nuisPars.add(*model.fttbarExp[icat]);
       nuisPars.add(*model.fsingletopExp[icat]);
     }
-  */
   model.modelConfig->SetNuisanceParameters(nuisPars);
 
   //all done here
@@ -440,7 +438,6 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       TString jmultkey=tag;
       jmultkey = jmultkey.ReplaceAll(dilCategory,"");
       int njets=jmultkey.Atoi();
-            
       //each bin in the histogram is a exclusive category
       TH1 *h = controlHistos_.getHisto("btags_"+jmultkey,dilCategory);
       for(int ibin=1; ibin<= h->GetXaxis()->GetNbins(); ibin++)
@@ -457,11 +454,11 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       model.jetocc[icat]->setVal( h->Integral() );
     }
   
-
   //
   //fit individually each channel
   //
   std::vector<RooNLLVar *> likelihoods;
+  std::vector<RooAbsReal *> profLikelihoods;
   std::vector<TString> lltitles; 
   TGraphAsymmErrors *exclusiveRgr=0;
   TGraphAsymmErrors *incRgr=0;
@@ -519,12 +516,17 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 				 RooFit::SumW2Error(kTRUE),
 				 RooFit::PrintLevel(-1),
 				 RooFit::Verbose(kFALSE));
-	  likelihoods.push_back( (RooNLLVar *) model.constrPdf->createNLL(*dataslice,Constrain(model.pdfConstrains),NumCPU(2)) );
+	  RooNLLVar *nll = (RooNLLVar *) model.constrPdf->createNLL(*dataslice,Constrain(model.pdfConstrains),NumCPU(2));
+	  likelihoods.push_back( nll );
+	  profLikelihoods.push_back( nll->createProfile( (fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) ? *model.sfeb : *model.r ) ); 
 	  TString tit=tag2.ReplaceAll("2","");
 	  tit=tit.ReplaceAll("mu","#mu");
 	  lltitles.push_back(tit);
-	}
 
+	  model.rCombFit[icat-1]=model.r->getVal();   model.rCombFitAsymmErrLo[icat-1]=model.r->getAsymErrorLo(); model.rCombFitAsymmErrHi[icat-1]=model.r->getAsymErrorHi();
+	  model.rCombFit[icat]=model.r->getVal();     model.rCombFitAsymmErrLo[icat]=model.r->getAsymErrorLo();   model.rCombFitAsymmErrHi[icat]=model.r->getAsymErrorHi();
+	}
+  
       //inclusive fit to two jets bin
       TString cut2inc("sample==sample::n0btags_ee2 || sample==sample::n1btags_ee2 || sample==sample::n2btags_ee2 ||"
 		      "sample==sample::n0btags_mumu2 || sample==sample::n1btags_mumu2 || sample==sample::n2btags_mumu2 ||"
@@ -557,7 +559,7 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       incRgr->SetPoint(1,4,model.r->getVal());
       incRgr->SetPointError(1,0,0,fabs(model.r->getAsymErrorLo()),fabs(model.r->getAsymErrorHi()));
     }
-
+  
   //
   //fit globally
   //
@@ -575,6 +577,8 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
   model.rFitResultAsymmErrHi = model.r->getAsymErrorHi();
 
   RooNLLVar *nll = (RooNLLVar *) model.constrPdf->createNLL(*data,Constrain(model.pdfConstrains),NumCPU(2));
+  RooAbsReal *pll= nll->createProfile( (fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) ? *model.sfeb : *model.r ); 
+
   RooMinuit minuit(*nll); 
   minuit.setErrorLevel(0.5);     
   minuit.hesse();
@@ -610,18 +614,20 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       fc_->UseAdaptiveSampling(true);      // speed it up a bit
       fc_->CreateConfBelt(true);
       fc_->SaveBeltToFile(true);
-
+      
       //set as one sided
       //ToyMCSampler*  toymcsampler = (ToyMCSampler*) fc_->GetTestStatSampler(); 
       //ProfileLikelihoodTestStat* testStat = dynamic_cast<ProfileLikelihoodTestStat*>(toymcsampler->GetTestStatistic());
       //testStat->SetOneSided(true);
-      
-      cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
-      PointSetInterval* interval = (PointSetInterval*)fc_->GetInterval();
-      ConfidenceBelt* belt = fc_->GetConfidenceBelt();
-      model.rFitLowerLimit=interval->LowerLimit(*model.r);
-      model.rFitUpperLimit=interval->UpperLimit(*model.r);
 
+      /*
+	cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
+	PointSetInterval* interval = (PointSetInterval*)fc_->GetInterval();
+	ConfidenceBelt* belt = fc_->GetConfidenceBelt();
+	model.rFitLowerLimit=interval->LowerLimit(*model.r);
+	model.rFitUpperLimit=interval->UpperLimit(*model.r);
+      */
+      
       //get the thresholds
       if(debug)
 	{
@@ -629,47 +635,50 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	  model.ws->import(*model.modelConfig);
 	  model.ws->import(*data);
 	  model.ws->writeToFile("HeavyFlavorWS.root");
-	  
+
 	  //display in canvas
-	  TCanvas *c = new TCanvas("HFCIntervalForFeldmanCousins","HFCIntervalForFeldmanCousins",600,600);
-	  c->SetWindowSize(600,600);     
-	  TGraph *frame = new TGraph;
-	  RooDataSet* parameterScan = (RooDataSet*) fc_->GetPointsToScan();
-	  for(Int_t i=0; i<parameterScan->numEntries(); ++i)
+	  /*
+	    TCanvas *c = new TCanvas("HFCIntervalForFeldmanCousins","HFCIntervalForFeldmanCousins",600,600);
+	    c->SetWindowSize(600,600);     
+	    TGraph *frame = new TGraph;
+	    RooDataSet* parameterScan = (RooDataSet*) fc_->GetPointsToScan();
+	    for(Int_t i=0; i<parameterScan->numEntries(); ++i)
 	    {
-	      RooArgSet *tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
-	      double arMax = belt->GetAcceptanceRegionMax(*tmpPoint);
-	      double poiVal = tmpPoint->getRealValue(model.r->GetName()) ;	  
-	      frame->SetPoint(i,poiVal,arMax);
+	    RooArgSet *tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
+	    double arMax = belt->GetAcceptanceRegionMax(*tmpPoint);
+	    double poiVal = tmpPoint->getRealValue(model.r->GetName()) ;	  
+	    frame->SetPoint(i,poiVal,arMax);
 	    }
-	  frame->Draw("ap");
-	  frame->GetXaxis()->SetTitle("R");
-	  frame->GetYaxis()->SetTitle("Acceptance region max");
+	    frame->Draw("ap");
+	    frame->GetXaxis()->SetTitle("R");
+	    frame->GetYaxis()->SetTitle("Acceptance region max");
 	  
-	  char buf[100];
-	  sprintf(buf,"%3.2f < R < %3.2f",model.rFitLowerLimit,model.rFitUpperLimit);
-	  TPaveText *pave = new TPaveText(0.15,0.96,0.41,0.99,"NDC");
-	  pave->SetBorderSize(0);
-	  pave->SetFillStyle(0);
-	  pave->SetTextAlign(12);
-	  pave->SetTextFont(42);
-	  pave->AddText("CMS preliminary");
-	  pave->Draw();
-	  
-	  pave = new TPaveText(0.4,0.96,0.94,0.99,"NDC");
-	  pave->SetFillStyle(0);
-	  pave->SetBorderSize(0);
-	  pave->SetTextAlign(32);
-	  pave->SetTextFont(42);
-	  pave->AddText(buf);
-	  pave->Draw();
-	  
-	  c->SaveAs("HFCIntervalForFeldmanCousins.png");
-	  c->SaveAs("HFCIntervalForFeldmanCousins.pdf");
-	  c->SaveAs("HFCIntervalForFeldmanCousins.C");
+	    char buf[100];
+	    sprintf(buf,"%3.2f < R < %3.2f",model.rFitLowerLimit,model.rFitUpperLimit);
+	    TPaveText *pave = new TPaveText(0.15,0.96,0.41,0.99,"NDC");
+	    pave->SetBorderSize(0);
+	    pave->SetFillStyle(0);
+	    pave->SetTextAlign(12);
+	    pave->SetTextFont(42);
+	    pave->AddText("CMS preliminary");
+	    pave->Draw();
+	    
+	    pave = new TPaveText(0.4,0.96,0.94,0.99,"NDC");
+	    pave->SetFillStyle(0);
+	    pave->SetBorderSize(0);
+	    pave->SetTextAlign(32);
+	    pave->SetTextFont(42);
+	    pave->AddText(buf);
+	    pave->Draw();
+	    
+	    c->SaveAs("HFCIntervalForFeldmanCousins.png");
+	    c->SaveAs("HFCIntervalForFeldmanCousins.pdf");
+	    c->SaveAs("HFCIntervalForFeldmanCousins.C");
+	    }
+	  */
 	}
     }
-
+  
   //
   // draw the results
   //
@@ -708,7 +717,6 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       c->SetWindowSize(600,600);
 
       //plot the likelihood in the main frame
-
       TString resLabel;
       if(fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) 
 	{
@@ -809,6 +817,85 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       c->SaveAs("HFCLikelihood.png");
       c->SaveAs("HFCLikelihood.pdf");
       c->SaveAs("HFCLikelihood.C");
+
+      
+      //
+      // PROFILE LIKELIHOODS
+      //
+      c = new TCanvas("HFCMeasurementProfLikelihood","HFCMeasurementProfLikelihood",600,600);
+      c->SetWindowSize(600,600);
+      
+      //plot the likelihood in the main frame
+      if(fitType_==FIT_EB || fitType_==FIT_EB_AND_EQ) 
+	{
+	  frame = model.sfeb->frame(Title("Likelihood"),Range(0.5,1.3));
+	  frame->GetXaxis()->SetTitle("SF #varepsilon_{b}");
+	}
+      else if (fitType_==FIT_R || fitType_==FIT_R_AND_EB || fitType_==FIT_R_CONSTRAINED) 
+	{
+	  frame = model.r->frame(Title("Likelihood"),Range(0.8,1.2)) ;    
+	  frame->GetXaxis()->SetTitle("R");
+	}
+      
+      pll->plotOn(frame,ShiftToZero(),Name("pll"),FillStyle(0),LineColor(kBlue),LineWidth(2));
+      for(size_t ill=0; ill<profLikelihoods.size(); ill++)
+	{
+	  if(profLikelihoods[ill]==0) continue;
+	  TString pllname("pll"); pllname +=ill;
+	  profLikelihoods[ill]->plotOn(frame, ShiftToZero(), LineColor(llColors[ill]), LineWidth(2),Name(pllname));
+	}
+      
+      frame->GetXaxis()->SetTitleOffset(0.8);
+      frame->GetYaxis()->SetTitle("-Log(L/L_{0})");
+      frame->GetYaxis()->SetTitleOffset(1);
+      frame->GetYaxis()->SetRangeUser(0,5);
+      frame->Draw();
+      
+      pave = new TPaveText(0.15,0.96,0.41,0.99,"NDC");
+      pave->SetBorderSize(0);
+      pave->SetFillStyle(0);
+      pave->SetTextAlign(12);
+      pave->SetTextFont(42);
+      pave->AddText("CMS preliminary");
+      pave->Draw();
+      
+      pave = new TPaveText(0.4,0.96,0.94,0.99,"NDC");
+      pave->SetFillStyle(0);
+      pave->SetBorderSize(0);
+      pave->SetTextAlign(32);
+      pave->SetTextFont(42);
+      pave->AddText(resLabel.Data());
+      pave->Draw();
+
+      leg = new TLegend(0.2,0.65,0.45,0.9,NULL,"brNDC");
+      leg->AddEntry("pll","Combined","l");     
+      for(size_t ill=0; ill<profLikelihoods.size(); ill++)
+	{
+	  TString pllname("pll"); pllname +=ill;
+	  leg->AddEntry(pllname,lltitles[ill],"l");
+	}
+
+      formatForCmsPublic(c,leg,"",5);
+      leg->SetFillColor(0);
+      leg->SetFillStyle(3001);
+      leg->Draw();
+      
+      //draw the data and the model sum in a sub-pad
+      npad = new TPad("pllpad","pll", 0.6, 0.6, 0.9, 0.9);
+      npad->Draw();
+      npad->cd();
+      frame = model.bmult->frame();
+
+      data->plotOn(frame,DrawOption("pz"));
+      frame->Draw();
+      h->DrawClone("histsame");
+      c->Modified();
+      c->Update();
+      c->SaveAs("HFCProfLikelihood.png");
+      c->SaveAs("HFCProfLikelihood.pdf");
+      c->SaveAs("HFCProfLikelihood.C");
+
+
 
       //
       // CONTOUR PLOT FOR COMBINED FITS

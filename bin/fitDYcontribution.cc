@@ -186,6 +186,7 @@ int main(int argc,char *argv[])
       float totalOthers=otherProcsHisto[0]->Integral(0,otherProcsHisto[0]->GetXaxis()->GetNbins()+1);
 
       RooRealVar ndyexp("<N>_{DY-MC}","dyyieldsexp",dyExpected);
+      cout << dyExpected << " " << totalOthers << " **********************" << endl;
       //float maxdysf=(totalData-totalOthers)/dyExpected;
       RooRealVar ndysf("SF_{DY}","dyyieldssfactor",1.0,0.,5.0);
       RooFormulaVar ndy("N_{DY}","@0*@1",RooArgSet(ndyexp,ndysf));

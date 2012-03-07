@@ -72,6 +72,7 @@ struct CombinedHFCModel_t
   Double_t rFitLowerLimit,         rFitUpperLimit;
   Double_t rFitResult,           rFitResultAsymmErrHi,           rFitResultAsymmErrLo;
   Double_t rFit[MAXCATEGORIES],  rFitAsymmErrHi[MAXCATEGORIES],  rFitAsymmErrLo[MAXCATEGORIES];
+  Double_t rCombFit[MAXCATEGORIES],  rCombFitAsymmErrHi[MAXCATEGORIES],  rCombFitAsymmErrLo[MAXCATEGORIES];
   Double_t ebFit[MAXCATEGORIES], ebFitAsymmErrHi[MAXCATEGORIES], ebFitAsymmErrLo[MAXCATEGORIES];
   Double_t eqFit[MAXCATEGORIES], eqFitAsymmErrHi[MAXCATEGORIES], eqFitAsymmErrLo[MAXCATEGORIES];
   Double_t minLL;

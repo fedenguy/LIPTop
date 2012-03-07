@@ -31,6 +31,7 @@ EnsembleMeasurement_t MassMeasurement::DoMassFit(top::EventSummaryHandler &evHan
   //configure the pre-selection
   float minTopMass=fitPars_["min"];
   float maxTopMass=fitPars_["max"];
+  int cattype=(int) fitPars_["cattype"];
 
   //read original tree into an ensemble measurement
   for(unsigned int i=0; i<evTree->GetEntriesFast(); i++)
@@ -45,8 +46,22 @@ EnsembleMeasurement_t MassMeasurement::DoMassFit(top::EventSummaryHandler &evHan
       if(btagMult==0) continue;
 
       em.evMasses[em.nEvents] = topMass;
-      if(btagMult==1) em.evCategories[em.nEvents]=(ev.cat==EMU ? OF_EQ1BTAGS  : SF_EQ1BTAGS);
-      else            em.evCategories[em.nEvents]=(ev.cat==EMU ? OF_GEQ2BTAGS : SF_GEQ2BTAGS);
+      if(cattype==INCLUSIVE)
+	{
+	  if(btagMult==1) em.evCategories[em.nEvents]=EQ1BTAGS;
+	  else            em.evCategories[em.nEvents]=GEQ2BTAGS;  
+	}
+      else if(cattype==EXCLUSIVE)
+	{
+	  if(ev.cat==EMU) em.evCategories[em.nEvents]=(btagMult==1?OF_EQ1BTAGS:OF_GEQ2BTAGS);
+	  else            em.evCategories[em.nEvents]=(btagMult==1?SF_EQ1BTAGS:SF_GEQ2BTAGS);
+	}
+      else
+	{
+	  if(ev.cat==EMU)  em.evCategories[em.nEvents]=(btagMult==1?EMU_EQ1BTAGS:EMU_GEQ2BTAGS);
+	  if(ev.cat==MUMU) em.evCategories[em.nEvents]=(btagMult==1?MUMU_EQ1BTAGS:MUMU_GEQ2BTAGS);
+	  if(ev.cat==EE)   em.evCategories[em.nEvents]=(btagMult==1?EE_EQ1BTAGS:EE_GEQ2BTAGS);
+	}
       em.nEvents++;
     }  
 
@@ -187,7 +202,7 @@ void MassMeasurement::InitModel()
       else
 	model = new RooAddPdf("model_"+sName,"Signal Only Model",RooArgList(*lan,*gaus),*massfrac);
 
-      //      model->printCompactTree(cout);
+      //model->printCompactTree(cout);
       allPdfs.push_back( model );  
     }
 }
@@ -521,14 +536,22 @@ std::map<TString,Double_t> MassMeasurement::ParseParametersFrom(TString parfileU
       catTitles_[EQ1BTAGS]  = TString("1 b-tags");
       catTitles_[GEQ2BTAGS] = TString("#geq 2 b-tags");
     }
-  else
+  else if(cattype==EXCLUSIVE)
     {
       catTitles_[SF_EQ1BTAGS]  = TString("1 b-tags (ee+#mu#mu)");
       catTitles_[SF_GEQ2BTAGS] = TString("#geq 2 b-tags (ee+#mu#mu)");
       catTitles_[OF_EQ1BTAGS]  = TString("1 b-tags (e#mu)");
       catTitles_[OF_GEQ2BTAGS] = TString("#geq 2 b-tags (e#mu)");
     }
-
+  else
+    {
+      catTitles_[EE_EQ1BTAGS]  = TString("1 b-tags (ee)");
+      catTitles_[EE_GEQ2BTAGS] = TString("#geq 2 b-tags (ee)");
+      catTitles_[MUMU_EQ1BTAGS]  = TString("1 b-tags (#mu#mu)");
+      catTitles_[MUMU_GEQ2BTAGS] = TString("#geq 2 b-tags (#mu#mu)");
+      catTitles_[EMU_EQ1BTAGS]  = TString("1 b-tags (e#mu)");
+      catTitles_[EMU_GEQ2BTAGS] = TString("#geq 2 b-tags (e#mu)");
+    }
   return fitPars_;
 }
 

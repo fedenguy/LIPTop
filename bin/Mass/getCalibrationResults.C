@@ -19,6 +19,11 @@
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/plotter.h"
 
+#include <iostream>
+#include <sstream>
+
+std::stringstream report;
+
 void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
 {
   TString mpts[]={"161.5","163.5","166.5","169.5","172.5","175.5","178.5","181.5","184.5"};
@@ -30,16 +35,25 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
       labels.push_back("1 b-tags");
       labels.push_back("#geq 2 b-tags");
     }
-  else
+  else if(nCategs==4)
     {
       labels.push_back("1 b-tags (ee+#mu#mu)");
       labels.push_back("#geq 2 b-tags (ee+#mu#mu)");
       labels.push_back("1 b-tags (e#mu)");
       labels.push_back("#geq 2 b-tags (e#mu)");
     }
+  else 
+    {
+      labels.push_back("1 b-tags (ee)");
+      labels.push_back("#geq 2 b-tags (ee)");
+      labels.push_back("1 b-tags (#mu#mu)");
+      labels.push_back("#geq 2 b-tags (#mu#mu)");
+      labels.push_back("1 b-tags (e#mu)");
+      labels.push_back("#geq 2 b-tags (e#mu)");
+    }
   
   TString outDir=gSystem->DirName(url);
-  cout << "Plots will be stored at @ " << outDir << endl;
+  report << "Plots will be stored at @ " << outDir << endl;
 
   TGraphErrors *lingr = new TGraphErrors;  
   lingr->SetMarkerStyle(20);
@@ -142,7 +156,7 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
   biasgr->Fit("pol1");
   float a=biasgr->GetFunction("pol1")->GetParameter(1);
   float b=biasgr->GetFunction("pol1")->GetParameter(0);
-  cout << "[Inclusive bias correction] resslope:" << (a+1.) << " resbias:" << b << endl;
+  report << "[Inclusive bias correction] resslope:" << (a+1.) << " resbias:" << b << endl;
   c->Modified();
   c->Update();
   c->SaveAs(outDir+"/TopMassCalibrationResults.C");
@@ -156,7 +170,7 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
   c->Divide(1,nCategs+1);
   c->cd(nCategs+1)->Delete();
   float ystep=(1.0)/(nCategs+1);
-  for(int icat=0; icat<nCategs; icat++) 
+  for(int icat=nCategs-1; icat>=0; --icat)
     {
       TGraphErrors *gr=categbiasgr[icat];
       gr->SetMarkerStyle(20);
@@ -175,7 +189,8 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
       gr->Draw("ap");
       float yscale = (0.95-ystep)/(ystep-0.0);
       if(icat==0) yscale=(0.95-2*ystep)/(1.2*ystep-0);
-      gr->GetXaxis()->SetTitle("Generated m_{top} [GeV/c^{2}]");
+      if(icat==0) gr->GetXaxis()->SetTitle("Generated m_{top} [GeV/c^{2}]");
+      else gr->GetXaxis()->SetNdivisions(0);
       gr->GetYaxis()->SetTitle("Bias");
       gr->GetYaxis()->SetRangeUser(-5.2,5.2);
       gr->GetXaxis()->SetTitleOffset(0.85);
@@ -188,10 +203,10 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
       gr->Fit("pol1");
       float a=gr->GetFunction("pol1")->GetParameter(1);
       float b=gr->GetFunction("pol1")->GetParameter(0);
-      cout << "[Bias correction #" << icat+1 << "] resslope:" << (a+1.) << " resbias:" << b << endl;
+      report << "[Bias correction #" << icat+1 << "] resslope:" << (a+1.) << " resbias:" << b << endl;
       
       //prepare label
-      TPaveText *pave = new TPaveText(0.65,0.75,0.9,0.92,"NDC");
+      TPaveText *pave = new TPaveText(0.70,0.65,0.8,0.92,"NDC");
       pave->SetTextFont(42);
       pave->SetFillStyle(0);
       pave->SetBorderSize(0);
@@ -297,7 +312,7 @@ void getCalibrationResults(TString url="TopMassCalibration.root",int nCategs=4)
   c->SaveAs(outDir+"/TopMassCalibrationPullsMomenta.pdf");
   //delete c;
 
-
+  cout << report.str() << endl;
 
 
 }

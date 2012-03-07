@@ -311,12 +311,16 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( new TH1D("mtsum"+cats[ivar],";M_{T}(l^{(1)},E_{T}^{miss})+M_{T}(l^{(2)},E_{T}^{miss});Events",100,0,1000) );
       controlHistos.addHistogram( new TH1D("ptsum"+cats[ivar],";p_{T}(l^{(1)})+p_{T}(l^{(2)});Events",100,0,500) );
 
-      TH1F * h = new TH1F ("njets"+cats[ivar], "; Jet multiplicity; Events", 4, 0.,4.);
+      TH1F * h = new TH1F ("njets"+cats[ivar], "; Jet multiplicity; Events", 6, 0.,6.);
       h->GetXaxis()->SetBinLabel(1,"=0 jets");
       h->GetXaxis()->SetBinLabel(2,"=1 jets");
       h->GetXaxis()->SetBinLabel(3,"=2 jets");
-      h->GetXaxis()->SetBinLabel(4,"#geq 3 jets");
+      h->GetXaxis()->SetBinLabel(4,"= 3 jets");
+      h->GetXaxis()->SetBinLabel(5,"= 4 jets");
+      h->GetXaxis()->SetBinLabel(6,"#geq 5 jets");
       controlHistos.addHistogram( h );
+      controlHistos.addHistogram( (TH1F *)h->Clone("njets30") );
+      controlHistos.addHistogram( (TH1F *)h->Clone("njets40") );
 
       controlHistos.addHistogram( new TH1F ("met"+cats[ivar], "; #slash{E}_{T} [GeV/c]; Events / (10 GeV/c)", 50, 0.,500.) );
       controlHistos.addHistogram( new TH1F ("rho"+cats[ivar]  ,"; #rho [GeV]; Events / (10 GeV/c)", 50, 0., 25.) );
@@ -581,7 +585,8 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( !isSameFlavor || theMET.pt()>40 );
+	  bool passMet( !isSameFlavor || theMET.pt()>30 );
+	  bool passMet40( !isSameFlavor || theMET.pt()>40 );
 	  bool isOS(dilcharge<0);
 	  
 	  //fill selection histograms
@@ -589,8 +594,7 @@ int main(int argc, char* argv[])
 	    {
 	      TString ctf=catsToFill[ictf];
 
-	      if(ivar==0)
-		controlHistos.fillHisto("nvertices",ctf,ev.nvtx,weight,true);
+	      if(ivar==0) controlHistos.fillHisto("nvertices",ctf,ev.nvtx,weight,true);
 
 	      //reinforce dilepton selection
 	      if(isInQuarkoniaRegion) continue;
@@ -610,11 +614,10 @@ int main(int argc, char* argv[])
 		  else
 		    metCat="limbo";
 		  controlHistos.fillHisto(jetCat+metCat+"dilarccosine"+cats[ivar],ctf,acosine,weight);
-			      
-		  if(passMet)
-		    {
-		      controlHistos.fillHisto("njets"+cats[ivar],ctf,nseljetsLoose,weight);
-		    }
+
+		  controlHistos.fillHisto("njets"+cats[ivar],ctf,nseljetsLoose,weight);			      
+		  if(passMet) controlHistos.fillHisto("njets30"+cats[ivar],ctf,nseljetsLoose,weight);
+		  if(passMet40) controlHistos.fillHisto("njets40"+cats[ivar],ctf,nseljetsLoose,weight);
 		}
 	      
 	      //>= 2 jets
@@ -763,8 +766,11 @@ int main(int argc, char* argv[])
 
 			  //just for the leading pT jets
 			  TString jetstr(""); jetstr+=(ijet+1);
-			  controlHistos.fillHisto("jet"+jetstr,ctf,ptOrderedJets[ijet].pt(),weight);
-			  controlHistos.fillHisto("jet"+jetstr+"eta",ctf,fabs(ptOrderedJets[ijet].eta()),weight);
+			  if(passMet40)
+			    {
+			      controlHistos.fillHisto("jet"+jetstr,ctf,ptOrderedJets[ijet].pt(),weight);
+			      controlHistos.fillHisto("jet"+jetstr+"eta",ctf,fabs(ptOrderedJets[ijet].eta()),weight);
+			    }
 			}
 
 

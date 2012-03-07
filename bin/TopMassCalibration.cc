@@ -78,13 +78,21 @@ int main(int argc, char* argv[])
   //
   // map the samples per type
   //
-  std::vector<Float_t> procYields(4,0);    
+  std::vector<Float_t> procYields(6,0);    
 
   //signal samples first (all share the same yields)
-  procYields[MassMeasurement::SF_EQ1BTAGS]=1077;
-  procYields[MassMeasurement::SF_GEQ2BTAGS]=2057;
-  procYields[MassMeasurement::OF_EQ1BTAGS]=1502;
-  procYields[MassMeasurement::OF_GEQ2BTAGS]=2787;
+  //2011A
+  procYields[MassMeasurement::EE_EQ1BTAGS]=250.6;
+  procYields[MassMeasurement::EE_GEQ2BTAGS]=491.5;
+  procYields[MassMeasurement::MUMU_EQ1BTAGS]=323.6;
+  procYields[MassMeasurement::MUMU_GEQ2BTAGS]=634.3;
+  procYields[MassMeasurement::EMU_EQ1BTAGS]=805.1;
+  procYields[MassMeasurement::EMU_GEQ2BTAGS]=1497.7;
+  //2011B
+  // procYields[MassMeasurement::SF_EQ1BTAGS]=1077;
+  // procYields[MassMeasurement::SF_GEQ2BTAGS]=2057;
+  // procYields[MassMeasurement::OF_EQ1BTAGS]=1502;
+  // procYields[MassMeasurement::OF_GEQ2BTAGS]=2787;
   evtYields["Signal"]=procYields;
   Int_t pdfVar(0);
   if(syst.Contains("pdf")) sscanf(syst.Data(),"pdf%d",&pdfVar);
@@ -148,19 +156,35 @@ int main(int argc, char* argv[])
       SingleTop.push_back("SingleTbar_s");
       SingleTop.push_back("SingleT_s");
       allSamples["SingleTop"]=SingleTop;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=70; 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=59; 
-      procYields[MassMeasurement::OF_EQ1BTAGS]=95; 
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=86;
+      //2011A
+      procYields[MassMeasurement::EE_EQ1BTAGS]=16.9; 
+      procYields[MassMeasurement::EE_GEQ2BTAGS]=14.3; 
+      procYields[MassMeasurement::MUMU_EQ1BTAGS]=21.3;
+      procYields[MassMeasurement::MUMU_GEQ2BTAGS]=18.2;
+      procYields[MassMeasurement::EMU_EQ1BTAGS]=50.2;
+      procYields[MassMeasurement::EMU_GEQ2BTAGS]=43.8;
+      //2011B
+      //      procYields[MassMeasurement::SF_EQ1BTAGS]=70; 
+      //  procYields[MassMeasurement::SF_GEQ2BTAGS]=59; 
+      // procYields[MassMeasurement::OF_EQ1BTAGS]=95; 
+      //procYields[MassMeasurement::OF_GEQ2BTAGS]=86;
       evtYields["SingleTop"]=procYields;
       
       Proc_t OtherTTbar;
       OtherTTbar.push_back("TTJets");
       allSamples["OtherTTbar"]=OtherTTbar;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=9.0+0.0;    //yields include w+jets 
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=8.0+0.0;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=11.+14.;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=11.+0.0;
+      //2011A
+      procYields[MassMeasurement::EE_EQ1BTAGS]=3.6+0;    //yields include w+jets 
+      procYields[MassMeasurement::EE_GEQ2BTAGS]=3.2+0.0;
+      procYields[MassMeasurement::MUMU_EQ1BTAGS]=0.8+0.0;
+      procYields[MassMeasurement::MUMU_GEQ2BTAGS]=1.7+0.0;
+      procYields[MassMeasurement::EMU_EQ1BTAGS]=6.3+7.8;
+      procYields[MassMeasurement::EMU_GEQ2BTAGS]=8.9+0.0;
+      //2011B
+      //      procYields[MassMeasurement::SF_EQ1BTAGS]=9.0+0.0;    //yields include w+jets 
+      // procYields[MassMeasurement::SF_GEQ2BTAGS]=8.0+0.0;
+      // procYields[MassMeasurement::OF_EQ1BTAGS]=11.+14.;
+      //procYields[MassMeasurement::OF_GEQ2BTAGS]=11.+0.0;
       evtYields["OtherTTbar"]=procYields;
       
       Proc_t DiBosons;
@@ -168,10 +192,18 @@ int main(int argc, char* argv[])
       DiBosons.push_back("ZZ");
       DiBosons.push_back("WZ");
       allSamples["DiBosons"]=DiBosons;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=13.;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=3.;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=18.;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=3.;
+      //2011A
+      procYields[MassMeasurement::EE_EQ1BTAGS]=3.6;
+      procYields[MassMeasurement::EE_GEQ2BTAGS]=1.2;
+      procYields[MassMeasurement::MUMU_EQ1BTAGS]=3.9;
+      procYields[MassMeasurement::MUMU_GEQ2BTAGS]=1.1;
+      procYields[MassMeasurement::EMU_EQ1BTAGS]=10.3;
+      procYields[MassMeasurement::EMU_GEQ2BTAGS]=1.6;
+      //2011B
+      //      procYields[MassMeasurement::SF_EQ1BTAGS]=13.;
+      //  procYields[MassMeasurement::SF_GEQ2BTAGS]=3.;
+      // procYields[MassMeasurement::OF_EQ1BTAGS]=18.;
+      // procYields[MassMeasurement::OF_GEQ2BTAGS]=3.;
       evtYields["DiBosons"]=procYields;
       
       Proc_t DY;
@@ -180,10 +212,18 @@ int main(int argc, char* argv[])
       float uncScaleFactor(1.0);
       if(syst=="dyup")   uncScaleFactor *= 1.15;
       if(syst=="dydown") uncScaleFactor *= 0.85;
-      procYields[MassMeasurement::SF_EQ1BTAGS]=249.*uncScaleFactor;
-      procYields[MassMeasurement::SF_GEQ2BTAGS]=42.*uncScaleFactor;
-      procYields[MassMeasurement::OF_EQ1BTAGS]=47.*uncScaleFactor;
-      procYields[MassMeasurement::OF_GEQ2BTAGS]=6.0*uncScaleFactor;
+      //2011A
+      procYields[MassMeasurement::EE_EQ1BTAGS]=92.3*uncScaleFactor;
+      procYields[MassMeasurement::EE_GEQ2BTAGS]=22.2*uncScaleFactor;
+      procYields[MassMeasurement::MUMU_EQ1BTAGS]=110.0*uncScaleFactor;
+      procYields[MassMeasurement::MUMU_GEQ2BTAGS]=19.3*uncScaleFactor;
+      procYields[MassMeasurement::EMU_EQ1BTAGS]=35.6*uncScaleFactor;
+      procYields[MassMeasurement::EMU_GEQ2BTAGS]=5.9*uncScaleFactor;
+      //2011B
+      //      procYields[MassMeasurement::SF_EQ1BTAGS]=249.*uncScaleFactor;
+      // procYields[MassMeasurement::SF_GEQ2BTAGS]=42.*uncScaleFactor;
+      //procYields[MassMeasurement::OF_EQ1BTAGS]=47.*uncScaleFactor;
+      // procYields[MassMeasurement::OF_GEQ2BTAGS]=6.0*uncScaleFactor;
       evtYields["DY"]=procYields;
     }
 
@@ -220,7 +260,7 @@ int main(int argc, char* argv[])
 
       //instantiate the histograms
       ProcHistos_t ihistos;
-      for(size_t icat=0; icat<4;icat++)
+      for(size_t icat=0; icat<6;icat++)
 	{
 	  TString hname(sName+"_"); hname += icat;
 	  TH1D *h= new TH1D(hname,hname,80,100,500);      
@@ -267,9 +307,9 @@ int main(int argc, char* argv[])
 
 	      //check the category of the event
 	      int catToFill(0);
-	      bool isSF(ev.cat==EE || ev.cat==MUMU);
-	      if(nbtags==1) catToFill=(isSF ? MassMeasurement::SF_EQ1BTAGS  : MassMeasurement::OF_EQ1BTAGS);
-	      if(nbtags>1)  catToFill=(isSF ? MassMeasurement::SF_GEQ2BTAGS : MassMeasurement::OF_GEQ2BTAGS);
+	      if(ev.cat==EMU)  catToFill=(nbtags==1?MassMeasurement::EMU_EQ1BTAGS:MassMeasurement::EMU_GEQ2BTAGS);
+	      if(ev.cat==MUMU) catToFill=(nbtags==1?MassMeasurement::MUMU_EQ1BTAGS:MassMeasurement::MUMU_GEQ2BTAGS);
+	      if(ev.cat==EE)   catToFill=(nbtags==1?MassMeasurement::EE_EQ1BTAGS:MassMeasurement::EE_GEQ2BTAGS);
 
 	      //fill the histograms
 	      float evWeight=ev.weight*ev.xsecWeight;

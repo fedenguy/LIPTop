@@ -92,9 +92,10 @@ class MassMeasurement
   TString tag_;  
   MassMeasurement(TString parfileURL,TString tag);
 
-  enum CategoryMode {INCLUSIVE,EXCLUSIVE};
+  enum CategoryMode {INCLUSIVE=0,EXCLUSIVE, DILEPTONEXCLUSIVE};
   enum InclusiveCategories {EQ1BTAGS=0,GEQ2BTAGS};
   enum ExclusiveCategories {SF_EQ1BTAGS=0,SF_GEQ2BTAGS,OF_EQ1BTAGS,OF_GEQ2BTAGS};
+  enum ExclusiveDileptonCategories {EE_EQ1BTAGS=0,EE_GEQ2BTAGS,MUMU_EQ1BTAGS,MUMU_GEQ2BTAGS,EMU_EQ1BTAGS,EMU_GEQ2BTAGS};
   inline int getCategorizationMode() { return (int) fitPars_["cattype"]; }
   inline int getNumberOfCategories() { return (int) fitPars_["ncategs"]; }
   

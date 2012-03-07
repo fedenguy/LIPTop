@@ -114,6 +114,7 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 	    if(p4.Pt()>20 && fabs(p4.Eta())<2.5)
 	      {
 		leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
+		//leptons.push_back( KinCandidate_t(p4,p4.Pt()) );
 		leptonsp4.push_back(p4);
 	      }
 	    clusteredP4+=p4;

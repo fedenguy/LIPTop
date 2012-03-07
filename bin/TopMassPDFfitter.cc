@@ -49,7 +49,7 @@ typedef std::map<std::string,Value_t> FitResults_t;
 using namespace std; 
 using namespace RooFit ;
 
-enum Channel{INCLUSIVE,SAMEFLAVOR,OPFLAVOR};
+enum Channel{INCLUSIVE,SAMEFLAVOR,OPFLAVOR,EECHANNEL,MUMUCHANNEL};
 FitResults_t SignalPDFs(TString url="EventSummaries.root",int nbtags=-1,int channel=INCLUSIVE);
 FitResults_t BckgPDFs(TString url="MassPDFs.root",int channel=INCLUSIVE);
 FitResults_t DYBckgPDFs(TString url,int channel=INCLUSIVE);
@@ -100,13 +100,14 @@ int main(int argc, char* argv[])
   AutoLibraryLoader::enable();
     
   //fit the templates
-  int ch[]={INCLUSIVE,SAMEFLAVOR,OPFLAVOR};
-  TString chName[]={"inclusive","same flavor","op. flavor"};
+  int ch[]={INCLUSIVE,SAMEFLAVOR,OPFLAVOR,EECHANNEL,MUMUCHANNEL};
+  const size_t nch=sizeof(ch)/sizeof(int);
+  TString chName[]={"inclusive","same flavor","op. flavor","ee","#mu#mu"};
 
   //signal fit
   if(fitSignal)
     {
-      for(size_t i=0; i<3;i++)
+      for(size_t i=0; i<nch;i++)
 	{
 	  std::map<string,FitResults_t> sigFitResults;
 	  sigFitResults["[CATEGORY #1]"]       = SignalPDFs(url,1,ch[i]);
@@ -128,7 +129,7 @@ int main(int argc, char* argv[])
   //background fits
   if(fitBckg)
     {
-      for(size_t i=0; i<3;i++)
+      for(size_t i=0; i<nch;i++)
 	{
 	  std::map<string,FitResults_t> bckgFitResults;
 	  bckgFitResults["[NON DY]"] = BckgPDFs(url,ch[i]);      
@@ -209,6 +210,8 @@ FitResults_t BckgPDFs(TString url,int channel)
 	  for(Int_t i=0; i<t->GetEntriesFast(); i++)
 	    {
 	      t->GetEntry(i);
+	      if(channel==EECHANNEL && cat!=EE) continue;
+	      if(channel==MUMUCHANNEL && cat!=MUMU)continue;
 	      if(channel==SAMEFLAVOR && cat!=EE && cat!=MUMU) continue;
 	      if(channel==OPFLAVOR && cat!= EMU) continue;
 	      if(evmeasurements[0]>0) 
@@ -251,6 +254,8 @@ FitResults_t BckgPDFs(TString url,int channel)
   TString chName("");
   if(channel==OPFLAVOR) chName += "_of";
   if(channel==SAMEFLAVOR) chName += "_sf";
+  if(channel==EECHANNEL) chName +="_ee";
+  if(channel==MUMUCHANNEL) chName +="_mumu";
   TString cnvName("NonDYPDF"); cnvName += chName; 
   TCanvas *c = new TCanvas(cnvName,cnvName,1800,600);
   c->SetWindowSize(1600,800);
@@ -384,9 +389,11 @@ FitResults_t DYBckgPDFs(TString url,int channel)
 	      bool isZcand(false);
 	      isZcand=bool(evmeasurements[2]); 
 	      int nbtags=evmeasurements[5];
-	      if(channel==SAMEFLAVOR)
+	      if(channel==SAMEFLAVOR || channel==EECHANNEL || channel==MUMUCHANNEL)
 		{
-		  if(cat!=EE && cat!=MUMU) continue;
+		  if(channel==EECHANNEL && cat!=EE) continue;
+		  if(channel==MUMUCHANNEL && cat !=MUMU) continue;
+		  else if(cat!=EE && cat!=MUMU) continue;
 		  
 		  //for data look only at Z like events
 		  if(isData && !isZcand) continue;
@@ -434,7 +441,7 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   //RooAddPdf mcmodel("mcmodel","Mass model",RooArgList(mcgauss,mclan),frac);
   RooLandau mcmodel(mclan);
  
-  if(channel==SAMEFLAVOR)
+  if(channel==SAMEFLAVOR || channel==EECHANNEL || channel==MUMUCHANNEL)
     {
       RooDataHist binnedMC("binnedMC","binned version of mch",RooArgSet(mass),ctrlmch);
       RooChi2Var chi2("chi2","chi2",mcmodel,binnedMC,DataError(RooAbsData::SumW2)) ;
@@ -499,6 +506,8 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   TString chName("");
   if(channel==OPFLAVOR) chName += "_of";
   if(channel==SAMEFLAVOR) chName += "_sf";
+  if(channel==EECHANNEL) chName += "_ee";
+  if(channel==MUMUCHANNEL) chName += "_mumu";
   TString cnvName("DYPDF"); cnvName += chName; 
   TCanvas *c = new TCanvas(cnvName,cnvName,800,800);
   c->SetWindowSize(800,800);
@@ -600,6 +609,8 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
       for(Int_t i=0; i<t->GetEntriesFast(); i++)
 	{
 	  t->GetEntry(i);
+	  if(channel==EECHANNEL && cat!=EE) continue;
+	  if(channel==MUMUCHANNEL && cat!= MUMU) continue;
 	  if(channel==SAMEFLAVOR && cat!=EE && cat!=MUMU) continue;
 	  if(channel==OPFLAVOR && cat!= EMU) continue;
 	  if(nbtags==0 && evmeasurements[5]!=0) continue;
@@ -682,6 +693,8 @@ FitResults_t SignalPDFs(TString url,int nbtags,int channel)
   int ny=MassPointCollection.size()/4+1;
   TString chName("");
   if(channel==OPFLAVOR) chName += "of";
+  if(channel==EECHANNEL) chName += "ee";
+  if(channel==MUMUCHANNEL) chName += "mumu";
   if(channel==SAMEFLAVOR) chName += "sf";
   TString cnvName("SignalPDF_"); cnvName += chName; cnvName +="_"; cnvName += nbtags; cnvName += "btags";
   TCanvas *c = getNewCanvas(cnvName,cnvName,true);

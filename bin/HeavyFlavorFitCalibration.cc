@@ -474,11 +474,26 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
 	      for(int iev=0; iev<nevToGenerate; iev++) ensembleHistos[ih]->Fill( itt->second[ih]->GetRandom() );
 	    }
 	}
-      
 
+      if(syst=="vareffs" && iPE>1)
+	{
+	  Double_t varsfeb=fitPars[btagWP+"_sfb"]+gRandom->Gaus(0,fitPars[btagWP+"_sfbunc"]);
+	  hfcFitter.model.sfeb->setVal(varsfeb);
+	  Double_t varsfeq=fitPars[btagWP+"_sfq"]+gRandom->Gaus(0,fitPars[btagWP+"_sfqunc"]);
+	  hfcFitter.model.sfeq->setVal(varsfeq);
+	  cout << fitPars[btagWP+"_sfb"] << " ---> " << varsfeb << endl
+	       << fitPars[btagWP+"_sfq"] << " ---> " << varsfeq << endl;
+	}
+      
       //fit
       hfcFitter.fitHFCtoMeasurement(ensembleHistos,runMode,false);
-      
+
+      if(syst=="vareffs")
+	{
+	  hfcFitter.model.sfeb->setVal(fitPars[btagWP+"_sfb"]);
+	  hfcFitter.model.sfeq->setVal(fitPars[btagWP+"_sfq"]);
+	}
+
       double effb(hfcFitter.model.abseb->getVal()) , effq(hfcFitter.model.abseq->getVal());
       report << "[Ensemble #" << iPE << "]" << endl; 
       report << "\t R   = " << hfcFitter.model.r->getVal() << " +" << hfcFitter.model.r->getAsymErrorHi() << " " << hfcFitter.model.r->getAsymErrorLo() << endl;
