@@ -68,7 +68,7 @@ evCats   = ['','emu','mumu','ee']
 mode='std'
 countHisto='evtflow'
 ibinSummary=5
-captionLumi=4564
+captionLumi='4564'
 dySfactors = { "emu":1, "mumu":1, "ee":1 }
 trigEffs   = { "emu":1, "mumu":1, "ee":1 }
 for o,a in opts:
@@ -79,7 +79,7 @@ for o,a in opts:
     elif o in('-m'): mode=a
     elif o in('-c'): countHisto = a
     elif o in('-b'): ibinSummary = int(a)
-    elif o in('-l'): captionLumi =a
+    elif o in('-l'): captionLumi =stra
     elif o in('-s'):
         sfactors=a.split('/')
         for i in xrange(0,len(sfactors)) : dySfactors[evCats[i+1]]=float(sfactors[i])
