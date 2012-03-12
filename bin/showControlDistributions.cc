@@ -59,7 +59,7 @@ std::pair<float,float> getArcCos(LorentzVector &a, LorentzVector &b)
   return std::pair<float,float>(cosine,arcCosine);
 }
 
-std::map<TString, int> getJetSortCounters(top::PhysicsObjectJetCollection &jets, LorentzVector met, LorentzVector ttbar_t)
+std::map<TString, int> getJetSortCounters(top::PhysicsObjectJetCollection &jets, LorentzVector met, LorentzVector ttbar_t, double jetPtCut)
 {
   std::map<TString,int> ctrs;
 
@@ -71,7 +71,7 @@ std::map<TString, int> getJetSortCounters(top::PhysicsObjectJetCollection &jets,
   top::PhysicsObjectJetCollection prunedJets;
   for(size_t i=0; i<csv.size(); i++)
     {
-      if(csv[i].pt()<30 || fabs(csv[i].eta())>2.5) continue;
+      if(csv[i].pt()<jetPtCut || fabs(csv[i].eta())>2.5) continue;
       prunedJets.push_back(jets[i]);
       bool isB(fabs(csv[i].genid)==5);
       ctrs["alpha"] += isB;
@@ -129,6 +129,9 @@ int main(int argc, char* argv[])
   double xsec = runProcess.getParameter<double>("xsec");
   bool saveSummaryTree = runProcess.getParameter<bool>("saveSummaryTree");
   bool runSystematics = runProcess.getParameter<bool>("runSystematics");
+  double sfMetCut = runProcess.getParameter<double>("sfMetCut");
+  double ofMetCut = runProcess.getParameter<double>("ofMetCut");
+  double jetPtCut = runProcess.getParameter<double>("jetPtCut");
   TString etaFileName = runProcess.getParameter<std::string>("etaResolFileName"); gSystem->ExpandPathName(etaFileName);
   TString phiFileName = runProcess.getParameter<std::string>("phiResolFileName"); gSystem->ExpandPathName(phiFileName);
   TString ptFileName  = runProcess.getParameter<std::string>("ptResolFileName");  gSystem->ExpandPathName(ptFileName);
@@ -500,7 +503,7 @@ int main(int argc, char* argv[])
 	  LorentzVector visible_t      = jetSystem+dileptonSystem;
 	  LorentzVector ttbar_t        = jetSystem+dileptonSystem+theMET;
 
-	  std::map<TString, int> jetSortCtr= getJetSortCounters(phys.jets,phys.met,ttbar_t);
+	  std::map<TString, int> jetSortCtr= getJetSortCounters(phys.jets,phys.met,ttbar_t,jetPtCut);
 
 	  std::vector<TString> catsToFill;
 	  catsToFill.push_back("all");
@@ -522,7 +525,7 @@ int main(int argc, char* argv[])
 	    {
 
 	      float pt=jetColl[ijet].pt();
-	      if(pt<=30 || fabs(jetColl[ijet].eta())>=2.5) continue;
+	      if(pt<=jetPtCut || fabs(jetColl[ijet].eta())>=2.5) continue;
 	      ptOrderedJets.push_back( orderedJetColl[ijet] );
 	      
 	      float csv=orderedJetColl[ijet].btag7;
@@ -585,8 +588,11 @@ int main(int argc, char* argv[])
 	  bool isZcand(isSameFlavor && fabs(dileptonSystem.mass()-91)<15);
 	  bool isEmuInZRegion(!isSameFlavor  && fabs(dileptonSystem.mass()-91)<15);
 	  bool passLooseJets(nseljetsLoose>1);
-	  bool passMet( !isSameFlavor || theMET.pt()>30 );
+
+	  bool passMet( (!isSameFlavor && theMET.pt()>ofMetCut) || (isSameFlavor && theMET.pt()>sfMetCut) );
+
 	  bool passMet40( !isSameFlavor || theMET.pt()>40 );
+
 	  bool isOS(dilcharge<0);
 	  
 	  //fill selection histograms
@@ -680,7 +686,7 @@ int main(int argc, char* argv[])
 			    {
 			      float pt=jetColl[ijet].pt();
 			      float eta=jetColl[ijet].eta();
-			      if(pt<=30 || fabs(eta)>=2.5) continue;
+			      if(pt<=jetPtCut || fabs(eta)>=2.5) continue;
 			      float btagdisc=orderedJetColl[ijet].btag7;
 			      float btagdisctche=orderedJetColl[ijet].btag1;
 			      bool isMatchedToB(false);
