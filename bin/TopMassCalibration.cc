@@ -26,6 +26,7 @@ using namespace RooFit ;
 int maxPE=1;
 TString url(""), massParsUrl(""), syst("std"), calibrationList(""), outDir("");
 bool doDebug=false;
+double jetPtCut=30;
 
 std::map<TString,std::vector<Float_t> > evtYields;
 typedef std::vector<TString> Proc_t;
@@ -48,6 +49,7 @@ void printHelp()
   printf("--calib   --> csv list with mass points to calibrate\n");
   printf("--out     --> output directory for the plots\n");
   printf("--npe     --> number of pseudo-experiments to generate\n");
+  printf("--jetpt   --> cut to be applied on jet pt\n");
   printf("--debug   --> produce plots for each pseudo-experiment\n");
 }
 
@@ -71,6 +73,7 @@ int main(int argc, char* argv[])
       if(arg.find("--calib")!=string::npos && i+1<argc){ calibrationList=argv[i+1];                                   i++;  printf("calib   = %s\n", calibrationList.Data()); }
       if(arg.find("--out")!=string::npos && i+1<argc)  { outDir=argv[i+1];                                            i++;  printf("out     = %s\n", outDir.Data()); }
       if(arg.find("--npe")!=string::npos && i+1<argc)  { TString npe=argv[i+1]; maxPE=npe.Atoi();                     i++;  printf("n pe    = %d\n", maxPE); }
+      if(arg.find("--jetpt")!=string::npos && i+1<argc){ TString jpc=argv[i+1]; jetPtCut=jpc.Atof();                  i++;  printf("ptJet   > %f\n", jetPtCut); }
       if(arg.find("--debug")!=string::npos)            { doDebug=true; }
     }
   if(url=="" || massParsUrl=="") { printHelp(); return 0;}
@@ -294,7 +297,7 @@ int main(int argc, char* argv[])
 		  top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
 		  for(unsigned int ijet=0; ijet<phys.jets.size(); ijet++)
 		    {
-		      if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.4) continue;
+		      if(phys.jets[ijet].pt()<jetPtCut || fabs(phys.jets[ijet].eta())>2.4) continue;
 		      float btagDisc=phys.jets[ijet].btag7;
 		      if(fabs(phys.jets[ijet].flavid)==5) nbtags += (btagDisc>newHeavyFlavorCut);
 		      else                                nbtags += (btagDisc>newLightFlavorCut);
