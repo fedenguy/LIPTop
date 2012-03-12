@@ -171,6 +171,10 @@ int main(int argc, char* argv[])
   bool saveSummaryTree        = runProcess.getParameter<bool>("saveSummaryTree");
   double xsec                 = runProcess.getParameter<double>("xsec");
   bool runSystematics = runProcess.getParameter<bool>("runSystematics");
+  double sfMetCut = runProcess.getParameter<double>("sfMetCut");
+  double ofMetCut = runProcess.getParameter<double>("ofMetCut");
+  double jetPtCut = runProcess.getParameter<double>("jetPtCut");
+  
   
   //pileup reweighter                                                        
   TString proctag=gSystem->BaseName(evurl); proctag=proctag.ReplaceAll(".root","");
@@ -421,7 +425,7 @@ int main(int argc, char* argv[])
       bool isSameFlavor(false);
       if(ev.cat==MUMU || ev.cat==EE) isSameFlavor=true;
 
-      float minJetPt(30);
+      float minJetPt(jetPtCut);
       if(ev.cat==ETAU) minJetPt=35;
     
       int njets(0),nbjets(0);
@@ -433,7 +437,7 @@ int main(int argc, char* argv[])
 	}
       if(njets<2 || ((ev.cat==ETAU || ev.cat==MUTAU) && nbjets==0) ) continue;
     
-      bool passMet( phys.met.pt()>40 );//(!isSameFlavor && phys.met.pt() > 30) || ( isSameFlavor && phys.met.pt()>30) );
+      bool passMet( (!isSameFlavor && phys.met.pt() > ofMetCut) || ( isSameFlavor && phys.met.pt()>sfMetCut) );
       if(!passMet) continue;
    
 
@@ -503,7 +507,7 @@ int main(int argc, char* argv[])
       int nbtags(0),nbtagscor(0);
       for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
 	{
-	  if(phys.jets[ijet].pt()<30 || fabs(phys.jets[ijet].eta())>2.5) continue;
+	  if(phys.jets[ijet].pt()<jetPtCut || fabs(phys.jets[ijet].eta())>2.5) continue;
 	  prunedJets.push_back(phys.jets[ijet]);
 	  float btagDisc=phys.jets[ijet].btag7;
 	  nbtags += (btagDisc>0.244);
