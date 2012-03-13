@@ -26,7 +26,7 @@ using namespace RooFit ;
 int maxPE=1;
 TString url(""), massParsUrl(""), syst("std"), calibrationList(""), outDir("");
 bool doDebug=false;
-double jetPtCut=30;
+double jetPtCut=1000; // So that the fit is meaningless and one does not forget to configure the pt cut, lol
 
 std::map<TString,std::vector<Float_t> > evtYields;
 typedef std::vector<TString> Proc_t;
