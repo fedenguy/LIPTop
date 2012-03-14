@@ -533,23 +533,23 @@ std::map<TString,Double_t> MassMeasurement::ParseParametersFrom(TString parfileU
   int cattype=(int) fitPars_["cattype"];
   if(cattype==INCLUSIVE)
     {
-      catTitles_[EQ1BTAGS]  = TString("1 b-tags");
+      catTitles_[EQ1BTAGS]  = TString("1 b-tag");
       catTitles_[GEQ2BTAGS] = TString("#geq 2 b-tags");
     }
   else if(cattype==EXCLUSIVE)
     {
-      catTitles_[SF_EQ1BTAGS]  = TString("1 b-tags (ee+#mu#mu)");
+      catTitles_[SF_EQ1BTAGS]  = TString("1 b-tag (ee+#mu#mu)");
       catTitles_[SF_GEQ2BTAGS] = TString("#geq 2 b-tags (ee+#mu#mu)");
-      catTitles_[OF_EQ1BTAGS]  = TString("1 b-tags (e#mu)");
+      catTitles_[OF_EQ1BTAGS]  = TString("1 b-tag (e#mu)");
       catTitles_[OF_GEQ2BTAGS] = TString("#geq 2 b-tags (e#mu)");
     }
   else
     {
-      catTitles_[EE_EQ1BTAGS]  = TString("1 b-tags (ee)");
+      catTitles_[EE_EQ1BTAGS]  = TString("1 b-tag (ee)");
       catTitles_[EE_GEQ2BTAGS] = TString("#geq 2 b-tags (ee)");
-      catTitles_[MUMU_EQ1BTAGS]  = TString("1 b-tags (#mu#mu)");
+      catTitles_[MUMU_EQ1BTAGS]  = TString("1 b-tag (#mu#mu)");
       catTitles_[MUMU_GEQ2BTAGS] = TString("#geq 2 b-tags (#mu#mu)");
-      catTitles_[EMU_EQ1BTAGS]  = TString("1 b-tags (e#mu)");
+      catTitles_[EMU_EQ1BTAGS]  = TString("1 b-tag (e#mu)");
       catTitles_[EMU_GEQ2BTAGS] = TString("#geq 2 b-tags (e#mu)");
     }
   return fitPars_;
