@@ -564,7 +564,7 @@ int main(int argc, char* argv[])
 	  else if(nbtagscor==1) { subcats.push_back("eq1btags"); categs.push_back(""); }
 	  else if(nbtagscor>=2) { subcats.push_back("geq2btags"); categs.push_back(""); }
 	}
-      else if(isZcand && !isSS) subcats.push_back("zcands");
+      else if(isZcand && !isSS && nbtagscor<2) subcats.push_back("zcands");
       else                      subcats.push_back("ss");
       for(std::vector<TString>::iterator cIt = categs.begin(); cIt != categs.end(); cIt++)
 	{

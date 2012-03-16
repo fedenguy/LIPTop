@@ -232,8 +232,8 @@ FitResults_t BckgPDFs(TString url,int channel)
   sumH->Add(bckgDists["EWK"]);
   
   //prepare the pdfs for the fit in mass
-  RooRealVar mpv_l("mpv_{l}","Mpv of landau",140,100,165);
-  RooRealVar sigma_l("#sigma_{l}","Sigma of landau",20,10,25);
+  RooRealVar mpv_l("mpv_{l}","Mpv of landau",160,120,180);
+  RooRealVar sigma_l("#sigma_{l}","Sigma of landau",20,15,30);
   RooLandau lan("blandau","Mass component 1",mass,mpv_l,sigma_l);
   RooRealVar mean_g("#mu_{g}","Mean of gaus",180,160,200);
   RooRealVar sigma_g("#sigma_{g}","Sigma of gaus",20,10,25);
@@ -345,6 +345,9 @@ FitResults_t DYBckgPDFs(TString url,int channel)
       dyLLSamples.push_back("DoubleMuPromptRecov6");
       dyLLSamples.push_back("DoubleElectronPromptRecov6");
       dyLLSamples.push_back("MuEGPromptRecov6");
+      dyLLSamples.push_back("DoubleMuPromptReco2011B");
+      dyLLSamples.push_back("DoubleElectronPromptReco2011B");
+      dyLLSamples.push_back("MuEGPromptReco2011B");
       bckgProcs["DYLLData"]=dyLLSamples;
     }
   if(channel==OPFLAVOR)
@@ -428,9 +431,14 @@ FitResults_t DYBckgPDFs(TString url,int channel)
 
   mass.setBins(10);
 
+  Double_t mpvlmin(channel==OPFLAVOR?150:140);
+  Double_t mpvlmax(channel==OPFLAVOR?180:180);
+  Double_t sigmalmin(channel==OPFLAVOR?20:20);
+  Double_t sigmalmax(channel==OPFLAVOR?40:40);
+
   //fit the MC template
-  RooRealVar mpv_l("mpv_{l}^{MC}","Mpv of landau",140,100,165);
-  RooRealVar sigma_l("#sigma_{l}^{MC}","Sigma of landau",20,15,25);
+  RooRealVar mpv_l("mpv_{l}^{MC}","Mpv of landau",160,mpvlmin,mpvlmax);
+  RooRealVar sigma_l("#sigma_{l}^{MC}","Sigma of landau",20,sigmalmin,sigmalmax);
   RooLandau mclan("mclan","Landau component",mass,mpv_l,sigma_l);
 
   RooRealVar mean_g("mpv_{g}^{MC}","Mean of gauss",180,160,200);
@@ -467,8 +475,8 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   // fitPars["dybckgfrac^{MC}"]       = Value_t(frac.getVal(),frac.getError());
 
   //fit the data-driven template
-  RooRealVar dmpv_l("mpv_{l}","Mpv of landau",140,100,165);
-  RooRealVar dsigma_l("#sigma_{l}","Sigma of landau",20,10,25);
+  RooRealVar dmpv_l("mpv_{l}","Mpv of landau",160,mpvlmin,mpvlmax);
+  RooRealVar dsigma_l("#sigma_{l}","Sigma of landau",20,sigmalmin,sigmalmax);
   RooLandau dlan("dlan","Landau component",mass,dmpv_l,dsigma_l);  
 //   RooRealVar dtail_l("tail_{l}","Tail",1.0,-20.,20.);
 //   RooExponential dexp("dexp","Mass model",mass,dtail_l);
@@ -514,7 +522,7 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   c->Divide(1,2);
   
   TPad *p=(TPad *) c->cd(1);
-  RooPlot* frame = mass.frame(Title("MC Result"),Bins(20));
+  RooPlot* frame = mass.frame(Title("MC Result"),Bins(15));
   mch.plotOn(frame,DataError(RooAbsData::SumW2));
   mcmodel.plotOn(frame,Components(mclan),RooFit::LineColor(kGray));
   mcmodel.plotOn(frame);
@@ -524,11 +532,11 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   frame->GetXaxis()->SetTitleOffset(0.8);
   frame->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
   TLegend *leg = p->BuildLegend();
-  formatForCmsPublic(p,leg,"CMS simulation",1);
+  formatForCmsPublic(p,leg,"CMS simulation (signal region)",1);
   leg->Delete();	  
   
   p=(TPad *) c->cd(2);
-  RooPlot* frame2 = mass.frame(Title("Data Result"),Bins(20));
+  RooPlot* frame2 = mass.frame(Title("Data Result"),Bins(15));
   dh.plotOn(frame2);
   datamodel.plotOn(frame2,Components(dlan),RooFit::LineColor(kGray));
   datamodel.plotOn(frame2);
@@ -538,7 +546,7 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   frame2->GetXaxis()->SetTitleOffset(0.8);
   frame2->GetXaxis()->SetTitle("Reconstructed Mass [GeV/c^{2}]");
   leg = p->BuildLegend();
-  formatForCmsPublic(p,leg,"CMS preliminary",1);
+  formatForCmsPublic(p,leg,"CMS preliminary (control region)",1);
   leg->Delete();	  
 
   c->Modified();
