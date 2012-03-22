@@ -78,7 +78,7 @@ KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, 
 }
 
 //
-void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc)
+void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc, bool isMC)
 {
   try{
     
@@ -185,7 +185,17 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		jecUnc->setJetPt(jets[jjet].first.Pt());
 		jet2Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
 	      }
-	    
+	    if(scheme_=="jesWup" || scheme_=="jesWdown" || scheme_=="jesW")
+	      {
+		//cf. http://cms-physics.web.cern.ch/cms-physics/public/TOP-11-015-pas.pdf
+		int shiftSign=0;
+		if(scheme_=="jesWup") shiftSign=1;
+		if(scheme_=="jesWdown") shiftSign=-1;
+		float baseJetScale(isMC ? 1.0 :  1.004);
+		jet1Scale=baseJetScale+shiftSign*(sqrt(pow(0.005,2)+pow(0.012,2)));
+		jet2Scale=jet1Scale;
+	      }
+
 	    for(int itry=1; itry<maxTries_; itry++)
 	      {		  
 		//leptons
@@ -224,8 +234,7 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		float mety = metResol*( met.Py()-(pb1.Py()-jets[ijet].first.Py())-(pb2.Py()-jets[jjet].first.Py())-(pl1.Py()-leptons[0].first.Py())-(pl2.Py()-leptons[1].first.Py()) );
 		TVector3 metConstraint( metx, mety, deltaPz-pb1.Pz()-pl1.Pz()-pb2.Pz()-pl2.Pz());
 		metConstraint.RotateZ(dPhiMET);
-		cout << jet1Scale << " " << jet2Scale << " "
-		     << met.Pt() << " " << mets[0].first.Pt() << endl;
+
 		//prevent strange values
 		if(pl1.Pt()<1 || pb1.Pt()<1 || pl2.Pt()<1 || pb2.Pt()<1 || metConstraint.Pt()<1) continue;
 		

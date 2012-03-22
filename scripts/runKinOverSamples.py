@@ -7,6 +7,17 @@ import getopt
 import os.path
 import commands
 
+"""
+Gets the value of a given item
+(if not available a default value is returned)
+"""
+def getByLabel(desc,key,defaultVal=None) :
+    try :
+        return desc[key]
+    except KeyError:
+        return defaultVal
+                    
+
 #print usage
 def usage(msg='') :
     print msg
@@ -68,6 +79,8 @@ for proc in procList :
 
     #run over processes
     for desc in proc[1] :
+
+        isdata=getByLabel(desc,'isdata',False)
         
         #run over items in process
         data = desc['data']
@@ -100,6 +113,7 @@ for proc in procList :
                 evEnd= (ijob+1)*evPerJob
                 if(evStart<initEvent) : continue
                 params = '-src=' + fileName + ' -f=' + str(evStart) + ' -e=' + str(evEnd) + ' ' + extraParams
+                if(isdata) : params += ' -data'
                 print params
                 if(len(subToBatch)==0) :
                     os.system(scriptFile + ' '  + params)

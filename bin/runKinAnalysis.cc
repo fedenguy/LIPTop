@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   TString scheme = kinProcess.getParameter<std::string>("kinScheme");
   int maxTries = kinProcess.getParameter<int>("maxTries");
   int maxJetMult = kinProcess.getParameter<int>("maxJetMult");
-  
+  bool isMC = kinProcess.getParameter<bool>("isMC");
   float mw=kinProcess.getParameter<double>("mw");
   float mb=kinProcess.getParameter<double>("mb");
 
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
     {
       evSummaryHandler.getEntry(iev);
       EventSummary_t &ev = evSummaryHandler.getEvent();
-      kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,subTotalUnc);
+      kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,subTotalUnc,isMC);
     }
   kin.endAnalysis();
 

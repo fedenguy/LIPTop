@@ -20,6 +20,7 @@ output="/castor/cern.ch/user/${MYLETTER}/${ME}/Dileptons/"
 scheme="std"
 evStart=0
 evEnd=-1
+isMC=True 
 for i in $*
 do
   case $i in
@@ -32,6 +33,9 @@ do
       -f=*)
       evStart=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
       ;;
+      -data*)
+      isMC=False
+      ;;
       -e=*)
       evEnd=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
       ;;
@@ -39,7 +43,7 @@ do
       scheme=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
       ;;
       -help*)
-      echo "wrapRunKinAnalysis [-src=input_file] [-out=out_dir] [-f=evStart] [-e=evEnd] [-run=std]"
+      echo "wrapRunKinAnalysis [-src=input_file] [-out=out_dir] [-f=evStart] [-e=evEnd] [-run=std] [-data]"
       exit -1
       ;;
   esac
@@ -61,6 +65,7 @@ kinProcess = cms.PSet(
     maxJetMult = cms.int32(2),
     mw = cms.double(80.398),
     mb = cms.double(4.8),
+    isMC=cms.bool($isMC),
     ptResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PtResolution_AK5PF.txt"),
     etaResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_EtaResolution_AK5PF.txt"),
     phiResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PhiResolution_AK5PF.txt"),
