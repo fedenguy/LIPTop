@@ -91,7 +91,8 @@ int main(int argc, char* argv[])
     {
       evSummaryHandler.getEntry(iev);
       EventSummary_t &ev = evSummaryHandler.getEvent();
-      kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,subTotalUnc,isMC);
+      //kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,subTotalUnc,isMC);
+      kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,totalUnc,isMC);
     }
   kin.endAnalysis();
 
