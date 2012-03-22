@@ -50,7 +50,6 @@
 #pragma link C++ function getMT2;
 #pragma link C++ class TopKinSolver;
 #pragma link C++ class KinAnalysis;
-#pragma link C++ function randomlyRotate;
 #pragma link C++ struct CombinedHFCModel_t;
 #pragma link C++ class HFCMeasurement;
 #pragma link C++ class MisassignmentMeasurement;

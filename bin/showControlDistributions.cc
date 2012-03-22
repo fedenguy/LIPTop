@@ -468,8 +468,15 @@ int main(int argc, char* argv[])
       double p0btags(0),p0btags_err(0),p1btags(0),p1btags_err(0),p2btags(0),p2btags_err(0);
       if(runSystematics) 
 	{
-	  jet::computeVariation(jets,phys.met,jetsVar,metsVar,&stdPtResol,&stdEtaResol,&stdPhiResol,totalUnc);
-	  
+	  //	  if( (ev.event==6836903 && ev.lumi==7) ||
+	  // 	      (ev.event==6981503 && ev.lumi==7) ||
+	  // 	      (ev.event==6928100 && ev.lumi==7) ||
+	  // 	      (ev.event==6430586 && ev.lumi==7) 	    )
+	  // 	    {
+ 	      cout << "Run: " << ev.run << " Lumi:" << ev.lumi << " Evt:" << ev.event << endl; 
+	      jet::computeVariation(jets,phys.met,jetsVar,metsVar,&stdPtResol,&stdEtaResol,&stdPhiResol,totalUnc);
+	      //	    }
+	      //	  else continue;
 	  bcomp.compute(phys.nbjets,phys.nljets);
 	  std::vector<btag::Weight_t> wgt = bcomp.getWeights();
 	  p0btags = wgt[0].first;  p0btags_err=wgt[0].second;

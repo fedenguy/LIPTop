@@ -1,51 +1,8 @@
 #include "LIP/Top/interface/KinAnalysis.h"
+#include "CMGTools/HtoZZ2l2nu/interface/MacroUtils.h"
 #include "TRandom.h"
 
 using namespace std;
-
-//
-TLorentzVectorCollection randomlyRotate(TLorentzVectorCollection &leptons, TLorentzVectorCollection &jets)
-{
-  //get rotated leptons
-  TLorentzVectorCollection rotLeptons;
-
-  //create a rotated copy of all leptons
-  for(TLorentzVectorCollection::iterator lit = leptons.begin(); lit != leptons.end(); lit++)
-    {
-      do
-	{
-	  //rotate lepton
-	  double en    = lit->E();
-	  double pabs  = lit->P();
-	  double phi   = gRandom->Uniform(0,2*TMath::Pi());
-	  double theta = TMath::ACos( gRandom->Uniform(-1,1) );
-	  TLorentzVector rotLep =  TLorentzVector( pabs*TMath::Cos(phi)*TMath::Sin(theta),
-						   pabs*TMath::Sin(phi)*TMath::Sin(theta),
-						   pabs*TMath::Cos(theta),
-						   en);
-
-	  //require selectable kinematics
-	  if( TMath::Abs(rotLep.Eta())>2.4 || rotLep.Pt()<20 ) continue;  
-
-	  //require object separation
-	  double minDR(1000);
-	  for(TLorentzVectorCollection::iterator jit = jets.begin(); jit != jets.end(); jit++)
-	    {
-	      double dR = jit->DeltaR(rotLep);
-	      if(dR>minDR) continue;
-	      minDR=dR;
-	    }
-	  if(minDR<0.4) continue;
-	  
-	  //save lepton
-	  rotLeptons.push_back(rotLep);
-	  break;
-	} while( 1 );
-    }
-
-  //all done
-  return rotLeptons;
-} 
 
 //
 KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, float mb, TString outpath, bool doWrite)
@@ -81,72 +38,80 @@ KinAnalysis::KinAnalysis(TString &scheme,int maxTries, int maxJetMult,float mw, 
 void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc, bool isMC)
 {
   try{
-    
-    KinCandidateCollection_t leptons, jets, mets;
-    TLorentzVectorCollection leptonsp4,jetsp4;
-    TLorentzVector clusteredP4(0,0,0,0), unclusteredP4(0,0,0,0);
-    for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
-      {
-	TLorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
-	if(isnan(p4.Pt()) || isinf(p4.Pt())) continue;
-	switch( ev.id[ipart] )
-	  {
-	  case 0:
-	    mets.push_back( KinCandidate_t(p4,p4.Pt()) );
-	    break;
-	  case 1:
-	    if(p4.Pt()>15 && fabs(p4.Eta())<5.0) clusteredP4 += p4;
-	    if(p4.Pt()>30 && fabs(p4.Eta())<2.5)
-	      {
-		jets.push_back( KinCandidate_t(p4, ev.info7[ipart]) );
-		jetsp4.push_back(p4);
-	      }
-	    break;
-	  default:
-	    double les(1.0);
-	    if( (scheme_=="lesup" || scheme_=="lesdown") && fabs(ev.id[ipart])==11)
-	      {
-		bool isEB( fabs(p4.Eta()) < 1.442 );
-		if(scheme_=="lesup")   les = isEB ? 1.005 : 1.025;
-		if(scheme_=="lesdown") les = isEB ? 0.995 : 0.975;
-	      }
-	    p4 *= les; 
-	    if(p4.Pt()>20 && fabs(p4.Eta())<2.5)
-	      {
-		leptons.push_back( KinCandidate_t(p4,ev.id[ipart]) );
-		//leptons.push_back( KinCandidate_t(p4,p4.Pt()) );
-		leptonsp4.push_back(p4);
-	      }
-	    clusteredP4+=p4;
-	    break;
-	  }
-      }
-    if(leptons.size()<2 || jets.size()<2 || mets.size()<1) return;
 
-    //vary by 10% the unclustered component the MET
-    unclusteredP4 = -mets[0].first-clusteredP4;
+    top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+    
+    //dilepton
+    KinCandidateCollection_t leptons;
+    LorentzVectorCollection finalLeptonsP4;
+    LorentzVector deltaLep(0,0,0,0);
+    for(size_t ilep=0; ilep<phys.leptons.size(); ilep++)
+      {
+	double les(1.0);
+	LorentzVector p4(phys.leptons[ilep]);
+	if( (scheme_=="lesup" || scheme_=="lesdown") && fabs(phys.leptons[ilep].id)==11)
+	  {
+	    bool isEB( fabs(p4.Eta()) < 1.442 );
+	    if(scheme_=="lesup")   les = isEB ? 1.005 : 1.025;
+	    if(scheme_=="lesdown") les = isEB ? 0.995 : 0.975;
+	  }
+	p4 *= les; 
+	deltaLep += (p4-phys.leptons[ilep]);
+	finalLeptonsP4.push_back(p4);
+	
+	if(p4.pt()<20 || fabs(p4.eta())>2.5) continue;
+	leptons.push_back( KinCandidate_t(p4,phys.leptons[ilep].id) );
+      }
+    if(leptons.size()<2) return;
+
+    //jets
+    std::vector<LorentzVector> origJetsP4; for(size_t ijet=0; ijet<phys.jets.size(); ijet++) origJetsP4.push_back(phys.jets[ijet]);
+    std::vector<LorentzVector> finalJetsP4(origJetsP4);
+    if(scheme_=="jesup" || scheme_=="jesdown")
+      {
+	std::vector<LorentzVectorCollection> jetsVar;
+	LorentzVectorCollection metsVar;
+	jet::computeVariation(origJetsP4,phys.met,jetsVar,metsVar,ptResol,etaResol,phiResol,jecUnc);
+	if(scheme_=="jesup")   { for(size_t ijet=0; ijet<origJetsP4.size(); ijet++) finalJetsP4[ijet]=jetsVar[jet::JES_UP][ijet];   }
+	if(scheme_=="jesdown") { for(size_t ijet=0; ijet<origJetsP4.size(); ijet++) finalJetsP4[ijet]=jetsVar[jet::JES_DOWN][ijet]; }
+      }
+    else if(scheme_=="jesWup" || scheme_=="jesWdown" || scheme_=="jesW")
+      {
+	//cf. http://cms-physics.web.cern.ch/cms-physics/public/TOP-11-015-pas.pdf
+	int shiftSign=0;
+	if(scheme_=="jesWup") shiftSign=1;
+	if(scheme_=="jesWdown") shiftSign=-1;
+	float baseJetScale(isMC ? 1.0 :  1.004);
+	float jetScale=baseJetScale+shiftSign*(sqrt(pow(0.005,2)+pow(0.012,2)));
+	for(size_t ijet=0; ijet<origJetsP4.size(); ijet++) finalJetsP4[ijet]=jetScale*origJetsP4[ijet];
+      }
+    LorentzVector deltaJets(0,0,0,0);
+    KinCandidateCollection_t jets;
+    for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
+      {
+	deltaJets += finalJetsP4[ijet]-origJetsP4[ijet];
+	if(finalJetsP4[ijet].pt()<30 || fabs(finalJetsP4[ijet].eta())>2.5) continue;
+	jets.push_back(KinCandidate_t(finalJetsP4[ijet],phys.jets[ijet].btag7));
+      }
+    if(jets.size()<2) return;
+    
+
+    //met
+    LorentzVector finalMet=phys.met-deltaLep-deltaJets;
+    LorentzVector clusteredP4(0,0,0,0);
+    for(size_t ilep=0; ilep<finalLeptonsP4.size(); ilep++) clusteredP4 += finalLeptonsP4[ilep];
+    for(size_t ijet=0; ijet<finalJetsP4.size(); ijet++)    clusteredP4 += finalJetsP4[ijet];
+    LorentzVector unclusteredP4(finalMet+clusteredP4);
     if(scheme_=="unclustup" || scheme_=="unclustdown")
       {
-	float sf=1.1;
-	if(scheme_=="unclustdown") sf=0.9;
+	float sf(scheme_=="unclustdown" ? 0.9 : 1.1);
 	unclusteredP4 *= sf;
-	TLorentzVector p4 = -clusteredP4 -unclusteredP4;
-	mets[0].first = p4;
       }
-    if(mets[0].first.Pt()<30) return;
-
-    //random rotation of leptons
-    if(scheme_=="randrot") 
-      {
-	TLorentzVector deltaLep(0,0,0,0);
-	leptonsp4 = randomlyRotate(leptonsp4,jetsp4);
-	for(size_t ilep=0; ilep<leptons.size(); ilep++) 
-	  {
-	    deltaLep += leptons[ilep].first-leptonsp4[ilep];
-	    leptons[ilep].first = leptonsp4[ilep];
-	  }
-	mets[0].first += deltaLep;
-      }
+    finalMet =unclusteredP4-clusteredP4;
+    KinCandidateCollection_t mets;  
+    mets.push_back( KinCandidate_t(finalMet,finalMet.pt()));    
+    LorentzVector deltaMet(finalMet-phys.met);
+    if(mets[0].first.pt()<30) return;
     
     //order collections
     sort(leptons.begin(),leptons.end(),KinAnalysis::sortKinCandidates);
@@ -156,89 +121,59 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
     //debug
     cout << "[KinAnalysis][runOn] " << ev.run << " : " << ev.lumi << " : " << ev.event << endl
 	 << "Scheme is: " << scheme_ << endl
-	 << "Leptons #1 : (" << leptons[0].first.Pt() << ";" << leptons[0].first.Eta() << ";" << leptons[0].first.Phi() << ") q:" << leptons[0].second << endl  
-	 << "        #2 : (" << leptons[1].first.Pt() << ";" << leptons[1].first.Eta() << ";" << leptons[1].first.Phi() << ") q:" << leptons[1].second << endl  
-	 << "Jets    #1 : (" << jets[0].first.Pt() << ";" << jets[0].first.Eta() << ";" << jets[0].first.Phi() << ") btag:" << jets[0].second  << endl  
-	 << "        #2 : (" << jets[1].first.Pt() << ";" << jets[1].first.Eta() << ";" << jets[1].first.Phi() << ") btag:" << jets[1].second << endl  
-	 << "MET        : (" << mets[0].first.Pt() << ";" << mets[0].first.Phi() << ")" << endl;
+	 << "Leptons #1 : (" << leptons[0].first.pt() << ";" << leptons[0].first.eta() << ";" << leptons[0].first.phi() << ") q:" << leptons[0].second << endl  
+	 << "        #2 : (" << leptons[1].first.pt() << ";" << leptons[1].first.eta() << ";" << leptons[1].first.phi() << ") q:" << leptons[1].second << endl  
+	 << "Jets    #1 : (" << jets[0].first.pt() << ";" << jets[0].first.eta() << ";" << jets[0].first.phi() << ") btag:" << jets[0].second  << endl  
+	 << "        #2 : (" << jets[1].first.pt() << ";" << jets[1].first.eta() << ";" << jets[1].first.phi() << ") btag:" << jets[1].second << endl  
+	 << "MET        : (" << mets[0].first.pt() << ";" << mets[0].first.phi() << ")" << endl;
+    cout << "Deltas: Lep: " << deltaLep.pt() << " Jet:" << deltaJets.pt() << " MET: " << deltaMet.pt() << endl;
     
     //set to the base values
     int nComb=0;
     resHandler_.resetHistos();
- 
-    //jet energy scale
-    double jet1Scale(1.0), jet2Scale(1.0);
+
+    //try all combinatorics
     for(int ijet=0; ijet<maxJetMult_; ijet++) 
       {
 	for(int jjet=0; jjet<maxJetMult_; jjet++)
 	  {
 	    if(ijet==jjet) continue;
 	    nComb++;
-	    if(scheme_=="jesup" || scheme_=="jesdown")
-	      {
-		int shiftSign( scheme_=="jesup" ? 1 : -1 );
-		jecUnc->setJetEta(jets[ijet].first.Eta());
-		jecUnc->setJetPt(jets[ijet].first.Pt());
-		jet1Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
-	
-		jecUnc->setJetEta(jets[jjet].first.Eta());
-		jecUnc->setJetPt(jets[jjet].first.Pt());
-		jet2Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
-	      }
-	    if(scheme_=="jesWup" || scheme_=="jesWdown" || scheme_=="jesW")
-	      {
-		//cf. http://cms-physics.web.cern.ch/cms-physics/public/TOP-11-015-pas.pdf
-		int shiftSign=0;
-		if(scheme_=="jesWup") shiftSign=1;
-		if(scheme_=="jesWdown") shiftSign=-1;
-		float baseJetScale(isMC ? 1.0 :  1.004);
-		jet1Scale=baseJetScale+shiftSign*(sqrt(pow(0.005,2)+pow(0.012,2)));
-		jet2Scale=jet1Scale;
-	      }
-
+	    
 	    for(int itry=1; itry<maxTries_; itry++)
 	      {		  
+		//get a new pzttbar hypothesis
+		double deltaPz = deltaPzFunc_->GetRandom();		
+		
 		//leptons
-		TLorentzVector pl1 = leptons[0].first;
-		TLorentzVector pl2 = leptons[1].first;
-		
-		//jets;
-		double deltaPz = deltaPzFunc_->GetRandom();
-		float ptScaleRes = (ptResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom()-1.0);
-		if(scheme_=="jer") ptScaleRes *=1.2;
-		float etaRes = etaResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom();
-		float phiRes = phiResol->resolutionEtaPt(jets[ijet].first.Eta(),jets[ijet].first.Pt())->GetRandom();
-		float newpt = (1.0+ptScaleRes)*jets[ijet].first.Pt();
-		float neweta = etaRes+jets[ijet].first.Eta();
-		float newphi = phiRes+jets[ijet].first.Phi();
-		TLorentzVector pb1;
-		pb1.SetPtEtaPhiM(newpt,neweta,newphi,mb_);
-		pb1 *= jet1Scale;
-		
-		ptScaleRes = (ptResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom()-1.0);
-		if(scheme_=="jer") ptScaleRes *=1.2;
-		etaRes = etaResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom();
-		phiRes = phiResol->resolutionEtaPt(jets[jjet].first.Eta(),jets[jjet].first.Pt())->GetRandom();
-		newpt = (1.0+ptScaleRes)*jets[jjet].first.Pt();
-		neweta = etaRes+jets[jjet].first.Eta();
-		newphi = phiRes+jets[jjet].first.Phi();
-		TLorentzVector pb2;
-		pb2.SetPtEtaPhiM(newpt,neweta,newphi,mb_);
-		pb2 *= jet2Scale;
+		LorentzVector pl1 = leptons[0].first;
+		LorentzVector pl2 = leptons[1].first;
+	
+		//smear jets and MET using the resolution functions
+		std::vector<LorentzVector> origJetsP4; origJetsP4.push_back(jets[0].first); origJetsP4.push_back(jets[1].first);
+		std::vector<LorentzVectorCollection> jetsVar;
+		LorentzVectorCollection metsVar;
+		jet::computeVariation(origJetsP4,mets[0].first,jetsVar,metsVar,ptResol,etaResol,phiResol,jecUnc);
+		LorentzVector pb1 = jetsVar[jet::JER][0];
+		LorentzVector pb2 = jetsVar[jet::JER][1];
+		LorentzVector met(metsVar[jet::JER]);
 		
 		//MET (must correct for jet energy scale/resolution smearing)
-		TLorentzVector met(mets[0].first);
-		float metResol= 1.0+rndGen_.Gaus(0,0.1);
-		double dPhiMET = rndGen_.Gaus(0,0.1);
-		float metx = metResol*( met.Px()-(pb1.Px()-jets[ijet].first.Px())-(pb2.Px()-jets[jjet].first.Px())-(pl1.Px()-leptons[0].first.Px())-(pl2.Px()-leptons[1].first.Px()) );
-		float mety = metResol*( met.Py()-(pb1.Py()-jets[ijet].first.Py())-(pb2.Py()-jets[jjet].first.Py())-(pl1.Py()-leptons[0].first.Py())-(pl2.Py()-leptons[1].first.Py()) );
+		float metResol= 1.0;//+rndGen_.Gaus(0,0.1);
+		//double dPhiMET = rndGen_.Gaus(0,0.1);
+		float metx = metResol*met.px();
+		float mety = metResol*met.py();
 		TVector3 metConstraint( metx, mety, deltaPz-pb1.Pz()-pl1.Pz()-pb2.Pz()-pl2.Pz());
-		metConstraint.RotateZ(dPhiMET);
+		//metConstraint.RotateZ(dPhiMET);
 
 		//prevent strange values
 		if(pl1.Pt()<1 || pb1.Pt()<1 || pl2.Pt()<1 || pb2.Pt()<1 || metConstraint.Pt()<1) continue;
 		
-		TTbarSolutionCollection_t sols = kin_.findSolutions(pl1,pb1,pl2,pb2,metConstraint,mw_);    
+		TLorentzVector Tpl1(pl1.px(),pl1.py(),pl1.pz(),pl1.energy());
+		TLorentzVector Tpl2(pl2.px(),pl2.py(),pl2.pz(),pl2.energy());
+		TLorentzVector Tpb1(pb1.px(),pb1.py(),pb1.pz(),pb1.energy());
+		TLorentzVector Tpb2(pb2.px(),pb2.py(),pb2.pz(),pb2.energy());
+		TTbarSolutionCollection_t sols = kin_.findSolutions(Tpl1,Tpb1,Tpl2,Tpb2,metConstraint,mw_);    
 		if(sols.size()==0) continue;
 		
 		//compute the full kinematics obtained
@@ -246,8 +181,8 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		TLorentzVector ttbar = sol->pt1+sol->pt2;
 		float avgMtop = (sol->pt1.M()+sol->pt2.M())*0.5;
 		float mttbar = ttbar.M();
-		std::vector<double> mt2 = getMT2( *sol );
-		float afb = sol->pt1.Eta()-sol->pt2.Eta();
+		//std::vector<double> mt2 = getMT2( *sol );
+		//float afb = sol->pt1.Eta()-sol->pt2.Eta();
 		
 		//fill histos
 		resHandler_.getHisto("mt", nComb)->Fill( avgMtop );

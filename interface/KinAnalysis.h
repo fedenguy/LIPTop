@@ -7,7 +7,6 @@
 #include "CondFormats/JetMETObjects/interface/JetResolution.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 
-#include "TLorentzVector.h"
 #include "TRandom2.h"
 #include "TString.h"
 #include "TTimeStamp.h"
@@ -18,12 +17,11 @@
 #include "LIP/Top/interface/TopKinSolver.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
 
-typedef std::vector<TLorentzVector> TLorentzVectorCollection;
-typedef std::pair<TLorentzVector, float> KinCandidate_t;
+typedef std::vector<LorentzVector> LorentzVectorCollection;
+typedef std::pair<LorentzVector, float> KinCandidate_t;
 typedef std::vector<KinCandidate_t> KinCandidateCollection_t;
 
-TLorentzVectorCollection randomlyRotate(TLorentzVectorCollection &leptonsp4, TLorentzVectorCollection &jetsp4); 
-
+//
 class KinAnalysis
 {
  public:
