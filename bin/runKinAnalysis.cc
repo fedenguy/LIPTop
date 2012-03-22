@@ -7,6 +7,7 @@
 
 #include "CondFormats/JetMETObjects/interface/JetResolution.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
@@ -55,9 +56,11 @@ int main(int argc, char* argv[])
   TString ptFileName  = kinProcess.getParameter<std::string>("ptResolFileName");  gSystem->ExpandPathName(ptFileName);
   JetResolution stdPtResol(ptFileName.Data(),true); 
   
-  TString uncFile =  kinProcess.getParameter<std::string>("jesUncFileName"); gSystem->ExpandPathName(uncFile);
-  JetCorrectionUncertainty jecUnc(uncFile.Data());
-  cout << uncFile.Data() << endl;
+  TString jesUncSourcesUrl = kinProcess.getParameter<std::string>("jesUncFileName"); gSystem->ExpandPathName(jesUncSourcesUrl);
+  JetCorrectionUncertainty *subTotalUnc = new JetCorrectionUncertainty(*(new JetCorrectorParameters(jesUncSourcesUrl.Data(), "SubTotalDataMC")));
+  JetCorrectionUncertainty *totalUnc = new JetCorrectionUncertainty(*(new JetCorrectorParameters(jesUncSourcesUrl.Data(), "Total")));
+  cout << jesUncSourcesUrl << endl;
+
   //open the file and get directory
   TFile *file = TFile::Open(url);
   if(file==0) return -1;
@@ -88,7 +91,7 @@ int main(int argc, char* argv[])
     {
       evSummaryHandler.getEntry(iev);
       EventSummary_t &ev = evSummaryHandler.getEvent();
-      kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,&jecUnc);
+      kin.runOn(ev, &stdPtResol,&stdEtaResol,&stdPtResol,subTotalUnc);
     }
   kin.endAnalysis();
 

@@ -180,7 +180,7 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		jecUnc->setJetEta(jets[ijet].first.Eta());
 		jecUnc->setJetPt(jets[ijet].first.Pt());
 		jet1Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
-		    
+	
 		jecUnc->setJetEta(jets[jjet].first.Eta());
 		jecUnc->setJetPt(jets[jjet].first.Pt());
 		jet2Scale = 1.0 + shiftSign*jecUnc->getUncertainty(true);
@@ -224,7 +224,8 @@ void KinAnalysis::runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetReso
 		float mety = metResol*( met.Py()-(pb1.Py()-jets[ijet].first.Py())-(pb2.Py()-jets[jjet].first.Py())-(pl1.Py()-leptons[0].first.Py())-(pl2.Py()-leptons[1].first.Py()) );
 		TVector3 metConstraint( metx, mety, deltaPz-pb1.Pz()-pl1.Pz()-pb2.Pz()-pl2.Pz());
 		metConstraint.RotateZ(dPhiMET);
-		
+		cout << jet1Scale << " " << jet2Scale << " "
+		     << met.Pt() << " " << mets[0].first.Pt() << endl;
 		//prevent strange values
 		if(pl1.Pt()<1 || pb1.Pt()<1 || pl2.Pt()<1 || pb2.Pt()<1 || metConstraint.Pt()<1) continue;
 		

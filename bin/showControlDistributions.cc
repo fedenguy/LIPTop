@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <boost/shared_ptr.hpp>
 #include <fstream>
@@ -171,9 +170,8 @@ int main(int argc, char* argv[])
   btag::UncertaintyComputer bcomp(0.837, 0.95, 0.06, 0.286, 1.11, 0.11);
   JetResolution stdEtaResol(etaFileName.Data(),false);
   JetResolution stdPhiResol(phiFileName.Data(),false);
-  JetResolution stdPtResol(ptFileName.Data(),true);
-  JetCorrectionUncertainty jecUnc(uncFile.Data());
-    
+  JetResolution stdPtResol(ptFileName.Data(),true); 
+
   // Instantiate uncertainty sources
   TString srcnames[] =
     {"Absolute", "HighPtExtra", "SinglePion", "Time", "Flavor",
@@ -182,7 +180,7 @@ int main(int argc, char* argv[])
     };
   const int nsrc=sizeof(srcnames)/sizeof(TString);
   std::map<TString, std::vector<JetCorrectionUncertainty*> > vsrc;
-  TString jesUncSourcesUrl("${CMSSW_BASE}/src/LIP/Top/data/JEC11_V12_AK5PF_UncertaintySources.txt");
+  TString jesUncSourcesUrl(uncFile.Data());
   gSystem->ExpandPathName(jesUncSourcesUrl);
   for (int isrc = 0; isrc<nsrc; ++isrc) 
     {
@@ -470,7 +468,7 @@ int main(int argc, char* argv[])
       double p0btags(0),p0btags_err(0),p1btags(0),p1btags_err(0),p2btags(0),p2btags_err(0);
       if(runSystematics) 
 	{
-	  jet::computeVariation(jets,phys.met,jetsVar,metsVar,&stdPtResol,&stdEtaResol,&stdPhiResol,&jecUnc);
+	  jet::computeVariation(jets,phys.met,jetsVar,metsVar,&stdPtResol,&stdEtaResol,&stdPhiResol,totalUnc);
 	  
 	  bcomp.compute(phys.nbjets,phys.nljets);
 	  std::vector<btag::Weight_t> wgt = bcomp.getWeights();
@@ -481,6 +479,7 @@ int main(int argc, char* argv[])
       
 
       //the cutflow with variations
+      // float dumpmet[3]={0,0,0};
       for(int ivar=0;ivar<(isMC ? nvarcats : 1); ivar++) 
 	{
 	  float weight=puweight;
@@ -488,13 +487,16 @@ int main(int argc, char* argv[])
 
 	  //objects to use
 	  LorentzVectorCollection jetColl = jets;
-	  LorentzVector theMET       = phys.met;     
+	  LorentzVector theMET       = phys.met;
 	  if(cats[ivar]=="jer")      { jetColl=jetsVar[jet::JER];      theMET=metsVar[jet::JER]; }
 	  if(cats[ivar]=="jesdown")  { jetColl=jetsVar[jet::JES_DOWN]; theMET=metsVar[jet::JES_DOWN]; }
 	  if(cats[ivar]=="jesup" )   { jetColl=jetsVar[jet::JES_UP];   theMET=metsVar[jet::JES_UP]; }
 	  if(cats[ivar]=="puup" )    { double TotalWeight_plus  = PShiftUp.ShiftWeight( ev.ngenpu );   weight *= TotalWeight_plus;  }
 	  if(cats[ivar]=="pudown" )  { double TotalWeight_minus = PShiftDown.ShiftWeight( ev.ngenpu ); weight *= TotalWeight_minus; }
-
+	  // 	  if(ivar==0) dumpmet[0]=theMET.pt();
+	  // 	  if(ivar==1) dumpmet[1]=theMET.pt();
+	  // 	  if(ivar==2) dumpmet[2]=theMET.pt();
+	  
 	  LorentzVector l1             = (phys.leptons[0].pt() > phys.leptons[1].pt() ? phys.leptons[0] : phys.leptons[1]);
 	  LorentzVector l2             = (phys.leptons[0].pt() < phys.leptons[1].pt() ? phys.leptons[0] : phys.leptons[1]);	  
 	  float dilcharge              = (phys.leptons[0].id/fabs(phys.leptons[0].id)) *(phys.leptons[1].id/fabs(phys.leptons[1].id));
@@ -650,6 +652,7 @@ int main(int argc, char* argv[])
 	      if(!isOS) continue;
 	      if(ivar==0)  controlHistos.fillHisto("dilmass",ctf,dileptonSystem.mass(),weight);
 	      controlHistos.fillHisto("dilmassctr"+cats[ivar],ctf,isZcand||isEmuInZRegion ,weight);
+	      //	      double dumpjet[2][3];
 	      if(!isZcand)
 		{
 		  if(ictf==0 && ivar==0) selEvents+=weight;
@@ -699,7 +702,7 @@ int main(int argc, char* argv[])
 			      if(isMC) controlHistos.fillHisto( (isMatchedToB ? "bjet" : "ljet") ,ctf, pt,           weight);
 
 			      //jes uncertainties
-			      if(ijet<=2)
+			      if(ijet<2)
 				{	
 				  std::map<TString,float> uncContribs;
 				  float checkTotal(0);
@@ -721,6 +724,8 @@ int main(int argc, char* argv[])
 				  totalUnc->setJetPt(pt);
 				  totalUnc->setJetEta(eta);
 				  double totalJESUnc = totalUnc->getUncertainty(true);
+				  //				  if(ivar==0) { dumpjet[ijet][0]=pt; dumpjet[ijet][1]=eta; dumpjet[ijet][2]=totalJESUnc; }
+
 				  for(std::map<TString,float>::iterator it = uncContribs.begin(); it != uncContribs.end(); it++)
 				    {
 				      controlHistos.fillHisto(it->first+"jesunc",ctf,pt,it->second*100);
@@ -741,7 +746,6 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("jetflavor",ctf,ncs+10,weight);		      
 			  controlHistos.fillHisto("jetflavor",ctf,nbs+20,weight);		      
 			}
-		      
   		      controlHistos.fillHisto("nbtags",ctf,nbtags,weight);
   		      controlHistos.fillHisto("nbtagstche",ctf,nbtagstche,weight);
 		      if(nseljetsLoose>=2 && nseljetsLoose<=3)
@@ -793,6 +797,14 @@ int main(int argc, char* argv[])
 			  controlHistos.fillHisto("drlj",ctf,drljs[ilj],weight,true);
 			}
 		    }
+
+		  // 		  if(ivar==3)
+		  // 		    {
+		  // 		      cout << "Run:Lumi:Event\t" << ev.run << ":" << ev.lumi << ":" << ev.event << endl;
+		  // 		      cout << "MET:" << dumpmet[0] << " jes up: " << dumpmet[1]-dumpmet[0] << " jes down: " << dumpmet[2]-dumpmet[0] << endl;
+		  // 		      for(size_t ijet=0; ijet<2; ijet++)
+		  // 			cout << "Jet #" << ijet+1 << " pt: " << dumpjet[ijet][0] << " eta:" << dumpjet[ijet][1] << " unc:" << dumpjet[ijet][2] << endl;
+		  // 		    }
 		}
 	      
 	      //save summary if required

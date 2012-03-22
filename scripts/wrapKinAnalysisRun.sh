@@ -64,7 +64,7 @@ kinProcess = cms.PSet(
     ptResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PtResolution_AK5PF.txt"),
     etaResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_EtaResolution_AK5PF.txt"),
     phiResolFileName = cms.string("${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PhiResolution_AK5PF.txt"),
-    jesUncFileName = cms.string("${CMSSW_BASE}/src/CMGTools/HtoZZ2l2nu/data/GR_R_42_V23_AK5PFchs_Uncertainty.txt")
+    jesUncFileName = cms.string("${CMSSW_BASE}/src/LIP/Top/data/JEC11_V12_AK5PF_UncertaintySources.txt")
     )
 EOF
 

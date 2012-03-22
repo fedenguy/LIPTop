@@ -325,8 +325,6 @@ FitResults_t DYBckgPDFs(TString url,int channel)
  
   //MC
   dyLLSamples.push_back("DYJetsToLL");
-  //   dyLLSamples.push_back("DYJetsToMuMu_M20to50");
-  //   dyLLSamples.push_back("DYJetsToEE_M20to50");
   bckgProcs["DYLLMC"]=dyLLSamples;
 
   //DATA-DRIVEN
@@ -434,7 +432,7 @@ FitResults_t DYBckgPDFs(TString url,int channel)
   Double_t mpvlmin(channel==OPFLAVOR?150:140);
   Double_t mpvlmax(channel==OPFLAVOR?180:180);
   Double_t sigmalmin(channel==OPFLAVOR?20:20);
-  Double_t sigmalmax(channel==OPFLAVOR?40:40);
+  Double_t sigmalmax(channel==OPFLAVOR?30:30);
 
   //fit the MC template
   RooRealVar mpv_l("mpv_{l}^{MC}","Mpv of landau",160,mpvlmin,mpvlmax);
