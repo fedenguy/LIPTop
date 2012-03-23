@@ -239,17 +239,17 @@
                 {
                   "dtag":"DoubleMuPromptReco2011B",
                   "dset":"/DoubleMu/Run2011B-PromptReco-v6/AOD",
-                  "patdir":["/store/cmst3/user/psilva/Data/DoubleMuon/DoubleMu-2011B-PromptReco"]
+                  "patdir":["/store/cmst3/user/psilva/Data3/DoubleMuon/DoubleMu-2011B-PromptReco"]
                 },
                 {
                   "dtag":"DoubleElectronPromptReco2011B",
                   "dset":"/DoubleElectron/Run2011B-PromptReco-v6/AOD",
-                  "patdir":["/store/cmst3/user/psilva/Data/DoubleElectron/DoubleElectron-2011B-PromptReco"]
+                  "patdir":["/store/cmst3/user/psilva/Data3/DoubleElectron/DoubleElectron-2011B-PromptReco"]
                 },
                 {
                   "dtag":"MuEGPromptReco2011B",
                   "dset":"/MuEG/Run2011B-PromptReco-v6/AOD",
-                  "patdir":["/store/cmst3/user/psilva/Data/MuEG/MuEG-2011B-PromptReco"]
+                  "patdir":["/store/cmst3/user/psilva/Data3/MuEG/MuEG-2011B-PromptReco"]
                 }
 	   ]
 	}
