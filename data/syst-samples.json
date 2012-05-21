@@ -45,7 +45,7 @@
 		{
  	        "dtag":"TTJets_matchingdown",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingdown_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingdown_7TeV-madgraph-tauola-F11"],
                 "xsec":165
                 }
 	]
@@ -59,7 +59,7 @@
                 {
  	        "dtag":"TTJets_matchingup",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingup_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_matchingup_7TeV-madgraph-tauola-F11"],
                 "xsec":165
                 }
 	   ]
@@ -73,7 +73,7 @@
 		{
  	        "dtag":"TTJets_scaledown",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaledown_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaledown_7TeV-madgraph-tauola-F11"],
                 "xsec":165
                 }
 	   ]
@@ -87,7 +87,35 @@
 		{
  	        "dtag":"TTJets_scaleup",
 		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
-                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaleup_7TeV-madgraph-tauola"],
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTjets_TuneZ2_scaleup_7TeV-madgraph-tauola-F11"],
+                "xsec":165
+                }
+	]
+	},
+	{
+         "tag":"t#bar{t} Perugia11 no CR",
+         "isdata":false,
+         "color":"8",
+         "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"TTJets_P11noCR",
+		"dset":"/TTJets_TuneZ2_7TeV-madgraph-tauola/Summer11-PU_S4_START42_V11-v1/AODSIM",
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneP11noCR_7TeV-madgraph-tauola"],
+                "xsec":165
+                }
+	]
+	},
+	{
+         "tag":"t#bar{t} Perugia11",
+         "isdata":false,
+         "color":"8",
+         "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"TTJets_P11CR",
+		"dset":"",
+                "patdir":["/store/cmst3/user/psilva/HZZ_11.10.03/Top/TTJets_TuneP11_7TeV-madgraph-tauola"],
                 "xsec":165
                 }
 	]
