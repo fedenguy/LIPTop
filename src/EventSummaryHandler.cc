@@ -229,7 +229,8 @@ namespace top
     for(Int_t ipart=0; ipart<ev.nparticles; ipart++)
       {
 	LorentzVector p4(ev.px[ipart],ev.py[ipart],ev.pz[ipart],ev.en[ipart]);
-	if(isnan(p4.pt()) || isinf(p4.pt())) continue;
+	float pt(p4.pt());
+	if(std::isnan(pt) || std::isinf(pt))continue;
 	switch( ev.id[ipart] )
 	  {
 	  case 0:

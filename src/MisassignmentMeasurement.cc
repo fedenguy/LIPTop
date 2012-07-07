@@ -1,12 +1,11 @@
 #include "LIP/Top/interface/MisassignmentMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
-#include "CMGTools/HtoZZ2l2nu/interface/MacroUtils.h"
+#include "CMGTools/HtoZZ2l2nu/interface/METUtils.h"
 
 #include "TSystem.h"
 
 using namespace std;
-using namespace top;
 
 //
 void MisassignmentMeasurement::bookMonitoringHistograms()
@@ -184,7 +183,7 @@ PhysicsObjectLeptonCollection MisassignmentMeasurement::randomlyRotate( PhysicsO
 }
 
 //
-void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHandler, double mcut, double minMlj, bool isData, int jetbin, TString syst)
+void MisassignmentMeasurement::measureMisassignments(ZZ2l2nuSummaryHandler &evHandler, double mcut, double minMlj, bool isData, int jetbin, TString syst)
 {
   if(evHandler.getEntries()==0) return;
  
@@ -201,17 +200,17 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	{
 	  evTree->GetEntry(i);
 
-	  EventSummary_t &ev = evHandler.getEvent();
+	  ZZ2l2nuSummary_t &ev = evHandler.getEvent();
 	  int evcat=ev.cat;
-	  bool hasSignal( ev.evmeasurements[0]>0 );
+	  //	  bool hasSignal( ev.evmeasurements[0]>0 );
 
 	  //save local event
 	  PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-	  if((syst=="metcut") && ((ev.cat==EE || ev.cat==MUMU) && phys.met.pt()<40)) continue;
+	  if((syst=="metcut") && ((ev.cat==EE || ev.cat==MUMU) && phys.met[0].pt()<40)) continue;
 
 	  PhysicsObjectLeptonCollection ileptons = phys.leptons;
 
-	  LorentzVectorCollection jetColl;
+	  PhysicsObjectJetCollection jetColl;
 	  std::vector<size_t> origJetsIdx;
 	  for(size_t ijet=0; ijet<phys.jets.size(); ijet++)
 	    {
@@ -223,12 +222,12 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	  //vary and reset if required a systematic variation
 	  if(syst!="" && syst !="metcut")
 	    {
-	      std::vector<LorentzVectorCollection> jetsVar;
+	      std::vector<PhysicsObjectJetCollection> jetsVar;
 	      LorentzVectorCollection metsVar;
-	      jet::computeVariation(jetColl,phys.met,jetsVar,metsVar,stdPtResol_,stdEtaResol_,stdPhiResol_,jecUnc_);
-	      if(syst.Contains("jesup"))    jetColl = jetsVar[jet::JES_UP];
-	      if(syst.Contains("jesdown"))  jetColl = jetsVar[jet::JES_DOWN];
-	      if(syst.Contains("jer"))      jetColl = jetsVar[jet::JER];
+	      METUtils::computeVariation(phys.jets, phys.leptons, phys.met[0], jetsVar, metsVar, jecUnc_);
+	      if(syst.Contains("jesup"))    jetColl = jetsVar[METUtils::JES_UP];
+	      if(syst.Contains("jesdown"))  jetColl = jetsVar[METUtils::JES_DOWN];
+	      if(syst.Contains("jer"))      jetColl = jetsVar[METUtils::JER];
 	    }
 	     	     
 	  if(jetbin!=0 && int(jetColl.size())!=jetbin) continue;
@@ -265,23 +264,22 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	      }
 
 	    evTree->GetEntry(j);
-	    EventSummary_t &mixev = evHandler.getEvent();
+	    ZZ2l2nuSummary_t &mixev = evHandler.getEvent();
 	    //if(evcat!= mixev.cat) continue;
 	    
 	    //get the jets
 	    PhysicsEvent_t mixphys = getPhysicsEventFrom(mixev);
-	    LorentzVectorCollection mixjetColl;
-	    for(size_t ijet=0; ijet<mixphys.jets.size(); ijet++) mixjetColl.push_back(mixphys.jets[ijet]);
-	  
+	    PhysicsObjectJetCollection mixjetColl=mixphys.jets;
 	    //vary and reset if required a systematic variation
 	    if(syst!="" && syst !="metcut")
 	      {
-		std::vector<LorentzVectorCollection> mixjetsVar;
+		std::vector<PhysicsObjectJetCollection> mixjetsVar;
 		LorentzVectorCollection mixmetsVar;
-		jet::computeVariation(mixjetColl,mixphys.met,mixjetsVar,mixmetsVar,stdPtResol_,stdEtaResol_,stdPhiResol_,jecUnc_);
-		if(syst.Contains("jesup"))    mixjetColl = mixjetsVar[jet::JES_UP];
-		if(syst.Contains("jesdown"))  mixjetColl = mixjetsVar[jet::JES_DOWN];
-		if(syst.Contains("jer"))      mixjetColl = mixjetsVar[jet::JER];
+		METUtils::computeVariation(mixphys.jets, mixphys.leptons, mixphys.met[0], mixjetsVar, mixmetsVar, jecUnc_);
+		//jet::computeVariation(mixjetColl,mixphys.met,mixjetsVar,mixmetsVar,stdPtResol_,stdEtaResol_,stdPhiResol_,jecUnc_);
+		if(syst.Contains("jesup"))    mixjetColl = mixjetsVar[METUtils::JES_UP];
+		if(syst.Contains("jesdown"))  mixjetColl = mixjetsVar[METUtils::JES_DOWN];
+		if(syst.Contains("jer"))      mixjetColl = mixjetsVar[METUtils::JER];
 	      }
 
 
@@ -351,7 +349,10 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 		      int partonMatch=phys.jets[ origJetsIdx[ijet] ].genid;
 		      int flavorMatch=phys.jets[ origJetsIdx[ijet] ].flavid;
 		      int assignCode=(lit->genid*partonMatch);
-		      bool isCorrect( (assignCode<0) && hasSignal && fabs(flavorMatch)==5 );
+
+		      //FIXME
+		      bool isCorrect(assignCode<0  && fabs(flavorMatch)==5 );
+		      //		      bool isCorrect( (assignCode<0) && hasSignal && fabs(flavorMatch)==5 );
 		      for(size_t icateg=0; icateg<categs.size(); icateg++)
 			{
 			  TString ctf=categs[icateg];
@@ -382,7 +383,7 @@ void MisassignmentMeasurement::measureMisassignments(EventSummaryHandler &evHand
 	  //random rotation
 	  for(PhysicsObjectLeptonCollection::iterator lit = rotLeptons.begin(); lit != rotLeptons.end(); lit++)
 	    {
-	      for(LorentzVectorCollection::iterator jit = jetColl.begin(); jit != jetColl.end(); jit++)
+	      for(PhysicsObjectJetCollection::iterator jit = jetColl.begin(); jit != jetColl.end(); jit++)
 		{
 		  //randomly rotated lepton-jet system
 		  LorentzVector sum = *lit + *jit;

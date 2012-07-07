@@ -12,6 +12,8 @@
   <use name="DataFormats/Math"/>
   <use name="DataFormats/TrackReco"/>
   <use name="DataFormats/JetReco"/>
+  <use name="CondFormats/JetMETObjects"/>
+  <use name="JetMETCorrections/Objects"/>
   <use name="DataFormats/PatCandidates"/>
   <use name="DataFormats/Common"/>
   <use name="TrackingTools/TransientTrack"/>

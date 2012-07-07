@@ -1,0 +1,38 @@
+{
+    "proc":[
+	{
+	 "tag":"t#bar{t} (Powheg)",
+         "isdata":false,
+         "color":"8",
+	 "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"MC8TeV_TT2l_Powheg",
+                "xsec":165,
+		"br":[0.065]
+                }
+	   ]
+	},
+	{
+           "tag":"Z#rightarrow #tau#tau (data)",
+           "isdata":true,
+           "color":1,
+           "fill":0,
+           "marker":20,
+           "data":[
+               {
+                  "dtag":"Data8TeV_DYTauEmbedded_2012A"
+               },
+               {
+                  "dtag":"Data8TeV_DYTauEmbedded_Run193752to195135_2012B"
+               },
+               {
+                  "dtag":"Data8TeV_DYTauEmbedded_Run195147to196070_2012B"
+               },
+               {
+                  "dtag":"Data8TeV_DYTauEmbedded_Run196090to196531_2012B"
+               }
+	    ]
+	}
+    ]	
+}

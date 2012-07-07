@@ -20,7 +20,7 @@ class KinResultsHandler
   
   KinResultsHandler();
   void init(TString outpath,bool doWrite,int maxJetMult=2);
-  void addResults(top::EventSummary_t &ev);
+  void addResults(int run , int lumi, int event);
   inline TTree *getResultsTree() { return kinTree_; }
   inline TChain *getResultsChain() { return kinChain_; }
   void end();

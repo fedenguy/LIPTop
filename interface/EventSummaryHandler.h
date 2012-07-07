@@ -16,7 +16,7 @@ typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > LorentzVector;
 typedef std::vector<LorentzVector> LorentzVectorCollection;
 
 #define MAXCANDIDATES 100
-#define MAXMEASUREMENTS 10
+#define TOPMAXMEASUREMENTS 10
 
 namespace top
 {
@@ -39,7 +39,7 @@ namespace top
     Int_t id1,id2;
     Float_t pdfWgts[44];
     Int_t nmeasurements;
-    Float_t evmeasurements[MAXMEASUREMENTS];
+    Float_t evmeasurements[TOPMAXMEASUREMENTS];
   };
   
   class EventSummaryHandler{

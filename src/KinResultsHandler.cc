@@ -99,11 +99,11 @@ void KinResultsHandler::init(TString outpath,bool doWrite, int maxJetMult)
 }
 
 //
-void KinResultsHandler::addResults(EventSummary_t &ev)
+void KinResultsHandler::addResults(int run , int lumi, int event)
 {
-  iRun_=ev.run;
-  iLumi_=ev.lumi;
-  iEvent_=ev.event;
+  iRun_=run;
+  iLumi_=lumi;
+  iEvent_=event;
   kinTree_->Fill();
 }
 

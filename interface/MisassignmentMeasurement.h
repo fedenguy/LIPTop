@@ -5,7 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "LIP/Top/interface/EventSummaryHandler.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuSummaryHandler.h"
+
 
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
@@ -66,12 +68,12 @@ class MisassignmentMeasurement
   /**
      @short returns a collection of randomly rotated leptons
   */
-  top::PhysicsObjectLeptonCollection randomlyRotate( top::PhysicsObjectLeptonCollection &leptons, top::PhysicsObjectJetCollection &jets);
+  PhysicsObjectLeptonCollection randomlyRotate( PhysicsObjectLeptonCollection &leptons, PhysicsObjectJetCollection &jets);
 
   /**
      @short runs the measurement
   */
-  void measureMisassignments(top::EventSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1, TString syst="");
+  void measureMisassignments(ZZ2l2nuSummaryHandler &evHandler, double mcut=190, double minMlj=40, bool isData=false, int jetBin=-1, TString syst="");
   
   /**
      @short getters

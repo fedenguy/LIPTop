@@ -13,7 +13,8 @@
 #include "TF1.h"
 #include "TH1.h"
 
-#include "LIP/Top/interface/EventSummaryHandler.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
+//#include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/TopKinSolver.h"
 #include "LIP/Top/interface/KinResultsHandler.h"
 
@@ -29,7 +30,7 @@ class KinAnalysis
   KinAnalysis(TString& scheme, int maxTries=10000, int maxJetMult=2, float mw=80.398, float mb=4.8, TString outpath="KinAnalysis.root", bool doWrite=true);
 
   static bool sortKinCandidates(KinCandidate_t a, KinCandidate_t b)   {   return (a.second>b.second);  }
-  void runOn(top::EventSummary_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc, bool isMC);
+  void runOn(PhysicsEvent_t &ev, JetResolution *ptResol, JetResolution *etaResol, JetResolution *phiResol, JetCorrectionUncertainty *jecUnc, bool isMC);
   void endAnalysis() { resHandler_.end(); }
   ~KinAnalysis();
 
