@@ -92,7 +92,7 @@ procs=[]
 systs=[]
 singleSyst=[]
 if(mode=='std' or mode=='simple') :
-    procs=[ "Di-bosons", "Single top", "W+jets", "Z-#gamma^{*}+jets#rightarrow ll", "other t#bar{t}", "t#bar{t} dileptons", "data" ]
+    procs=[ "Di-boson", "Single top", "W#rightarrow l#nu", "Z#rightarrow ll","other t#bar{t}", "t#bar{t}", "data" ]
     if(mode=='std') :
         systs     = ['jer', 'jesup','jesdown','puup', 'pudown']
         singleSyst= [True,  False,   False,    False,  False]

@@ -1,0 +1,588 @@
+#include <iostream>
+#include <boost/shared_ptr.hpp>
+#include "Math/GenVector/Boost.h"
+
+#include "CMGTools/HtoZZ2l2nu/src/tdrstyle.C"
+#include "CMGTools/HtoZZ2l2nu/src/JSONWrapper.cc"
+#include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
+#include "CMGTools/HtoZZ2l2nu/interface/MacroUtils.h"
+#include "CMGTools/HtoZZ2l2nu/interface/plotter.h"
+
+#include "TSystem.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "TCanvas.h"
+#include "TH1F.h"
+#include "TH2F.h"
+#include "TProfile.h"
+#include "TROOT.h"
+#include "TString.h"
+#include "TList.h"
+#include "TGraph.h"
+#include "TCanvas.h"
+#include "TPad.h"
+#include "TLegend.h"
+#include "TPaveText.h"
+#include "TObjArray.h"
+#include "THStack.h"
+#include "TGraphErrors.h"
+
+#include<iostream>
+#include<fstream>
+#include<map>
+#include<algorithm>
+#include<vector>
+#include<set>
+
+using namespace std;
+
+TString inFileUrl("");
+TString jsonFileUrl("");
+TString histo("finalevtflow");
+std::set<TString> systVars;
+std::vector<int> binsToProject;
+std::vector<std::string> channels;
+float lumiUnc(0.04);
+float iEcm(8);
+
+//wrapper for a projected shape for a given set of cuts
+struct Shape_t
+{
+  TH1F* data, *totalBckg, *totalSplusB, *signal;
+  std::vector<TH1F *> bckg;
+  
+  //the first key corresponds to the proc name
+  //the second key is the name of the variation: e.g. jesup, jesdown, etc.
+  std::map<TString,std::map<TString, TH1F*> > bckgVars;
+  std::map<TString,std::map<TString, float> > dataDrivenBckgVars;
+  std::map<TString, TH1F*> signalVars;
+  
+  //cross section and uncertainties
+  std::map<TString,std::pair<float,float> > crossSections;
+};
+
+
+//
+void printHelp();
+Shape_t getShapeFromFile(TFile* inF, TString ch,JSONWrapper::Object &Root);
+void getYieldsFromShapes(const map<TString, Shape_t> &allShapes);
+void convertShapesToDataCards(const map<TString, Shape_t> &allShapes);
+void saveShapeForMeasurement(TH1F *h, TDirectory *oDir,TString syst="");
+TString convertNameForDataCard(TString title);
+void TLatexToTex(TString &expr);
+float getIntegratedSystematics(TH1F *h,const std::map<TString, TH1F*> &hSysts, std::map<TString,float> &rateSysts);
+
+
+//
+TString convertNameForDataCard(TString title)
+{
+  if(title=="Di-boson")          return "vv";
+  if(title=="QCD")               return "qcd";
+  if(title=="W#rightarrow l#nu") return "w"; 
+  if(title=="other t#bar{t}")    return "ttbar";
+  if(title=="Z#rightarrow ll")   return "dy"; 
+  if(title=="Single top")        return "st";
+  if(title=="t#bar{t}")          return "signal";
+  return title;
+}
+
+//
+float getIntegratedSystematics(TH1F *h,const std::map<TString, TH1F*> &hSysts, std::map<TString,float> &rateSysts, int bin)
+{
+  if(h==0) return -1;
+  float rate=h->GetBinContent(bin);
+  float varUp(0),varDown(0);
+  for(std::map<TString, TH1F*>::const_iterator it=hSysts.begin(); it!=hSysts.end(); it++)
+    {
+      float var=it->second->GetBinContent(bin)/rate;
+      if(isnan(var) || isinf(var)) continue;
+      if(var>1) varUp += pow(var-1,2);
+      else      varDown += pow(1-var,2);
+    } 
+  for(std::map<TString, float>::iterator it=rateSysts.begin(); it!=rateSysts.end(); it++)
+    {
+      varUp += pow(it->second,2);
+      varDown += pow(it->second,2);
+    }
+  varUp=sqrt(varUp);
+  varDown=sqrt(varDown);
+  float var=0.5*(varUp+varDown);
+  return var*rate;
+}
+
+//
+void TLatexToTex(TString &expr)
+{
+  expr = "$"+expr;
+  expr += "$";
+  expr.ReplaceAll("mu","\\mu"); 
+  expr.ReplaceAll("_"," "); 
+  expr.ReplaceAll("#","\\");
+}
+
+//
+void printHelp()
+{
+  printf("Options\n");
+  printf("--in        --> input file from plotter\n");
+  printf("--s         --> shape name\n");
+  printf("--json      --> json file with the sample descriptor\n");
+  printf("--histo     --> name of histogram to be used\n");
+  printf("--bins      --> list of bins to be used (they must be comma separated without space)\n");
+  printf("--ch        --> list of channels to be used (they must be comma separated without space)\n");
+}
+
+//
+Shape_t getShapeFromFile(TFile* inF, TString ch, JSONWrapper::Object &Root)
+{
+  Shape_t shape; 
+  shape.totalBckg=NULL;
+  shape.signal=NULL;
+  shape.data=NULL;
+
+  std::vector<JSONWrapper::Object> Process = Root["proc"].daughters();
+  for(unsigned int i=0;i<Process.size();i++)
+    {
+      TString procCtr(""); procCtr+=i;
+      TString proc=(Process[i])["tag"].toString();
+      TDirectory *pdir = (TDirectory *)inF->Get(proc);         
+      if(pdir==0) continue;
+      
+      bool isData(Process[i]["isdata"].toBool());
+      bool isSignal(Process[i]["issignal"].toBool());
+      int color(1);       if(Process[i].isTag("color" ) ) color  = (int)Process[i]["color" ].toInt();
+      int lcolor(color);  if(Process[i].isTag("lcolor") ) lcolor = (int)Process[i]["lcolor"].toInt();
+      int mcolor(color);  if(Process[i].isTag("mcolor") ) mcolor = (int)Process[i]["mcolor"].toInt();
+      int fcolor(color);  if(Process[i].isTag("fcolor") ) fcolor = (int)Process[i]["fcolor"].toInt();
+      int lwidth(1);      if(Process[i].isTag("lwidth") ) lwidth = (int)Process[i]["lwidth"].toInt();
+      int lstyle(1);      if(Process[i].isTag("lstyle") ) lstyle = (int)Process[i]["lstyle"].toInt();
+      int fill(1001);     if(Process[i].isTag("fill"  ) ) fill   = (int)Process[i]["fill"  ].toInt();
+      int marker(20);     if(Process[i].isTag("marker") ) marker = (int)Process[i]["marker"].toInt();
+  
+      TH1F* syst = (TH1F*) pdir->Get("optim_systs");
+      for(int ivar = 1; ivar<= (syst==0? 1 : syst->GetNbinsX());ivar++)
+	{
+	  TString varName = (syst==0? "" : syst->GetXaxis()->GetBinLabel(ivar));
+	  if(!varName.IsNull()) systVars.insert(varName);
+	  
+	  TString histoName = ch;  if(!ch.IsNull()) histoName += "_"; histoName += histo+varName ;
+	  TH1F* hshape = (TH1F*) pdir->Get( histoName );
+	  if(hshape==0) continue;
+
+	  //project out required bins (set the others to 0)
+	  if(binsToProject.size()) {
+	    for(int ibin=1; ibin<=hshape->GetXaxis()->GetNbins(); ibin++) { 
+	      if(find(binsToProject.begin(),binsToProject.end(),ibin) != binsToProject.end()) continue;
+	      hshape->SetBinContent(ibin,0);
+	      hshape->SetBinError(ibin,0);
+	    }
+	  }
+	  else for(int ibin=1; ibin<=hshape->GetXaxis()->GetNbins(); ibin++) binsToProject.push_back(ibin); 
+
+	  //format shape
+	  // fixExtremities(hshape,true,true);
+	  hshape->SetDirectory(0);  
+	  hshape->SetTitle(proc);
+	  hshape->SetFillColor(color); 
+	  hshape->SetLineColor(lcolor); 
+	  hshape->SetMarkerColor(mcolor);
+	  hshape->SetFillStyle(fill);  
+	  hshape->SetLineWidth(lwidth); 
+	  hshape->SetMarkerStyle(marker); 
+	  hshape->SetLineStyle(lstyle);
+	
+	 //save in structure
+	  if(isData){
+	    if(varName=="")  shape.data=hshape;
+	    else continue;
+	  }else if(isSignal){
+	    if(varName==""){
+	      float thxsec = Process[i]["data"].daughters()[0]["xsec"].toDouble();
+	      float thxsecunc=0;
+	      if(Process[i]["data"].daughters()[0].isTag("xsecunc") )  thxsecunc = Process[i]["data"].daughters()[0]["xsecunc"].toDouble();
+	      shape.crossSections[proc]=std::pair<float,float>(thxsec,thxsecunc);
+	      shape.signal=hshape;
+            }
+	    else{
+	      shape.signalVars[varName]=hshape;
+            }
+	  }else{
+	    if(varName==""){
+	      shape.bckg.push_back(hshape);
+	      float thxsec = Process[i]["data"].daughters()[0]["xsec"].toDouble();
+              float thxsecunc=0;
+              if(Process[i]["data"].daughters()[0].isTag("xsecunc") )  thxsecunc = Process[i]["data"].daughters()[0]["xsecunc"].toDouble();
+	      shape.crossSections[proc]=std::pair<float,float>(thxsec,thxsecunc);
+	    }
+	    else{
+	      shape.bckgVars[proc][varName]=hshape;
+	    }
+	  }
+	}
+    }
+
+  //compute the total background
+  for(size_t i=0; i<shape.bckg.size(); i++)
+    {
+      if(shape.totalBckg==0) { shape.totalBckg = (TH1F *)shape.bckg[i]->Clone(ch+"_"+histo+"_total"); shape.totalBckg->SetDirectory(0); shape.totalBckg->SetTitle("total bckg"); }
+      else                   { shape.totalBckg->Add(shape.bckg[i]); }
+    }
+
+  //total prediction
+  if(shape.totalBckg && shape.signal)
+    {
+      shape.totalSplusB = (TH1F *) shape.totalBckg->Clone(ch+"_"+histo+"_totalsplusb"); 
+      shape.totalSplusB->SetTitle("total");
+      shape.totalSplusB->SetDirectory(0);
+      shape.totalSplusB->Add(shape.signal);
+    }
+  
+  //all done
+  return shape;
+}
+
+
+//
+void getYieldsFromShapes(const map<TString, Shape_t> &allShapes)
+{
+  FILE* pFile = fopen("CrossSectionYields.tex","w");
+  TH1F *dataTempl=allShapes.begin()->second.data;
+  const std::vector<TH1F *> &bckgTempl=allShapes.begin()->second.bckg;
+  for(std::vector<int>::iterator bIt = binsToProject.begin(); bIt != binsToProject.end(); bIt++)
+    {
+      TString cat=dataTempl->GetXaxis()->GetBinLabel(*bIt);
+        
+      //table header
+      fprintf(pFile,"\\begin{center}\n\\caption{Event yields expected for background and signal processes and observed in data for the %s category. The uncertainty associated to the limited statistics in the MC is quoted separately from the other systematic uncertainties.}\n\\label{tab:table}\n",cat.Data());
+      TString Ccol   = "\\begin{tabular}{|c|";
+      TString Cval   = "Channel ";
+      for(std::map<TString,Shape_t>::const_iterator cIt=allShapes.begin(); cIt!=allShapes.end(); cIt++) {
+	TString ch(cIt->first); if(ch.IsNull()) ch="inclusive"; 
+	Ccol += "l";
+	TString icol(ch/*+"-"+cat*/); TLatexToTex(icol);
+	Cval += " & "+icol+" ";      
+      }
+      Ccol += "}\\hline\\hline\n"; fprintf(pFile,"%s",Ccol.Data());
+      Cval += "\\\\\\hline\n";      fprintf(pFile,"%s",Cval.Data());
+            
+      //event yields
+      std::map<TString, TString > CByields;
+      TString CSyields,CSpByields,CDyields;
+      int ich(0);
+      for(std::map<TString,Shape_t>::const_iterator cIt=allShapes.begin(); cIt!= allShapes.end(); cIt++,ich++) {
+
+	const Shape_t &shape=cIt->second;
+
+	//data
+	if(ich==0) CDyields = "data ";
+	CDyields += " & "; CDyields += (int) shape.data->GetBinContent(*bIt);
+
+	float totalSyst(0);
+
+	//signal
+	TString sigProc=shape.signal->GetTitle();
+	if(ich==0) { CSyields = sigProc; TLatexToTex(CSyields); }
+	std::map<TString,float> sigRateSysts;
+	if(shape.crossSections.find(sigProc) != shape.crossSections.end())
+	  {
+	    std::pair<float,float> xsec=shape.crossSections.find(sigProc)->second;
+	    sigRateSysts["xsec"]=xsec.second/xsec.first;
+	  }
+	sigRateSysts["lumi"]=lumiUnc;
+	float sSyst=getIntegratedSystematics(shape.signal,shape.signalVars,sigRateSysts,*bIt);
+	totalSyst += pow(sSyst,2); 
+	CSyields += " & ";
+	CSyields += toLatexRounded( shape.signal->GetBinContent(*bIt), shape.signal->GetBinError(*bIt), sSyst);
+
+	//background
+	for(std::vector<TH1F *>::const_iterator bckgIt=bckgTempl.begin(); bckgIt!=bckgTempl.end(); bckgIt++)
+	  {
+	    TString proc=(*bckgIt)->GetTitle();
+	    bool procFound(false);
+	    for(std::vector<TH1F *>::const_iterator bckgItt=shape.bckg.begin(); bckgItt!=shape.bckg.end(); bckgItt++)
+	      {
+		if(proc!=TString((*bckgItt)->GetTitle())) continue;
+		float bSyst(-1);
+		if(true)
+		  {
+		    std::map<TString,float> rateSysts;
+		    if(shape.crossSections.find(proc) != shape.crossSections.end())
+		      {
+			std::pair<float,float> xsec=shape.crossSections.find(proc)->second;
+			rateSysts["xsec"]=xsec.second/xsec.first;
+		      }
+		    rateSysts["lumi"]=lumiUnc;
+		    std::map<TString, TH1F*> bckgVars;
+		    if(shape.bckgVars.find(proc)!=shape.bckgVars.end()) bckgVars =shape.bckgVars.find(proc)->second;
+		    bSyst=getIntegratedSystematics(*bckgItt,bckgVars,rateSysts,*bIt);
+		    totalSyst += pow(bSyst,2); 
+		  }
+
+		if(ich==0) { CByields[proc]=proc; TLatexToTex(CByields[proc]); }
+		CByields[proc] += " & "; CByields[proc] += toLatexRounded( (*bckgItt)->GetBinContent(*bIt), (*bckgItt)->GetBinError(*bIt), bSyst); 
+		procFound=true;
+		break;
+	      }
+	    if(procFound) continue;
+	    CByields[proc] += " & ";
+	  }	  
+
+	//signal + background
+	totalSyst=sqrt(totalSyst);
+	if(ich==0) { CSpByields = shape.totalSplusB->GetTitle(); TLatexToTex(CSpByields); }
+	CSpByields += " & "; CSpByields += toLatexRounded( shape.totalSplusB->GetBinContent(*bIt), shape.totalSplusB->GetBinError(*bIt),totalSyst);
+      }
+      for(std::map<TString,TString>::iterator cbyIt=CByields.begin(); cbyIt!=CByields.end(); cbyIt++)
+	{ 
+	  cbyIt->second += "\\\\\n";  
+	  fprintf(pFile,"%s",cbyIt->second.Data()); 
+	}
+      CSyields += "\\\\\\hline\n";       fprintf(pFile,"%s",CSyields.Data()); 
+      CSpByields += "\\\\\\hline\n";     fprintf(pFile,"%s",CSpByields.Data());
+      CDyields += "\\\\\\hline\n";       fprintf(pFile,"%s",CDyields.Data());      
+
+      //close table
+      fprintf(pFile,"\\hline\\end{tabular}\n\\end{center}\n");
+      fprintf(pFile,"\n\n\n\n");
+    }
+  fclose(pFile);
+}
+
+//
+void saveShapeForMeasurement(TH1F *h, TDirectory *oDir,TString syst)
+{
+  if(h==0 || oDir==0) return;
+  oDir->cd();
+  TString proc=convertNameForDataCard(h->GetTitle());
+  if(syst.IsNull())
+    {
+      if(proc=="data") h->Write("data_obs");
+      else {
+	h->Write(proc);
+	
+	//build also the statistical uncertainty shapes
+	//for each bin set content as val +/- statErr (beware however of negative and extremely large values)
+	TString statSystName(proc+"_"); 
+	if(proc=="signal") statSystName="ttbar_";
+	statSystName+=oDir->GetTitle(); 
+	statSystName+="_stat";
+	TH1* statup   = (TH1 *)h->Clone(statSystName+"Up");
+	TH1* statdown = (TH1 *)h->Clone(statSystName+"Down");
+	for(int ibin=1; ibin<=statup->GetXaxis()->GetNbins(); ibin++){
+	  statup  ->SetBinContent(ibin,std::min(2*h->GetBinContent(ibin), std::max(0.01*h->GetBinContent(ibin), statup  ->GetBinContent(ibin) + statup  ->GetBinError(ibin))));
+	  statdown->SetBinContent(ibin,std::min(2*h->GetBinContent(ibin), std::max(0.01*h->GetBinContent(ibin), statdown->GetBinContent(ibin) - statdown->GetBinError(ibin))));
+	}
+	statup  ->Write(proc+"_"+statSystName+"Up");
+	statdown->Write(proc+"_"+statSystName+"Down");
+      }
+    }
+  else
+    {
+      TString systName(proc+"_");
+      //systName+=oDir->GetTitle();
+      //systName+="_";
+      systName+=syst;
+      systName.ReplaceAll("down","Down");
+      systName.ReplaceAll("up","Up");
+      h->Write(systName);
+    }
+}
+
+
+//
+void convertShapesToDataCards(const map<TString, Shape_t> &allShapes)
+{
+  TFile *fOut = TFile::Open("CrossSectionShapes.root","RECREATE");
+  for(std::map<TString, Shape_t>::const_iterator it=allShapes.begin(); it!=allShapes.end(); it++)
+    {
+      TString ch(it->first); if(ch.IsNull()) ch="inclusive";
+      TDirectory *oDir=fOut->mkdir(ch);
+
+      TString shapesFile("DataCard_"+ch+".dat");
+      const Shape_t &shape=it->second;
+      
+      FILE* pFile = fopen(shapesFile,"w");
+
+      fprintf(pFile, "imax 1\n");
+      fprintf(pFile, "jmax *\n");
+      fprintf(pFile, "kmax *\n");
+      fprintf(pFile, "-------------------------------\n");
+      fprintf(pFile, "shapes * * %s %s/$PROCESS %s/$PROCESS_$SYSTEMATIC\n","CrossSectionShapes.root", ch.Data(), ch.Data());
+      fprintf(pFile, "-------------------------------\n");
+      
+      //observations
+      fprintf(pFile, "bin 1\n");
+      fprintf(pFile, "observation %f\n",shape.data->Integral());
+      fprintf(pFile, "-------------------------------\n");
+      saveShapeForMeasurement(shape.data,oDir);
+      
+      //process rows
+      fprintf(pFile,"%30s ", "bin");
+      fprintf(pFile,"%6i ",1);
+      for(size_t j=0; j<shape.bckg.size(); j++) fprintf(pFile,"%6i ", 1);
+      fprintf(pFile,"\n");
+     
+      fprintf(pFile,"%30s ", "process");
+      fprintf(pFile,"%6s ", convertNameForDataCard(shape.signal->GetTitle()).Data());
+      for(size_t j=0; j<shape.bckg.size(); j++) fprintf(pFile,"%6s ", convertNameForDataCard(shape.bckg[j]->GetTitle()).Data());
+      fprintf(pFile,"\n");
+
+      fprintf(pFile,"%30s ", "process");
+      fprintf(pFile,"%6s ","0");
+      for(size_t j=0; j<shape.bckg.size(); j++) fprintf(pFile,"%6d ", int(j+1));
+      fprintf(pFile,"\n");
+
+      fprintf(pFile,"%30s ", "rate");
+      fprintf(pFile,"%6.3f ",shape.signal->Integral());
+      saveShapeForMeasurement(shape.signal,oDir);
+      for(size_t j=0; j<shape.bckg.size(); j++) { fprintf(pFile,"%6.3f ", shape.bckg[j]->Integral()); saveShapeForMeasurement(shape.bckg[j],oDir); }
+      fprintf(pFile,"\n");
+      fprintf(pFile, "-------------------------------\n");
+      
+      //systematics
+      
+      //lumi
+      fprintf(pFile,"%30s_%dTeV %10s","lumi",int(iEcm),"lnN");
+      fprintf(pFile,"%6.3f ",1+lumiUnc);
+      for(size_t j=0; j<shape.bckg.size(); j++) {
+	if(shape.dataDrivenBckgVars.find(shape.bckg[j]->GetTitle()) != shape.dataDrivenBckgVars.end()) fprintf(pFile,"%6s ","-");
+	else                                                                                           fprintf(pFile,"%6.3f ",1+lumiUnc);
+      }
+      fprintf(pFile,"\n");
+      
+      //th.xsec
+      fprintf(pFile,"%35s %10s ", "theoryUncXS_ttbar", "lnN");
+      std::pair<float,float> ttbarXsec=shape.crossSections.find(shape.signal->GetTitle())->second;
+      fprintf(pFile,"%6.3f ",1.0+ttbarXsec.second/ttbarXsec.first);
+      for(size_t j=0; j<shape.bckg.size(); j++) {
+	if(convertNameForDataCard(shape.bckg[j]->GetTitle())!="ttbar") fprintf(pFile,"%6s ","-");
+	else                                                           fprintf(pFile,"%6.3f ",1.0+ttbarXsec.second/ttbarXsec.first);
+      }
+      fprintf(pFile,"\n");
+
+      for(size_t j=0; j<shape.bckg.size(); j++)
+	{
+	  TString proc(convertNameForDataCard(shape.bckg[j]->GetTitle()));
+	  if(proc=="ttbar") continue;
+	  std::pair<float,float> procXsec=shape.crossSections.find(shape.bckg[j]->GetTitle())->second;
+	  if(procXsec.second<=0) continue;
+	  if(shape.dataDrivenBckgVars.find(shape.bckg[j]->GetTitle()) != shape.dataDrivenBckgVars.end()) continue;
+	  
+	  TString uncName("theoryUncXS_"+proc);
+	  fprintf(pFile,"%35s %10s ", uncName.Data(), "lnN");
+	  fprintf(pFile,"%6s ","-");
+	  for(size_t k=0; k<shape.bckg.size(); k++) {
+	    if(k!=j) fprintf(pFile,"%6s ","-");
+	    else if(shape.dataDrivenBckgVars.find(shape.bckg[k]->GetTitle()) != shape.dataDrivenBckgVars.end()) fprintf(pFile,"%6s ","-");
+	    else     fprintf(pFile,"%6.3f ",1.0+procXsec.second/procXsec.first);
+	  }
+	  fprintf(pFile,"\n");
+	}
+
+      //fakes
+      fprintf(pFile,"%35s %10s ", "fakes", "lnN");
+      fprintf(pFile,"%6s ","-");
+      for(size_t j=0; j<shape.bckg.size(); j++) {
+	TString name=convertNameForDataCard(shape.bckg[j]->GetTitle());
+	if(name!="qcd" && name!="ttbar" && name !="w")  fprintf(pFile,"%6s ","-");
+	else                                            fprintf(pFile,"%6s ","2.0");
+      }
+      fprintf(pFile,"\n");
+
+      //systematics described by shapes
+      for(std::set<TString>::iterator it=systVars.begin(); it!=systVars.end(); it++)
+	{
+	  if(it->EndsWith("down")) continue;
+	  TString systName(*it);
+	  if(systName.EndsWith("up")) systName.Remove(systName.Length()-2,2);
+	  
+	  fprintf(pFile,"%35s %10s ", systName.Data(), "shape");
+	  if(shape.signalVars.find(*it)==shape.signalVars.end())     fprintf(pFile,"%6s ","-");
+	  else if(shape.signalVars.find(*it)->second->Integral()==0) fprintf(pFile,"%6s ","-");
+	  else 
+	    { 
+	      fprintf(pFile,"%6s ","1"); 
+	      saveShapeForMeasurement(shape.signalVars.find(systName+"up")->second,oDir,systName+"up"); 
+	      saveShapeForMeasurement(shape.signalVars.find(systName+"down")->second,oDir,systName+"down"); 
+	    }
+	  for(size_t j=0; j<shape.bckg.size(); j++) {
+	    if(shape.bckgVars.find(shape.bckg[j]->GetTitle())==shape.bckgVars.end())                                                                fprintf(pFile,"%6s ","-");
+	    else if(shape.dataDrivenBckgVars.find(shape.bckg[j]->GetTitle()) != shape.dataDrivenBckgVars.end())                                     fprintf(pFile,"%6s ","-");
+	    else if(shape.bckgVars.find(shape.bckg[j]->GetTitle())->second.find(*it)==shape.bckgVars.find(shape.bckg[j]->GetTitle())->second.end()) fprintf(pFile,"%6s ","-");
+	    else if(shape.bckgVars.find(shape.bckg[j]->GetTitle())->second.find(*it)->second->Integral()==0)                                        fprintf(pFile,"%6s ","-");
+	    else                                                                                                                                  
+	      { 
+		fprintf(pFile,"%6s ","1"); 
+		saveShapeForMeasurement(shape.bckgVars.find(shape.bckg[j]->GetTitle())->second.find(systName+"up")->second,oDir,systName+"up"); 
+		saveShapeForMeasurement(shape.bckgVars.find(shape.bckg[j]->GetTitle())->second.find(systName+"down")->second,oDir,systName+"down"); 
+	      }
+	  }
+	  fprintf(pFile,"\n");
+	}
+
+      //MC statistics (is also systematic but written separately, it is saved at the same time as the nominal shape)
+      fprintf(pFile,"%35s %10s ", ("ttbar_"+ch+"_stat").Data(), "shape");
+      fprintf(pFile,"%6s ","1");
+      for(size_t j=0; j<shape.bckg.size(); j++) {
+	if(convertNameForDataCard(shape.bckg[j]->GetTitle())!="ttbar") fprintf(pFile,"%6s ","-");
+	else                                                           fprintf(pFile,"%6s ","1");
+      }
+      fprintf(pFile,"\n");
+
+      for(size_t j=0; j<shape.bckg.size(); j++)
+	{
+	  TString proc(convertNameForDataCard(shape.bckg[j]->GetTitle()));
+	  if(proc=="ttbar") continue;
+	  if(shape.dataDrivenBckgVars.find(shape.bckg[j]->GetTitle()) != shape.dataDrivenBckgVars.end()) continue;
+	  
+	  fprintf(pFile,"%35s %10s ", (proc+"_"+ch+"_stat").Data(), "shape");
+	  fprintf(pFile,"%6s ","-");
+	  for(size_t k=0; k<shape.bckg.size(); k++) {
+	    if(k!=j) fprintf(pFile,"%6s ","-");
+	    else if(shape.dataDrivenBckgVars.find(shape.bckg[k]->GetTitle()) != shape.dataDrivenBckgVars.end()) fprintf(pFile,"%6s ","-");
+	    else     fprintf(pFile,"%6s ","1");
+	  }
+	  fprintf(pFile,"\n");
+	}
+
+      //all done
+      fprintf(pFile,"\n");
+      fclose(pFile);
+    }      
+
+  fOut->Close();
+}      
+
+//
+int main(int argc, char* argv[])
+{
+  setStyle();
+
+  //get input arguments
+  for(int i=1;i<argc;i++){
+    string arg(argv[i]);
+    if(arg.find("--help")        !=string::npos)              { printHelp(); return -1;} 
+    else if(arg.find("--in")     !=string::npos && i+1<argc)  { inFileUrl = argv[i+1];  i++;  printf("in = %s\n", inFileUrl.Data());  }
+    else if(arg.find("--json")   !=string::npos && i+1<argc)  { jsonFileUrl  = argv[i+1];  i++;  printf("json = %s\n", jsonFileUrl.Data()); }
+    else if(arg.find("--histo")  !=string::npos && i+1<argc)  { histo     = argv[i+1];  i++;  printf("histo = %s\n", histo.Data()); }
+    else if(arg.find("--bins")   !=string::npos && i+1<argc)  { char* pch = strtok(argv[i+1],",");printf("bins to use are : ");while (pch!=NULL){int b; sscanf(pch,"%d",&b); printf(" %d ",b); binsToProject.push_back(b);  pch = strtok(NULL,",");}printf("\n"); i++; }
+    else if(arg.find("--ch")     !=string::npos && i+1<argc)  { char* pch = strtok(argv[i+1],",");printf("ch to use are : ");  while (pch!=NULL){printf(" %s ",pch); channels.push_back(pch);  pch = strtok(NULL,",");}printf("\n"); i++; }
+  }
+  if(jsonFileUrl.IsNull() || inFileUrl.IsNull() || histo.IsNull()) { printHelp(); return -1; }
+  if(channels.size()==0) { channels.push_back("ee"); channels.push_back("mumu"); channels.push_back("emu"); channels.push_back(""); }
+
+ 
+  //get the shapes
+  TFile *inF = TFile::Open(inFileUrl);
+  JSONWrapper::Object jsonF(jsonFileUrl.Data(), true);
+  std::map<TString, Shape_t> shapes;
+  for(std::vector<string>::iterator cIt = channels.begin(); cIt != channels.end(); cIt++) shapes[*cIt]=getShapeFromFile(inF, *cIt, jsonF);
+  inF->Close();
+
+  //print the tables/datacards
+  getYieldsFromShapes(shapes);
+  
+  //convert shapes to datacards
+  convertShapesToDataCards(shapes);
+}
+

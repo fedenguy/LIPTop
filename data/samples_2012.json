@@ -10,25 +10,29 @@
                 "dtag":"MC8TeV_SingleTbar_tW",
                 "dset":"",
                 "split":1,
-                "xsec":11.1773
+                "xsec":11.1,
+	        "xsecunc":0.76	
                 },
                 {
                 "dtag":"MC8TeV_SingleT_tW",
                 "dset":"",
                 "split":1,
-                "xsec":11.1773
+                "xsec":11.1,
+	        "xsecunc":0.76	
                 },
                 {
                 "dtag":"MC8TeV_SingleTbar_t",
                 "dset":"",
                 "split":1,
-                "xsec":55.531
+                "xsec":56.4,
+		"xsecunc":2.37
                 },
                 {
                 "dtag":"MC8TeV_SingleTbar_s",
                 "dset":"",
                 "split":1,
-                "xsec":3.89394
+                "xsec":3.8,
+	        "xsecunc":0.15
                 }
           ]
         },
@@ -43,6 +47,7 @@
                 "dtag":"MC8TeV_WW",
                 "split":1,
                 "xsec":57.1097,
+		"xsecunc":0,
 		"br":[0.104976]
              },
 	    {
@@ -50,6 +55,7 @@
                 "split":2,
 	        "mctruthmode":1,
                 "xsec":7.92,
+		"xsecunc":0,
 		"br":[0.0403896,1.14]
              },
             {
@@ -57,6 +63,7 @@
                 "dset":"/WZ_TuneZ2star_8TeV_pythia6_tauola/Summer12-PU_S7_START50_V15-v1/AODSIM",
                 "split":2,
                 "xsec":22.9,
+		"xsecunc":0,
 		"br":[0.032715576]
              }
            ]
@@ -127,6 +134,7 @@
         },
 	{
          "tag":"t#bar{t}",
+         "issignal":true,
          "isdata":false,
          "color":"614",
          "lcolor":1,
@@ -136,7 +144,8 @@
                 "dtag":"MC8TeV_TTJets_signal",
                 "dset":"/TTJets_TuneZ2star_8TeV-madgraph-tauola/Summer12-PU_S7_START50_V15-v1/AODSIM",
                 "split":1,
-                "xsec":225.197
+                "xsec":234,
+		"xsecunc":12
                 }
           ]
         },
@@ -151,7 +160,8 @@
                 "dtag":"MC8TeV_TTJets",
                 "dset":"/TTJets_TuneZ2star_8TeV-madgraph-tauola/Summer12-PU_S7_START50_V15-v1/AODSIM",
                 "split":1,
-                "xsec":225.197
+                "xsec":234,
+		"xsecunc":12
                 }
           ]
         },

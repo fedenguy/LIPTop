@@ -91,6 +91,7 @@ int main(int argc, char* argv[])
   int jetIdToUse=JETID_LOOSE;
   int eIdToUse=EID_TIGHT;
   int mIdToUse=MID_TIGHT;
+  bool applyDYweight(true);//false);
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
 
   //
@@ -149,6 +150,7 @@ int main(int argc, char* argv[])
   //
   SmartSelectionMonitor controlHistos;
   TH1F* Hcutflow  = (TH1F*) controlHistos.addHistogram(  new TH1F ("cutflow"    , "cutflow"    ,5,0,5) ) ;
+  TH1F* Hoptim_systs     =  (TH1F*) controlHistos.addHistogram( new TH1F ("optim_systs"    , ";syst;", nSystVars,0,nSystVars) );
 
   //vertex multiplicity
   controlHistos.addHistogram( new TH1F ("nvertices", "; Vertex multiplicity; Events", 50, 0.,50.) );
@@ -274,14 +276,25 @@ int main(int argc, char* argv[])
   TString thetallcats[]={"","eq0jets","eq1jets"};
   for(size_t ivar=0;ivar<nSystVars; ivar++) 
     {
+      Hoptim_systs->GetXaxis()->SetBinLabel(ivar+1, systVars[ivar]);
+
       TH1D *cutflowH=new TH1D("evtflow"+systVars[ivar],";Cutflow;Events",nsteps,0,nsteps);
       for(int ibin=0; ibin<nsteps; ibin++) cutflowH->GetXaxis()->SetBinLabel(ibin+1,labels[ibin]);
       controlHistos.addHistogram( cutflowH );
 
-      controlHistos.addHistogram( new TH1D("sumdphilmet"+systVars[ivar],";#sum |#Delta#phi(l^{i},E_{T}^{miss})|;Events",100,0,6) );
-      controlHistos.addHistogram( new TH1D("mtsum"+systVars[ivar],";M_{T}(l^{1},E_{T}^{miss})+M_{T}(l^{2},E_{T}^{miss});Events",100,0,1000) );
-      controlHistos.addHistogram( new TH1D("ptsum"+systVars[ivar],";p_{T}(l^{1})+p_{T}(l^{2});Events",100,0,500) );
+      TH1D *finalCutflowH=new TH1D("finalevtflow"+systVars[ivar],";Category;Events",3,0,3);
+      finalCutflowH->GetXaxis()->SetBinLabel(1,"=2 jets");
+      finalCutflowH->GetXaxis()->SetBinLabel(2,"=3 jets");
+      finalCutflowH->GetXaxis()->SetBinLabel(3,"=4 jets");
+      controlHistos.addHistogram( finalCutflowH );
 
+      controlHistos.addHistogram( new TH1D("mtsum"+systVars[ivar],";M_{T}(l^{1},E_{T}^{miss})+M_{T}(l^{2},E_{T}^{miss});Events",100,0,1000) );
+      controlHistos.addHistogram( new TH1D("eq1jetsmtsum"+systVars[ivar],";M_{T}(l^{1},E_{T}^{miss})+M_{T}(l^{2},E_{T}^{miss});Events",100,0,1000) );
+      controlHistos.addHistogram( new TH1D("ptsum"+systVars[ivar],";p_{T}(l^{1})+p_{T}(l^{2});Events",100,0,500) );
+      controlHistos.addHistogram( new TH1D("eq1jetsptsum"+systVars[ivar],";p_{T}(l^{1})+p_{T}(l^{2});Events",100,0,500) );
+      controlHistos.addHistogram( new TH1D("mll"+systVars[ivar],";M(l,l') [GeV/c^{2}];Events",50,0,250) );
+      controlHistos.addHistogram( new TH1D("eq1jetsmll",";M(l,l') [GeV/c^{2}];Events",50,0,250) );
+      
       TH1F * h = new TH1F ("njets"+systVars[ivar], "; Jet multiplicity; Events", 6, 0.,6.);
       h->GetXaxis()->SetBinLabel(1,"=0 jets");
       h->GetXaxis()->SetBinLabel(2,"=1 jets");
@@ -322,7 +335,8 @@ int main(int argc, char* argv[])
   if(evurl.Contains("SingleMu"))  fType=MUMU;
   bool isSingleMuPD(!isMC && evurl.Contains("SingleMu"));
   bool isTauEmbedded(!isMC && evurl.Contains("DYTauEmbedded"));
-  
+  bool isDYJetsMC(isMC && evurl.Contains("DYJetsToLL"));
+
   //
   //total entries to process and normalization
   //
@@ -539,7 +553,6 @@ int main(int argc, char* argv[])
 	  double leadlepmt    = METUtils::transverseMass(l1,theMET,false);
 	  double subleadlepmt = METUtils::transverseMass(l2,theMET,false);
 	  double mtsum        = leadlepmt+subleadlepmt;
-	  double dphilmetsum  = fabs(deltaPhi(l1.phi(),theMET.phi()))+fabs(deltaPhi(l2.phi(),theMET.phi()));
  
 	  //TTbar system candidate
 	  LorentzVector ttbar_t = dileptonSystem+theMET;
@@ -553,6 +566,16 @@ int main(int argc, char* argv[])
 	  bool passJet(ngoodJets>=2);
 	  bool isOS(dilcharge<0);
 	  bool passMet( (!isSameFlavor && theMET.pt()>ofMetCut) || (isSameFlavor && theMET.pt()>sfMetCut) );
+	  if( isDYJetsMC && passMet && applyDYweight)
+	    {
+	      if(ngoodJets==1 && ev.cat==EE)   weight *= 1.70;
+	      if(ngoodJets==1 && ev.cat==MUMU) weight *= 1.41;
+	      if(ngoodJets==1 && ev.cat==EMU)  weight *= 0.91;
+	      if(ngoodJets>1  && ev.cat==EE)   weight *= 1.85;
+	      if(ngoodJets>1  && ev.cat==MUMU) weight *= 1.39;
+	      if(ngoodJets>1  && ev.cat==EMU)  weight *= 1.33;
+	    }
+
 
 	  TString metCat("none");
 	  if(passMet)              metCat="";
@@ -583,7 +606,16 @@ int main(int argc, char* argv[])
 		    }
 		}
 	    }
-	  if(!passJet) continue;
+	  if(!passJet)
+	    {
+	      if(!isZcand && passMet && isOS && ngoodJets==1)
+		{
+		  controlHistos.fillHisto("eq1jetsmtsum"+systVars[ivar],catsToFill,mtsum,weight);
+		  controlHistos.fillHisto("eq1jetsmll"+systVars[ivar],catsToFill,dileptonSystem.mass(),weight);
+		  controlHistos.fillHisto("e1jetsptsum"+systVars[ivar],catsToFill,ptsum,weight);
+		}
+	      continue;
+	    }
 	  if(!isZcand)
 	    {
 	      controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELJETS,weight);
@@ -601,9 +633,11 @@ int main(int argc, char* argv[])
 	  if(isZcand) continue;
 
 	  //this is the final selected dilepton sample
+	  if(ngoodJets<=4)  controlHistos.fillHisto("finalevtflow"+systVars[ivar],catsToFill,ngoodJets-2,weight);
+
 	  controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELOS,weight);
-	  controlHistos.fillHisto("sumdphilmet"+systVars[ivar],catsToFill,dphilmetsum,weight);
 	  controlHistos.fillHisto("mtsum"+systVars[ivar],catsToFill,mtsum,weight);
+	  controlHistos.fillHisto("mll"+systVars[ivar],catsToFill,dileptonSystem.mass(),weight);
 	  controlHistos.fillHisto("ptsum"+systVars[ivar],catsToFill,ptsum,weight);
 	  if(ivar==0)
 	    {
@@ -706,6 +740,7 @@ int main(int argc, char* argv[])
 		    
 		  for(std::map<TString, bool>::iterator it=hasTagger.begin(); it!=hasTagger.end(); it++)
 		    {
+		      if(!it->second) continue;
 		      controlHistos.fillHisto( btaggerToTemplate+systVars[ivar]+it->first,catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
 		      if(isMC) controlHistos.fillHisto( btaggerToTemplate+jetFlav+systVars[ivar]+it->first,catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
 		    }

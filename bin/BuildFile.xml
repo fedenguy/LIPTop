@@ -3,6 +3,7 @@
 <environment>
   <bin name="showControlDistributions"  file="showControlDistributions.cc"></bin> 
   <bin name="fitDYcontribution"         file="fitDYcontribution.cc"></bin> 
+  <bin name="fitCrossSection"           file="fitCrossSection.cc"></bin> 
 <!-- <bin name="runKinAnalysis"            file="runKinAnalysis.cc"></bin> -->
 <!--  <bin name="displayKinResults"         file="displayKinResults.cc"></bin>  -->
 <!--  <bin name="showMassDistribution"      file="showMassDistribution.cc"></bin>  -->

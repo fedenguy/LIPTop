@@ -3,6 +3,7 @@
 	{
 	 "tag":"t#bar{t} (Powheg)",
          "isdata":false,
+         "spimpose":true,
          "color":"8",
 	 "lcolor":1,
          "data":[
