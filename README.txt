@@ -8,6 +8,10 @@
 runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/28May2012_CMSSW444_HZZ2l2v_ntuples -o $CMSSW_BASE/src/LIP/Top/test/results -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @runSystematics=True" -s 8nh
 runPlotter --iLumi 5041 --inDir test/results/ --outDir test/results/plots --json data/samples_2012.json
 
+# FIT THE CROSS SECTION
+fitCrossSection --in plotter_dilepton.root --json data/samples_2012.json --syst plotter_syst.root
+combinedCards.py Name1=DataCard_ee.dat Name2=DataCard_mumu.dat Name3=DataCard_emu.dat > DataCard_combined.dat
+runPLRanalysis --in DataCard_ee.dat,DataCard_mumu.dat,DataCard_emu.dat,DataCard_combined.dat
 
 #
 # RUN KIN RECONSTRUCTION
