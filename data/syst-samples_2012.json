@@ -8,8 +8,9 @@
 	 "lcolor":1,
          "data":[
 		{
- 	        "dtag":"MC8TeV_TT2l_Powheg",
-                "xsec":165,
+ 	        "dtag":"MC8TeV_TTTo2L2Nu2B_powheg",
+                "split":2,
+		"xsec":165,
 		"br":[0.065]
                 }
 	   ]
@@ -34,6 +35,84 @@
                   "dtag":"Data8TeV_DYTauEmbedded_Run196090to196531_2012B"
                }
 	    ]
+	},
+	{
+         "tag":"t#bar{t} scale down",
+         "isdata":false,
+         "color":"8",
+         "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"MC8TeV_TTJets_scaledown",
+                "xsec":165
+                }
+	   ]
+	},
+	{
+         "tag":"t#bar{t} scale up",
+         "isdata":false,
+         "color":"8",
+         "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"MC8TeV_TTJets_scaleup",
+                "xsec":165
+                }
+            ]
+	},
+	{
+         "tag":"t#bar{t} matching down",
+         "isdata":false,
+         "color":"8",
+         "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"MC8TeV_TTJets_matchingdown",
+                "xsec":165
+                }
+	   ]
+	},
+	{
+         "tag":"t#bar{t} matching up",
+         "isdata":false,
+         "color":"8",
+         "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"MC8TeV_TTJets_matchingup",
+                "xsec":165
+                }
+            ]
+	},
+        {
+        "tag":"t#bar{t} (m_{t}=166.5)",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets_166v5",
+                "xsec":165
+                }
+     	   ]
+	},
+        {
+        "tag":"t#bar{t} (m_{t}=178.5)",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets_178v5",
+                "xsec":165
+                }
+     	   ]
 	}
     ]	
 }

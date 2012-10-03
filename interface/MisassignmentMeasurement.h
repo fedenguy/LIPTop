@@ -10,14 +10,23 @@
 
 
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
-#include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
+#include "CMGTools/HtoZZ2l2nu/interface/SmartSelectionMonitor.h"
 
 #include "TFile.h"
 #include "TRandom2.h"
 #include "TH1D.h"
+#include "TSystem.h"
 
 #include "CondFormats/JetMETObjects/interface/JetResolution.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+
+/**
+   @short returns a collection of randomly rotated leptons
+*/
+PhysicsObjectLeptonCollection randomlyRotate(PhysicsObjectLeptonCollection &leptons, PhysicsObjectJetCollection &jets, TRandom2 &rndGen);
+
+
+
 
 /**
    @short 
@@ -31,11 +40,13 @@ class MisassignmentMeasurement
   /**
      @short CTOR
    */
-  MisassignmentMeasurement() : nMeasurements(0)  { bookMonitoringHistograms();  }
+  MisassignmentMeasurement(TString jesUncFileName) : nMeasurements(0) 
+    { 
+      bookMonitoringHistograms(); 
+      gSystem->ExpandPathName(jesUncFileName);
+      jecUnc_      = new JetCorrectionUncertainty(jesUncFileName.Data());
+    }
     
-    void initJetUncertainties(TString uncFileName,  TString ptFileName, TString etaFileName,  TString phiFileName);
-
-  
   /**
      @short DTOR
    */
@@ -43,7 +54,7 @@ class MisassignmentMeasurement
   ~MisassignmentMeasurement()  { }
 
   TRandom2 rndGen;
-  SelectionMonitor controlHistos;
+  SmartSelectionMonitor controlHistos;
 
   /**
      @short books the histograms
@@ -64,11 +75,6 @@ class MisassignmentMeasurement
      @short resets the histogram contents
    */
   void resetHistograms(bool fullReset=false);
-
-  /**
-     @short returns a collection of randomly rotated leptons
-  */
-  PhysicsObjectLeptonCollection randomlyRotate( PhysicsObjectLeptonCollection &leptons, PhysicsObjectJetCollection &jets);
 
   /**
      @short runs the measurement
@@ -114,7 +120,6 @@ class MisassignmentMeasurement
 
   std::map<TString,double> bias;
 
-  JetResolution *stdEtaResol_, *stdPhiResol_, *stdPtResol_;
   JetCorrectionUncertainty *jecUnc_;
 
 };

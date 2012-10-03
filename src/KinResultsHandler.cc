@@ -5,7 +5,6 @@
 
 
 using namespace std;
-using namespace top;
 
 //
 KinResultsHandler::KinResultsHandler()

@@ -1,12 +1,12 @@
 #include "LIP/Top/interface/MassMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
 #include <memory>
 #include "TCut.h"
 #include "RooHist.h"
 
 using namespace std;
 using namespace RooFit;
-using namespace top;
 
 //
 MassMeasurement::MassMeasurement(TString parfileURL,TString tag)
@@ -19,7 +19,7 @@ MassMeasurement::MassMeasurement(TString parfileURL,TString tag)
 
 
 //
-EnsembleMeasurement_t MassMeasurement::DoMassFit(top::EventSummaryHandler &evHandler, bool debug)
+EnsembleMeasurement_t MassMeasurement::DoMassFit(ZZ2l2nuSummaryHandler &evHandler, bool debug)
 {
   EnsembleMeasurement_t em;
   em.status=false;
@@ -38,11 +38,11 @@ EnsembleMeasurement_t MassMeasurement::DoMassFit(top::EventSummaryHandler &evHan
     {
       evTree->GetEntry(i);
 
-      top::EventSummary_t &ev = evHandler.getEvent();
-      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
-      double topMass=ev.evmeasurements[0];
+      ZZ2l2nuSummary_t &ev = evHandler.getEvent();
+      PhysicsEvent_t phys=getPhysicsEventFrom(ev);
+      double topMass=ev.measurements[0];
       if(topMass<minTopMass || topMass>maxTopMass) continue;
-      int btagMult = ev.evmeasurements[4]; 
+      int btagMult = ev.measurements[4]; 
       if(btagMult==0) continue;
 
       em.evMasses[em.nEvents] = topMass;

@@ -47,6 +47,10 @@
 using namespace RooFit;
 using namespace std;
 
+bool doSyst(false);
+TString stdUrl(""),outUrl(""),dyReplacementUrl("");
+int smoothOrder(1);
+
 void printHelp();
 void showDYFitResults(RooRealVar &x, RooDataHist &data, RooAbsPdf &model,RooAbsPdf &dyModel, RooRealVar &ndysf,RooNLLVar &nll,
 		      TString tag, TString caption, TString xvar);
@@ -56,6 +60,7 @@ void printHelp()
 {
   printf("--in      --> input file with standard control plots from showControlPlots\n");
   printf("--ttrep   --> input file with control plots from showControlPlots for the syst. json (optional)\n");
+  printf("--out     --> output directory (optional)\n");
   printf("--syst    --> will run systematics also\n");
   printf("--smooth  --> smooth histograms before templating\n");
   printf("command line example: fitDYcontribution --in std_plotter.root --ttrep syst_plotter.root\n");
@@ -64,15 +69,12 @@ void printHelp()
 //
 int main(int argc,char *argv[])
 {
-
-  bool doSyst(false);
-  TString stdUrl(""),dyReplacementUrl("");
-  int smoothOrder(0);
   for(int i=1;i<argc;i++)
     {
       string arg(argv[i]);
       if(arg.find("--help")!=string::npos) { printHelp();    return 0; }
       if(arg.find("--in")!=string::npos)                  { stdUrl=argv[i+1];           gSystem->ExpandPathName(stdUrl);            i++;  printf("in      = %s\n", stdUrl.Data()); }
+      if(arg.find("--out")!=string::npos)                  { outUrl=argv[i+1];           gSystem->ExpandPathName(outUrl);            i++;  printf("out     = %s\n", outUrl.Data()); }
       if(arg.find("--ttrep")!=string::npos)               { dyReplacementUrl=argv[i+1]; gSystem->ExpandPathName(dyReplacementUrl);  i++;  printf("ttRep   = %s\n", dyReplacementUrl.Data()); }
       if(arg.find("--syst")!=string::npos)                { doSyst=true;                                                            printf("Will run systematics\n"); }
       if(arg.find("--smooth")!=string::npos)              { smoothOrder=5;                                                          printf("Will smooth templates with %d-order interpol.\n",smoothOrder); }
@@ -106,10 +108,14 @@ int main(int argc,char *argv[])
       systVars.push_back("jerup");
       systVars.push_back("jerdown");
       systVars.push_back("signalpowheg");
+      systVars.push_back("signalscaleup");
+      systVars.push_back("signalscaledown");
+      systVars.push_back("signalmatchingup");
+      systVars.push_back("signalmatchingdow");
     }
   const size_t nsystVars=systVars.size();
   
-  TString procs[]={"Di-boson","Single top", "W#rightarrow l#nu","Z#rightarrow ll","t#bar{t}","other t#bar{t}"};
+  TString procs[]={"VV", "Single top", "W#rightarrow l#nu","Z#rightarrow ll","t#bar{t}","other t#bar{t}"};
 
   TString ch[]               ={"ee1jets",                      "ee",                    "mumu1jets",                      "mumu",                    "emueq1jets",            "emu",      "emueq1jets", "emu"};
   size_t runNsystVars[]      ={1,                              nsystVars,               1,                                nsystVars,                 1,                       nsystVars,  1,            nsystVars};
@@ -117,7 +123,7 @@ int main(int argc,char *argv[])
   TString templateHisto[]    ={"ee_eq1jetslowmetdilarccosine", "ee_lowmetdilarccosine", "mumu_eq1jetslowmetdilarccosine", "mumu_lowmetdilarccosine", "emu_eq1jetsmtsum",      "emu_mtsum", "emu_eq1jetsmll", "emu_mll"};
   TString templateTitle[]    ={"Z#rightarrow ee (=1 jets)",    "Z#rightarrow ee",       "Z#rightarrow #mu#mu (=1 jets)",  "Z#rightarrow #mu#mu",     "Z#rightarrow #tau#tau (=1 jets)", "Z#rightarrow #tau#tau", "Z#rightarrow #tau#tau (=1 jets)", "Z#rightarrow #tau#tau"};
   TString templateName[]     ={"dytoee",                       "dytoee",                "dytomumu",                       "dytomumu",                "dytoemu",               "dytoemu", "dytoemu", "dytoemu"};
-  //bool rebin[]             ={true,                            true,                    true,                             true,                     false,                   false};
+  //bool rebin[]               ={true,                            true,                    true,                             true,                     false,                   false, false, false};
   bool rebin[]               ={false,                           false,                   false,                            false,                    false,                   false, false, false};
 
   const size_t nchs=sizeof(ch)/sizeof(TString);
@@ -147,7 +153,8 @@ int main(int argc,char *argv[])
       TH1F *dataHisto=(TH1F *) stdFile->Get("data/"+signalRegionHisto[ich])->Clone("data");
       dataHisto->SetDirectory(0);
       dataHisto->SetTitle("data");
-      if(rebin[ich]) dataHisto->Rebin();
+      if(rebin[ich]) 
+	dataHisto->Rebin();
            
       //get histograms for MC
       std::vector<TH1F *> dyReplacementMCHisto, dyMCHisto, otherProcsHisto, mcSumHisto;
@@ -166,12 +173,22 @@ int main(int argc,char *argv[])
 		  cout << "[WARNING] signal will be replaced from alternative simulation for " << ivarOrigName << endl;
 		  TFile *systReplacementFile=TFile::Open( dyReplacementUrl );
 		  systReplacementFile->cd();
-		  if(ivarOrigName.Contains("powheg")) histo = (TH1F *) systReplacementFile->Get("t#bar{t} (Powheg)/"+signalRegionHisto[ich]+ivarName); 
+		  TH1F *repHisto=0;
+		  if(ivarOrigName.Contains("powheg"))       repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} (Powheg)/"+signalRegionHisto[ich]+ivarName); 
+		  if(ivarOrigName.Contains("matchingup"))   repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching up/"+signalRegionHisto[ich]+ivarName); 
+		  if(ivarOrigName.Contains("matchingdown")) repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching down/"+signalRegionHisto[ich]+ivarName); 
+		  if(ivarOrigName.Contains("scaleup"))      repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale up/"+signalRegionHisto[ich]+ivarName); 
+		  if(ivarOrigName.Contains("scaledown"))    repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale down/"+signalRegionHisto[ich]+ivarName); 
+		  if(repHisto==0)
+		      cout << "[WARNING] using default: couldn't find replacement for " << ivarOrigName << endl;
+		  else
+		    histo=repHisto;
 		  histo->SetDirectory(0);
 		  systReplacementFile->Close();
 		  stdFile->cd();
 		}
-	      if(rebin[ich]) histo->Rebin();
+	      if(rebin[ich]) 
+		histo->Rebin();
 
 	      //force the normalization of the shape
 	      if(ivar>0 && !procs[iproc].Contains("Z#rightarrow"))
@@ -193,7 +210,8 @@ int main(int argc,char *argv[])
 		  
 		  TH1F *repHistoMC = (TH1F *) stdFile->Get(procs[iproc]+"/"+templateHisto[ich]+ivarName);
 		  repHistoMC       = (TH1F *) repHistoMC->Clone(templateName[ich]+ivarOrigName+"repmc");
-		  if(rebin[ich]) repHistoMC->Rebin();
+		  if(rebin[ich]) 
+		    repHistoMC->Rebin();
 		  repHistoMC->SetDirectory(0);
 		  dyReplacementMCHisto.push_back( repHistoMC );
 		}
@@ -237,6 +255,10 @@ int main(int argc,char *argv[])
       RooDataHist* sumData = new RooDataHist("sumData", "sumData", RooArgList(x), dataHisto);
       
       //data (or MC) driven template for DY
+      //protect against bins with 0 entries...
+      for(int ibin=1; ibin<=dyReplacementHisto->GetXaxis()->GetNbins(); ibin++)	
+	if(dyReplacementHisto->GetBinContent(ibin)<=0)
+	  dyReplacementHisto->SetBinContent(ibin,0.01); 
       RooDataHist* dataTemplate = new RooDataHist("dataTemplate", "dataTemplate", RooArgList(x), dyReplacementHisto, smoothOrder );
       RooHistPdf modelDataTemplate("modelDataTemplate", "modelDataTemplate", RooArgSet(x), *dataTemplate);
       RooRealVar ndysf("SF_{DY}","dyyieldssfactor",0.91,0.5,3.0);
@@ -263,10 +285,14 @@ int main(int argc,char *argv[])
 
       //fit data
       constrShapeModelData.fitTo(*sumData,Extended(kTRUE),Constrain(nother),Save(kTRUE));
+      RooNLLVar *nll = (RooNLLVar*) constrShapeModelData.createNLL(*sumData,CloneData(kFALSE),Extended(kTRUE),Constrain(nother));
+      if(fabs(ndysf.getError()/ndysf.getVal())>0.5) 
+	report << "Fit did not converge properly most probably..." << endl;
       report << "[SF-DY] "      << ndysf.getVal() << " +/- " << ndysf.getError()  << endl
+	     << "[DY fit]"      << ndy.getVal() << " +/- "  << ndy.getVal()*ndysf.getError()/ndysf.getVal() << endl
 	     << "[Others fit] " << nother.getVal() << " +/- " << nother.getError() << endl
 	     << "---------------------------------------------------" << endl;
-      RooNLLVar *nll = (RooNLLVar*) constrShapeModelData.createNLL(*sumData,CloneData(kFALSE),Extended(kTRUE),Constrain(nother));
+
       showDYFitResults(x,*sumData,constrShapeModelData,modelDataTemplate,ndysf,*nll,
        		       signalRegionHisto[ich],"CMS preliminary",dyReplacementHisto->GetXaxis()->GetTitle());
             
@@ -281,7 +307,7 @@ int main(int argc,char *argv[])
 	  float ndyExp=dyMCHisto[ivar]->Integral(); 
 	  float totalOthers=otherProcsHisto[ivar]->Integral();
 	  float uncOthers=max(float(sqrt(totalOthers)),float(0.04*totalOthers)); 
-
+	  	  
 	  RooDataHist* mcTemplate = new RooDataHist("mcTemplate", "mcTemplate", RooArgList(x), dyReplacementMCHisto[ivar],smoothOrder );
 	  RooHistPdf modelMCTemplate("modelMCTemplate", "modelMCTemplate", RooArgSet(x), *mcTemplate);
 	  RooRealVar ndysf("SF_{DY}","dyyieldssfactor",1.0,0.5,3.0);
@@ -383,9 +409,9 @@ void showDYFitResults(RooRealVar &x,
   //update and save
   cnv->Modified();
   cnv->Update();
-  cnv->SaveAs(tag+".png");
-  cnv->SaveAs(tag+".C");
-  cnv->SaveAs(tag+".pdf");
+  cnv->SaveAs(outUrl+"/"+tag+".png");
+  cnv->SaveAs(outUrl+"/"+tag+".C");
+  cnv->SaveAs(outUrl+"/"+tag+".pdf");
 }
 
 

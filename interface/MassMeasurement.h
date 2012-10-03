@@ -52,7 +52,7 @@
 #include "TDirectory.h"
 #include "TPaveText.h"
 
-#include "LIP/Top/interface/EventSummaryHandler.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuSummaryHandler.h"
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
 
@@ -102,7 +102,7 @@ class MassMeasurement
   /**
      @short performs the standard unbinned likelihood fit to a set of mass measurements
   */
-  EnsembleMeasurement_t DoMassFit(top::EventSummaryHandler &evHandler, bool debug=false);
+  EnsembleMeasurement_t DoMassFit(ZZ2l2nuSummaryHandler &evHandler, bool debug=false);
   
   /**
      @short fits the mass to an ensemble

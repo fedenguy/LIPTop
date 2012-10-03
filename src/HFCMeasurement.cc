@@ -1,5 +1,6 @@
 #include "LIP/Top/interface/HFCMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
 
 #include "RooNumIntConfig.h"
 #include "RooNLLVar.h"
@@ -352,7 +353,7 @@ void HFCMeasurement::fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos, int ru
 
 
 //
-void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, int runMode, bool debug )
+void HFCMeasurement::fitHFCtoEnsemble(ZZ2l2nuSummaryHandler  &evHandler, int runMode, bool debug )
 {
   if(evHandler.getEntries()==0) return;
 
@@ -365,15 +366,13 @@ void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, int r
   for(int i=0; i<evHandler.getEntries(); i++)
     {
       evHandler.getEntry(i);
-      top::EventSummary_t &ev = evHandler.getEvent();
-
-      //the physics
-      top::PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+      ZZ2l2nuSummary_t &ev = evHandler.getEvent();
+      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
       
       //check dilepton
       LorentzVector dilepton = phys.leptons[0]+phys.leptons[1];
       float dilcharge=(phys.leptons[0].id/fabs(phys.leptons[0].id)) *(phys.leptons[1].id/fabs(phys.leptons[1].id));
-      if((ev.cat==EE || ev.cat==MUMU) && (fabs(dilepton.mass()-91)<15 || phys.met.pt()<30)) continue;
+      if((ev.cat==EE || ev.cat==MUMU) && (fabs(dilepton.mass()-91)<15 || phys.met[0].pt()<30)) continue;
       if(dilcharge>0) continue;
 
       //check jets: kinematics + count b-tags
@@ -386,12 +385,9 @@ void HFCMeasurement::fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, int r
 	  njets++;
 	  double btag(-9999.);
 	  if(btagAlgo_.Contains("TCHE") )        btag = phys.jets[ijet].btag1;
-	  else if(btagAlgo_.Contains("TCHP") )   btag = phys.jets[ijet].btag2;
-	  else if(btagAlgo_.Contains("SSVHE") )  btag = phys.jets[ijet].btag3;
-	  else if(btagAlgo_.Contains("JBP") )    btag = phys.jets[ijet].btag4;
-	  else if(btagAlgo_.Contains("JP") )     btag = phys.jets[ijet].btag5;
-	  else if(btagAlgo_.Contains("SSVHP") )  btag = phys.jets[ijet].btag6;
-	  else if(btagAlgo_.Contains("CSV") )    btag = phys.jets[ijet].btag7;
+	  else if(btagAlgo_.Contains("CSV") )    btag = phys.jets[ijet].btag2;
+	  else if(btagAlgo_.Contains("JP") )     btag = phys.jets[ijet].btag3;
+	  else if(btagAlgo_.Contains("TCHP") )   btag = phys.jets[ijet].btag4;
 	  nbtags += (btag>algoCut_);
 	}
       if(njets>maxJets_) continue;

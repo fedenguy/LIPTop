@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "LIP/Top/interface/EventSummaryHandler.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuSummaryHandler.h"
 
 #include "TFile.h"
 #include "TTree.h"

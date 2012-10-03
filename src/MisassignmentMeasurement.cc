@@ -42,55 +42,45 @@ void MisassignmentMeasurement::bookMonitoringHistograms()
   controlHistos.addHistogram( new TH1D("knorm",";Model k-factor;Pseudo-experiments",200,0,1.5) );
 
   //instantiate for different categories
-  controlHistos.initMonitorForStep("ee");
-  controlHistos.initMonitorForStep("emu");
-  controlHistos.initMonitorForStep("mumu");
-  controlHistos.initMonitorForStep("ll");
+//   controlHistos.initMonitorForStep("ee");
+//   controlHistos.initMonitorForStep("emu");
+//   controlHistos.initMonitorForStep("mumu");
+//   controlHistos.initMonitorForStep("ll");
 
-}
-
-//
-void MisassignmentMeasurement::initJetUncertainties(TString uncFileName,  TString ptFileName, TString etaFileName,  TString phiFileName)
-{
-  gSystem->ExpandPathName(etaFileName);
-  stdEtaResol_ = new JetResolution(etaFileName.Data(),false);
-  gSystem->ExpandPathName(phiFileName);
-  stdPhiResol_ = new JetResolution(phiFileName.Data(),false);
-  gSystem->ExpandPathName(ptFileName);
-  stdPtResol_  = new JetResolution(ptFileName.Data(),true);
-  gSystem->ExpandPathName(uncFileName);
-  jecUnc_      = new JetCorrectionUncertainty(uncFileName.Data());
 }
 
 //
 void MisassignmentMeasurement::resetHistograms(bool fullReset)
 {
+  /*
+    //FIXME
   if(fullReset) nMeasurements=0;
-  SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
-  for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
-    for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
-      {
-	TString hname=hit->second->GetName();
-	if(!fullReset)
-	  {
-	    if(hname.Contains("avg")) continue; 
-	    if(hname.Contains("pull")) continue; 
-	    if(hname.Contains("bias")) continue; 
-	    if(hname.Contains("staterr")) continue; 
-	    if(hname.Contains("fcorr")) continue; 
-	    if(hname.Contains("truefcorr")) continue; 
-	    if(hname.Contains("sigonlytruefcorr")) continue; 
-	    if(hname.Contains("jetflavor")) continue;
-	    if(hname.Contains("knorm")) continue;
-	  }
-	hit->second->Reset("ICE");
-      }
+  SmartSelectionMonitor::Monitor_t &mons=controlHistos.getAllMonitors();
+  for(SmartSelectionMonitor::Monitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
+    {
+      TString hname=it->second->GetName();
+      if(!fullReset)
+	{
+	  if(hname.Contains("avg")) continue; 
+	  if(hname.Contains("pull")) continue; 
+	  if(hname.Contains("bias")) continue; 
+	  if(hname.Contains("staterr")) continue; 
+	  if(hname.Contains("fcorr")) continue; 
+	  if(hname.Contains("truefcorr")) continue; 
+	  if(hname.Contains("sigonlytruefcorr")) continue; 
+	  if(hname.Contains("jetflavor")) continue;
+	  if(hname.Contains("knorm")) continue;
+	}
+      it->second->Reset("ICE");
+    }
+  */
 }
 
 //
 void MisassignmentMeasurement::finishMonitoringHistograms()
 {
-  SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
+/*FIXME
+ SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
   for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
     {
       for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
@@ -106,6 +96,7 @@ void MisassignmentMeasurement::finishMonitoringHistograms()
 	  if(doGausFit)  hit->second->Fit("gaus","Q");
         }
     }
+*/
 }
 
 //
@@ -113,26 +104,16 @@ void MisassignmentMeasurement::saveMonitoringHistograms()
 {
   //open file
   TFile *fout=TFile::Open("MisassignmentMeasurement.root","RECREATE");
-  fout->cd();
-  
   TDirectory *baseOutDir=fout->mkdir("localAnalysis");
-  SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
-  for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
-    {
-      TDirectory *dir=baseOutDir->mkdir(it->first);
-      dir->cd();
-      for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
-	hit->second->Write();
-    }
-  
-  //close file
+  baseOutDir->cd();
+  controlHistos.Write();
   fout->Close();
   fout->Delete();
 }
 
 
 //
-PhysicsObjectLeptonCollection MisassignmentMeasurement::randomlyRotate( PhysicsObjectLeptonCollection &leptons, PhysicsObjectJetCollection &jets)
+PhysicsObjectLeptonCollection randomlyRotate( PhysicsObjectLeptonCollection &leptons, PhysicsObjectJetCollection &jets, TRandom2 &rndGen)
 {
   PhysicsObjectLeptonCollection rotLeptons;
 
@@ -276,7 +257,6 @@ void MisassignmentMeasurement::measureMisassignments(ZZ2l2nuSummaryHandler &evHa
 		std::vector<PhysicsObjectJetCollection> mixjetsVar;
 		LorentzVectorCollection mixmetsVar;
 		METUtils::computeVariation(mixphys.jets, mixphys.leptons, mixphys.met[0], mixjetsVar, mixmetsVar, jecUnc_);
-		//jet::computeVariation(mixjetColl,mixphys.met,mixjetsVar,mixmetsVar,stdPtResol_,stdEtaResol_,stdPhiResol_,jecUnc_);
 		if(syst.Contains("jesup"))    mixjetColl = mixjetsVar[METUtils::JES_UP];
 		if(syst.Contains("jesdown"))  mixjetColl = mixjetsVar[METUtils::JES_DOWN];
 		if(syst.Contains("jer"))      mixjetColl = mixjetsVar[METUtils::JER];
@@ -310,7 +290,7 @@ void MisassignmentMeasurement::measureMisassignments(ZZ2l2nuSummaryHandler &evHa
 	  //
 	  // MODEL 2 get rotated leptons
 	  //
-	  PhysicsObjectLeptonCollection rotLeptons = randomlyRotate(ileptons,phys.jets);
+	  PhysicsObjectLeptonCollection rotLeptons = randomlyRotate(ileptons,phys.jets,rndGen);
 	  
 	  //
 	  // Fill the control histograms
@@ -327,7 +307,7 @@ void MisassignmentMeasurement::measureMisassignments(ZZ2l2nuSummaryHandler &evHa
 		  for(size_t icateg=0; icateg<categs.size(); icateg++)
 		    {
 		      TString ctf=categs[icateg];
-		      controlHistos.fillHisto("jetflavor",ctf,flavbin);
+		      controlHistos.fillHisto("jetflavor",ctf,flavbin,1);
 		    }
 		}
 	    }
@@ -401,7 +381,8 @@ void MisassignmentMeasurement::measureMisassignments(ZZ2l2nuSummaryHandler &evHa
   //
   // finalize model and estimate the misassignments
   //
-  SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
+  /*FIXME
+    SelectionMonitor::StepMonitor_t &mons=controlHistos.getAllMonitors();
   for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
     {
       TString ctf = it->first;
@@ -493,16 +474,17 @@ void MisassignmentMeasurement::measureMisassignments(ZZ2l2nuSummaryHandler &evHa
 	{
 	  double fCorrectMCTruth=double(nCorrectAssignments[ctf])/double(nPairsTotal);
 	  double fCorrectMCTruthSigOnly=double(nCorrectAssignments[ctf])/double(nPairsTotalSigOnly);
-	  controlHistos.fillHisto("truefcorr", ctf, fCorrectMCTruth);
-	  controlHistos.fillHisto("sigonlytruefcorr", ctf, fCorrectMCTruthSigOnly);
-	  controlHistos.fillHisto("fcorrsf", ctf, sfmc);
-	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst[ctf]);
-	  controlHistos.fillHisto("knorm",ctf,kNorm[ctf]);
-	  controlHistos.fillHisto("bias",ctf, fCorrectPairsEst[ctf]-fCorrectMCTruth);
-	  controlHistos.fillHisto("pull",ctf, (fCorrectPairsEst[ctf]-fCorrectMCTruth)/fCorrectPairsEstErr[ctf]);
-	  controlHistos.fillHisto("staterr",ctf, fCorrectPairsEstErr[ctf]/fCorrectPairsEst[ctf]);
+	  controlHistos.fillHisto("truefcorr", ctf, fCorrectMCTruth,1);
+	  controlHistos.fillHisto("sigonlytruefcorr", ctf, fCorrectMCTruthSigOnly,1);
+	  controlHistos.fillHisto("fcorrsf", ctf, sfmc,1);
+	  controlHistos.fillHisto("fcorr",ctf,fCorrectPairsEst[ctf],1);
+	  controlHistos.fillHisto("knorm",ctf,kNorm[ctf],1);
+	  controlHistos.fillHisto("bias",ctf, fCorrectPairsEst[ctf]-fCorrectMCTruth,1);
+	  controlHistos.fillHisto("pull",ctf, (fCorrectPairsEst[ctf]-fCorrectMCTruth)/fCorrectPairsEstErr[ctf],1);
+	  controlHistos.fillHisto("staterr",ctf, fCorrectPairsEstErr[ctf]/fCorrectPairsEst[ctf],1);
 	}
     }
+  */
 }
 
 

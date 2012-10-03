@@ -3,8 +3,7 @@
 
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/SelectionMonitor.h"
-
-#include "LIP/Top/interface/EventSummaryHandler.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuSummaryHandler.h"
 
 #include "TFile.h"
 #include "TRandom2.h"
@@ -117,7 +116,7 @@ class HFCMeasurement
     /**
        @short steer the fit
     */
-    void fitHFCtoEnsemble(top::EventSummaryHandler &evHandler, int runMode, bool debug=false);
+    void fitHFCtoEnsemble(ZZ2l2nuSummaryHandler &evHandler, int runMode, bool debug=false);
     void fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos,  int runMode, bool debug=false);
     
     /**

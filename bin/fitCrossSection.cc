@@ -562,14 +562,14 @@ void convertShapesToDataCards(const map<TString, Shape_t> &allShapes)
       fprintf(pFile,"\n");
      
       //th.xsec
-      fprintf(pFile,"%35s %10s ", "theoryUncXS_ttbar", "lnN");
-      std::pair<float,float> ttbarXsec=shape.crossSections.find(shape.signal->GetTitle())->second;
-      fprintf(pFile,"%6.3f ",1.0+ttbarXsec.second/ttbarXsec.first);
-      for(size_t j=0; j<shape.bckg.size(); j++) {
-	if(convertNameForDataCard(shape.bckg[j]->GetTitle())!="ttbar") fprintf(pFile,"%6s ","-");
-	else                                                           fprintf(pFile,"%6.3f ",1.0+ttbarXsec.second/ttbarXsec.first);
-      }
-      fprintf(pFile,"\n");
+      // fprintf(pFile,"%35s %10s ", "theoryUncXS_ttbar", "lnN");
+      //       std::pair<float,float> ttbarXsec=shape.crossSections.find(shape.signal->GetTitle())->second;
+      //       fprintf(pFile,"%6.3f ",1.0+ttbarXsec.second/ttbarXsec.first);
+      //       for(size_t j=0; j<shape.bckg.size(); j++) {
+      // 	if(convertNameForDataCard(shape.bckg[j]->GetTitle())!="ttbar") fprintf(pFile,"%6s ","-");
+      // 	else                                                           fprintf(pFile,"%6.3f ",1.0+ttbarXsec.second/ttbarXsec.first);
+      //       }
+      //       fprintf(pFile,"\n");
 
       for(size_t j=0; j<shape.bckg.size(); j++)
 	{
@@ -706,5 +706,20 @@ int main(int argc, char* argv[])
   
   //convert shapes to datacards
   convertShapesToDataCards(shapes);
+
+  //combine the datacards and run profile likelihood analysis
+  TString combCardCmd("combineCards.py "),plrAnalysisCmd("runPLRanalysis --in "); 
+  int icard(1);
+  for(std::map<TString, Shape_t>::const_iterator it=shapes.begin(); it!=shapes.end(); it++)
+    {
+      TString ch(it->first); if(ch.IsNull() || ch=="inclusive") continue;
+      combCardCmd += "Name"; combCardCmd += icard; combCardCmd +="=DataCard_"+ch+".dat ";
+      plrAnalysisCmd += "DataCard_"+ch+".dat,";
+      icard++;
+    }
+  combCardCmd += " > DataCard_combined.dat";
+  plrAnalysisCmd += "DataCard_combined.dat";
+  gSystem->Exec(combCardCmd.Data());
+  gSystem->Exec(plrAnalysisCmd.Data());
 }
 

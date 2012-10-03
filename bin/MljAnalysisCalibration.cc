@@ -1,7 +1,9 @@
 #include "TList.h"
+#include "TRandom2.h"
 #include "TStyle.h"
 #include "TCanvas.h"
 #include "TTree.h"
+#include "TChain.h"
 #include "TH1D.h"
 #include "TPaveText.h"
 #include "TRandom.h"
@@ -14,41 +16,324 @@
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/plotter.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
+#include "CMGTools/HtoZZ2l2nu/src/JSONWrapper.cc"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuSummaryHandler.h"
+#include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
+#include "CMGTools/HtoZZ2l2nu/interface/SmartSelectionMonitor.h"
+#include "CMGTools/HtoZZ2l2nu/interface/METUtils.h"
 
-#include "LIP/Top/interface/EventSummaryHandler.h"
 #include "LIP/Top/interface/MisassignmentMeasurement.h"
 
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 #include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
 
 #include <vector>
 
 using namespace std;
- 
-Double_t dataLumi=2165.0;
+
+stringstream report; 
+float dataLumi         = 5041.0;
+int maxJets            = 4;
+int maxMixTries        = 100;
+float sfMetCut         = 40;
+TString jesUncFile     = "${CMSSW_BASE}/src/CMGTools/HtoZZ2l2nu/data/GR_R_42_V23_AK5PFchs_Uncertainty.txt";
+JetCorrectionUncertainty *jetCorUnc=0;
+TChain *dataChain, *signalChain;
+std::map<TString, TChain *> bckgChain;
+SmartSelectionMonitor controlHistos;
+TRandom2 calibRndGen;
+
+//
+void printHelp();
+void fillEventsChain(TString url,JSONWrapper::Object &jsonF);
+void buildMljTemplates();
+void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, bool isDY,bool isVV);
+
+////CHECK ME
 std::map<TString,Int_t> procYields;
 std::map<TString,TTree *> procTrees,dataTrees;
 std::map<std::pair<int,TString>, TGraphErrors*> calibCurves;
 std::map<int, MisassignmentMeasurement *> exclusiveMisMeasurements;
-TString cats[]    = {"ee", "mumu",   "emu",  "all"};
-TString catTits[] = {"ee", "#mu#mu", "e#mu", "inclusive"};
-enum JetBinCodes       {JETINCLUSIVE=0, JETS2=2,   JETS3=3};
-TString jetBinTitles[]={"inclusive",    "=2 jets", "=3 jets"};
-stringstream report;
 std::map<std::pair<int, TString>, std::vector<double> > fCorrectTrue, fCorrectSigOnlyTrue, fCorrectData;
-
-//
-void runCalibration(TString url,Double_t lumi=50, int maxPE=100,Int_t jetbin=JETINCLUSIVE, TString syst="", bool freezeResults=false);
+void runCalibration(TString url, JSONWrapper::Object &jsonF, Double_t lumi, int maxPE, Int_t jetbin, bool freezeResults);
 void runPileupCheck(TString url);
+////////
 
 
 //                                                                                                                                                                                          
 void printHelp()
 {
   printf("--help    --> print this\n");
-  printf("--in      --> input file with the summary trees\n");
-  printf("--syst    --> systematic to be evaluated (dyup/down, jesup/down, jer, metcut, scaleup/down, matchingup/down\n");
+  printf("--in      --> input directory with the summary trees\n");
+  printf("--json    --> json file with the description of the samples\n");
 }
+
+//
+void fillEventsChain(TString url, JSONWrapper::Object &jsonF)
+{
+  //iterate over the processes
+  std::vector<JSONWrapper::Object> Process = jsonF["proc"].daughters();
+  for(unsigned int i=0;i<Process.size();i++)
+    {
+      TString procCtr(""); procCtr+=i;
+      TString proc=(Process[i])["tag"].toString();
+      bool isData(Process[i]["isdata"].toBool()); 
+      bool isSignal(false);
+      if(Process[i].isTag("issignal")) isSignal=Process[i]["issignal"].toBool();
+
+      TChain *c=0;
+      if(isData)
+	{
+	  if(dataChain==0) dataChain = new TChain;
+	  c=dataChain;
+	}
+      else if(isSignal)
+	{
+	  if(signalChain==0) signalChain = new TChain;
+	  c=signalChain;
+	}
+      
+      //iterator over the sub-processes
+      std::vector<JSONWrapper::Object> Samples = (Process[i])["data"].daughters();
+      for(size_t id=0; id<Samples.size(); id++)
+	{
+	  int split=1;
+	  if(Samples[id].isTag("split"))split = Samples[id]["split"].toInt();
+	  if(!isSignal && !isData)
+	    {
+	      c = new TChain;
+	      bckgChain[ (Samples[id])["dtag"].toString() ] = c;
+	    }
+	  
+	  //in case there was splitting of the analysis 
+	  for(int isplit=0; isplit<split; isplit++)
+	    {
+	      TString tname((Samples[id])["dtag"].toString());
+	      if(split>1) { tname += "_"; tname+=isplit; }
+	      TString fname(url+tname+"_summary.root");
+	      //logic is inverted in the ROOT API...
+	      if(!gSystem->AccessPathName(fname))  c->AddFile(fname,TChain::kBigNumber,tname+"/data");
+	    }
+  
+	}
+    }
+
+  //report what was found
+  report << "[Samples used]" << endl;
+  report << "\tData : ";     if(dataChain==0)   report << "n/a" << endl; else report << dataChain->GetEntries() << " events" << endl;
+  report << "\tSignal : ";   if(signalChain==0) report << "n/a" << endl; else report << signalChain->GetEntries() << " events" << endl;
+  for(std::map<TString,TChain *>::iterator cIt=bckgChain.begin(); cIt!=bckgChain.end(); cIt++)
+    report << "\t" << cIt->first  << " : " << cIt->second->GetEntries() << " events" << endl;
+  
+}
+
+//
+void buildMljTemplates()
+{
+  TH1F *baseMlj= new TH1F("mlj",";Invariant Mass [GeV];Lepton-jet pairs",100,0,1000);
+  TString systVars[] = {"","jesup","jesdown","jerup","jerdown"};
+  TString mljVars[]  = {"","correct","misassigned","wrong","unmatched","rot","swap"};
+  for(size_t iSystVar=0; iSystVar<sizeof(systVars)/sizeof(TString); iSystVar++)
+    for(size_t imljVar=0; imljVar<sizeof(mljVars)/sizeof(TString); imljVar++)
+      controlHistos.addHistogram( (TH1F *) baseMlj->Clone(mljVars[imljVar]+"mlj"+systVars[iSystVar]) );
+  baseMlj->Delete();
+
+  if(jetCorUnc==0)
+    {
+      gSystem->ExpandPathName(jesUncFile);  
+      jetCorUnc = new JetCorrectionUncertainty(jesUncFile.Data());
+    }
+  
+  fillMljTemplatesFrom(dataChain,  true,false,false,false,false);  cout << "." << flush;
+  fillMljTemplatesFrom(signalChain,false,true,false,false,false);  cout << "." << flush;
+  for(std::map<TString,TChain *>::iterator it = bckgChain.begin(); it != bckgChain.end(); it++)
+    {
+      bool hasTop(it->first.Contains("SingleT") || it->first.Contains("TTJets"));
+      bool isDY(it->first.Contains("DYJets"));
+      bool isVV(it->first.Contains("WW") || it->first.Contains("ZZ") || it->first.Contains("WZ"));
+      fillMljTemplatesFrom(it->second,  false,false,hasTop,isDY,isVV);  cout << "." << flush;
+    }
+  cout << endl;
+}
+
+//
+void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, bool isDY,bool isVV)
+{
+  //attach to tree
+  if(c==0) return;
+  const unsigned int iEntries=c->GetEntries();
+  if(iEntries==0) return;
+  ZZ2l2nuSummaryHandler evHandler;
+  bool result=evHandler.attachToTree((TTree *)c);
+  
+  if(!result) return;
+  TString chPrefix("");
+  if(isData)                     chPrefix="data";  
+  else if(isSignal)              chPrefix="signal";
+  else if(isDY)                  chPrefix="dy"; 
+  else if(isVV)                  chPrefix="vv"; 
+  else if(hasTop && !isSignal)   chPrefix="stop";
+  for(unsigned int i=0; i<iEntries; i++)
+    {
+      c->GetEntry(i,1);
+
+      //decode the event
+      ZZ2l2nuSummary_t &ev = evHandler.getEvent();
+      float weight(isData ? 1.0 : ev.hptWeights[0]*ev.hptWeights[1]);  //for MC (xsec/NeventsGen)*puWeight
+      
+      TString ch("");
+      if(ev.cat==MUMU)     ch="mumu"; 
+      else if(ev.cat==EE)  ch="ee"; 
+      else if(ev.cat==EMU) ch="emu";
+      else                 continue;
+      PhysicsEvent_t phys = getPhysicsEventFrom(ev);
+
+      //leptons
+      LorentzVector dil=phys.leptons[0]+phys.leptons[1];
+      bool isZcand(ev.cat!=EMU && fabs(dil.mass()-91)<15);
+      bool passMet(ev.cat==EMU || ((ev.cat==EE||ev.cat==MUMU) && phys.met[0].pt()>sfMetCut));
+      PhysicsObjectLeptonCollection iRotLeptons = randomlyRotate(phys.leptons,phys.ajets,calibRndGen);
+
+      //jets
+      int nJPLtags(0);
+      std::vector<PhysicsObjectJetCollection> jetsVar;
+      LorentzVectorCollection metsVar;      
+      METUtils::computeVariation(phys.ajets, phys.leptons, phys.met[0], jetsVar, metsVar, jetCorUnc);
+      for(size_t iSystVar=0; iSystVar<jetsVar.size(); iSystVar++)
+	{
+	  TString systVar("");
+	  if     (iSystVar==METUtils::JER_UP && !isData)    systVar="jerup";
+	  else if(iSystVar==METUtils::JER_DOWN  && !isData) systVar="jerdown";
+	  else if(iSystVar==METUtils::JES_UP && !isData)    systVar="jesup";
+	  else if(iSystVar==METUtils::JES_DOWN && !isData)  systVar="jesdown";
+	  else if(iSystVar!=METUtils::JER)                  continue;
+	  
+	  //analyze jets
+	  int nGoodJets(0);
+	  std::map<TString,std::vector<float> >mljs;
+	  for(size_t ijet=0; ijet<jetsVar[iSystVar].size(); ijet++)
+	    {
+	      if(jetsVar[iSystVar][ijet].pt()<30 || fabs(jetsVar[iSystVar][ijet].eta())>2.5) continue;
+	      nGoodJets++;
+	      if(iSystVar==0) nJPLtags += (jetsVar[iSystVar][ijet].btag3>0.275);
+	      int partonMatch=jetsVar[iSystVar][ijet].genid;
+	      int flavorMatch=jetsVar[iSystVar][ijet].flavid;	      
+	      
+	      for(size_t ilep=0; ilep<2; ilep++)
+		{
+		  LorentzVector lj=phys.leptons[ilep]+jetsVar[iSystVar][ijet];
+		  float imlj=lj.mass();
+
+		  mljs[""].push_back( imlj );
+		  
+		  //rotated leptons model
+		  if(iSystVar==0)
+		    {
+		      LorentzVector rotLJ=iRotLeptons[ilep]+jetsVar[iSystVar][ijet];
+		      mljs["rot"].push_back(rotLJ.mass());
+		    }
+		  
+		  //MC only
+		  if(isData) continue;
+		  
+		  //check if the assignment is correct
+		  int assignCode=(phys.leptons[ilep].genid*partonMatch);
+		  bool isCorrect(assignCode<0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
+		  bool isFlipMatch(assignCode>0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
+		  if(isCorrect)       mljs["correct"].push_back(imlj);
+		  else                mljs["misassigned"].push_back(imlj);
+		  if(isFlipMatch)     mljs["wrong"].push_back(imlj);
+		  else if(!isCorrect) mljs["unmatched"].push_back(imlj);
+		}
+	    }
+	  if(nGoodJets<2 || nGoodJets>maxJets) continue;
+	  
+	  //do the mixing for signal and data only
+	  if((isSignal || isData) && passMet && !isZcand)
+	    {
+	      int imixtry(1);
+	      LorentzVectorCollection mixjets;
+	      do{
+		//unsigned int j=calibRndGen.Uniform(0,iEntries);
+		unsigned int j=(i+imixtry)%iEntries;
+		if(j==i) { imixtry++; continue; }
+		else     imixtry++;
+		if(imixtry>maxMixTries) {  cout << "Failed to mix 1 event" << endl; break; }
+		c->GetEntry(j);
+		
+		ZZ2l2nuSummary_t &mixev = evHandler.getEvent();
+		//if(evcat!= mixev.cat) continue;
+		PhysicsEvent_t mixphys = getPhysicsEventFrom(mixev);
+
+		//check that it is not a Z cand
+		LorentzVector mixdil=mixphys.leptons[0]+mixphys.leptons[1];
+		bool isZcand((mixev.cat==EE||mixev.cat==MUMU)&&fabs(mixdil.mass()-91)<15);   
+		bool passMet(mixev.cat==EMU || ((mixev.cat==EE||mixev.cat==MUMU) && mixphys.met[0].pt()>sfMetCut));
+		if(!passMet || isZcand) continue;
+
+		//analyse the jets
+		std::vector<PhysicsObjectJetCollection> mixjetsVar;
+		LorentzVectorCollection mixmetsVar;
+		METUtils::computeVariation(mixphys.ajets, mixphys.leptons, mixphys.met[0], mixjetsVar, mixmetsVar, jetCorUnc);
+		for(size_t jjet=0; jjet< mixjetsVar[0].size(); jjet++)
+		  {
+		    if(mixjetsVar[0][jjet].pt()<30 || fabs(mixjetsVar[0][jjet].eta())>2.5) continue;
+		    double dR1 = deltaR(phys.leptons[0].eta(),phys.leptons[0].phi(),mixjetsVar[0][jjet].eta(),mixjetsVar[0][jjet].phi());
+		    double dR2 = deltaR(phys.leptons[1].eta(),phys.leptons[1].phi(),mixjetsVar[0][jjet].eta(),mixjetsVar[0][jjet].phi());
+		    if(dR1<0.3 || dR2<0.3) continue; 
+		    if(int(mixjets.size())<nGoodJets) mixjets.push_back( mixjetsVar[0][jjet] );
+		    else                              break; 
+		  }
+		
+		//continue until jet multiplicity is filled
+		if(int(mixjets.size())<nGoodJets) continue;	
+		break;
+	      }while(1);
+	
+	      //compute the mljs for the mixed jets
+	      for(size_t jjet=0; jjet<mixjets.size(); jjet++)
+		{
+		  for(size_t ilep=0; ilep<2; ilep++)
+		    {
+		      LorentzVector lj=phys.leptons[ilep]+mixjets[jjet];
+		      float imlj=lj.mass();
+		      mljs["swap"].push_back( imlj );
+		    }
+		}
+	    }
+
+	  //fill control histograms for what was computed
+	  TString jetCat("eq"); jetCat+=nGoodJets; jetCat +="jets";
+	  std::vector<TString> ctf;
+	  if(passMet && !isZcand)
+	    {
+	      if(!isData)
+		{
+		  ctf.push_back("all");
+		  ctf.push_back(ch);
+		  ctf.push_back(ch+jetCat);
+		}
+	      ctf.push_back(chPrefix);
+	      ctf.push_back(chPrefix+ch);
+	      ctf.push_back(chPrefix+jetCat);
+	      ctf.push_back(chPrefix+ch+jetCat);
+	    }
+	  else if(isZcand && nJPLtags==0)
+	    {	   
+	      ctf.push_back(chPrefix+ch+"z");
+	      ctf.push_back(chPrefix+ch+"z"+jetCat);
+	    }
+	  for(std::map<TString,std::vector<float> >::iterator mIt=mljs.begin(); mIt!=mljs.end(); mIt++)
+	    {
+	      TString hname(mIt->first); hname+="mlj"; hname+=systVar;
+	      for(size_t imlj=0; imlj<mIt->second.size(); imlj++)
+		controlHistos.fillHisto(hname,ctf,(mIt->second)[imlj],weight);
+	    }
+	}
+    }
+}
+
 
 //
 int main(int argc, char* argv[])
@@ -57,17 +342,76 @@ int main(int argc, char* argv[])
   gSystem->Load( "libFWCoreFWLite" );
   AutoLibraryLoader::enable();
 
-  TString url(""), syst("");
+  //configure
+  TString url(""), json("");
   for(int i=1;i<argc;i++)
     {
       string arg(argv[i]);
-      if(arg.find("--help")!=string::npos)             { printHelp();    return 0; }
-      if(arg.find("--in")!=string::npos && i+1<argc)   { url=argv[i+1];         gSystem->ExpandPathName(url);         i++;  printf("in      = %s\n", url.Data()); }
-      if(arg.find("--syst")!=string::npos && i+1<argc) { syst=argv[i+1];                                            i++;  printf("syst    = %s\n", syst.Data()); }
+      if(arg.find("--help")!=string::npos)              { printHelp();    return 0; }
+      if(arg.find("--in")!=string::npos && i+1<argc)    { url=argv[i+1];   gSystem->ExpandPathName(url); i++;  printf("in      = %s\n", url.Data()); }
+      if(arg.find("--json")!=string::npos && i+1<argc)  { json=argv[i+1];                                i++;  printf("json    = %s\n", json.Data()); }
+      if(arg.find("--iLumi")!=string::npos && i+1<argc) { sscanf(argv[i+1],"%f",&dataLumi);              i++;  printf("lumi    = %f\n", dataLumi); }
     }
-  if(url=="") { printHelp(); return 0;}
-  
-  int jetBins[]={JETINCLUSIVE,JETS2,JETS3};
+  if(url=="" || json=="") { printHelp(); return 0;}
+
+  //readout the data
+  JSONWrapper::Object jsonF(json.Data(), true);
+  fillEventsChain(url, jsonF);
+
+  //fill the templated distributions for Mlj
+  buildMljTemplates();
+
+
+  cout << report.str() << endl;
+
+  //save everything
+  TFile *outF=TFile::Open("MljAnalysisReport.root","recreate");
+  outF->cd();
+  controlHistos.Write();
+  outF->Close();
+
+  //calibrate method
+  /*
+  typedef std::pair<Double_t,Int_t> PseudoExperimentKey_t;
+  std::vector<PseudoExperimentKey_t > lumiScenarios;
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(36,100));
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(50,100));
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(100,100));
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(200,100));
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(400,50));
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(600,25));
+  //   lumiScenarios.push_back(PseudoExperimentKey_t(1000,10));
+  lumiScenarios.push_back(PseudoExperimentKey_t(dataLumi,5));
+  for(size_t ijet=0; ijet<njbins; ijet++)
+    {
+      //init the misassignment measurement handler from the mlj spectrum
+      exclusiveMisMeasurements[jetBins[ijet]] = new MisassignmentMeasurement("${CMSSW_BASE}/src/CMGTools/HtoZZ2l2nu/data/GR_R_42_V23_AK5PFchs_Uncertainty.txt");
+      for(int icat=0; icat<ncats; icat++)  misMeasurement->setBiasCorrections(cats[icat],0.0);
+
+      for(size_t ipe=0; ipe<lumiScenarios.size(); ipe++)
+	{
+	  PseudoExperimentKey_t pe=lumiScenarios[ipe];
+	  bool freezeResults=(pe.first==200);
+	  runCalibration(url,pe.first,pe.second,jetBins[ijet],freezeResults );
+	}
+    }
+  */
+
+	  
+// 	  TString iname(cats[icat]+jetBins[ijet]);
+// 	  TGraphErrors *gr = new TGraphErrors;
+// 	  gr->SetName(iname);
+// 	  std::pair<int,TString> key(jetBins[ijet],cats[icat]);
+// 	  calibCurves[key]=gr;
+// 	}
+
+
+}
+
+
+/*
+
+
   typedef std::pair<Double_t,Int_t> PseudoExperimentKey_t;
   std::vector<PseudoExperimentKey_t > lumiScenarios;
   if(syst=="")// || syst=="metcut") 
@@ -87,32 +431,6 @@ int main(int argc, char* argv[])
     }
 
 
-  for(size_t ijet=0; ijet<3; ijet++)
-    {
-      //init the misassignment measurement handler from the mlj spectrum
-      MisassignmentMeasurement *misMeasurement = new MisassignmentMeasurement;
-      misMeasurement->initJetUncertainties("${CMSSW_BASE}/src/CMGTools/HtoZZ2l2nu/data/GR_R_42_V20_AK5PFchs_Uncertainty.txt",
-					   "${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PtResolution_AK5PF.txt",
-					   "${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_EtaResolution_AK5PF.txt",
-					   "${CMSSW_RELEASE_BASE}/src/CondFormats/JetMETObjects/data/Spring10_PhiResolution_AK5PF.txt");
-      for(int icat=0; icat<4; icat++) 
-	{
-	  misMeasurement->setBiasCorrections(cats[icat],0.0);
-	  TGraphErrors *gr = new TGraphErrors;
-	  TString iname(cats[icat]); iname+=jetBins[ijet];
-	  gr->SetName(iname);
-	  std::pair<int,TString> key(jetBins[ijet],cats[icat]);
-	  calibCurves[key]=gr;
-	}
-      exclusiveMisMeasurements[jetBins[ijet]]=misMeasurement;
-
-      for(size_t ipe=0; ipe<lumiScenarios.size(); ipe++)
-	{
-	  PseudoExperimentKey_t pe=lumiScenarios[ipe];
-	  bool freezeResults=(pe.first==200);//ipe==lumiScenarios.size()-1);
-	  runCalibration(url,pe.first,pe.second,jetBins[ijet],syst, freezeResults );
-	}
-    }
 
   //display the results
   setStyle();
@@ -230,15 +548,35 @@ int main(int argc, char* argv[])
 
 
   //runPileupCheck(url);
-}
+
+*/
+
+
 	  
 //
-void runCalibration(TString url,Double_t lumi, int maxPE,Int_t jetbin, TString syst, bool freezeResults)
+void runCalibration(TString url, JSONWrapper::Object &jsonF, Double_t lumi, int maxPE, Int_t jetbin, bool freezeResults)
 {
+
+
+  /*
+
+  ZZ2l2nuSummaryHandler evHandler, ensembleHandler;
+  // MisassignmentMeasurement *misMeasurement = exclusiveMisMeasurements[jetbin];
+  // misMeasurement->resetHistograms(true);
+  TString peTag("Jets: "); if(jetbin==JETINCLUSIVE) peTag += "inclusive"; else peTag += jetbin; peTag += " Lumi:"; peTag += int(lumi);
+  for(int iPE=1; iPE<=maxPE; iPE++)
+    {
+      if(iPE%5==0) { printf("\r[ %s ]  completed %d/%d ",peTag.Data(),iPE,maxPE); cout << flush; }
+
+
+	  
+
   //
   // map the samples per type
   //
   //signal
+  
+  TString syst("");
   if(syst=="matchingdown")                    procYields["TTJets_matchingdown"]=0;
   else if(syst=="matchingup")                 procYields["TTJets_matchingup"]=0;
   else if(syst=="scaledown")                  procYields["TTJets_scaledown"]=0;
@@ -283,18 +621,6 @@ void runCalibration(TString url,Double_t lumi, int maxPE,Int_t jetbin, TString s
       procYields[it->first] = sf*lumi*xsecWeight*t->GetEntriesFast();
       //      cout << "\t" << it->first <<  " " <<  procYields[it->first] << " evts" << endl; 
     }
-
-  //
-  // run calibration
-  //
-  top::EventSummaryHandler evHandler, ensembleHandler;
-  MisassignmentMeasurement *misMeasurement = exclusiveMisMeasurements[jetbin];
-  misMeasurement->resetHistograms(true);
-  TString peTag("Jets: "); if(jetbin==JETINCLUSIVE) peTag += "inclusive"; else peTag += jetbin; peTag += " Lumi:"; peTag += int(lumi);
-  for(int iPE=1; iPE<=maxPE; iPE++)
-    {
-      if(iPE%5==0) { printf("\r[ %s ]  completed %d/%d ",peTag.Data(),iPE,maxPE); cout << flush; }
-      
       bool initEnsemble(true);
       for(std::map<TString,TTree*>::iterator it = procTrees.begin(); it!= procTrees.end(); it++)
 	{
@@ -575,6 +901,7 @@ void runCalibration(TString url,Double_t lumi, int maxPE,Int_t jetbin, TString s
   pullc->SaveAs("MisassignmentPull"+postfix+".pdf");
 
   inF->Close();    
+	      */
 }
 
 
@@ -582,7 +909,7 @@ void runCalibration(TString url,Double_t lumi, int maxPE,Int_t jetbin, TString s
 //
 void runPileupCheck(TString url)
 {
-
+  /*
   SelectionMonitor controlHistos;
   
   //generate fake data with different pileup average
@@ -722,4 +1049,6 @@ void runPileupCheck(TString url)
   mljmomc->SaveAs("MljPUMomenta.C");
   mljmomc->SaveAs("MljPUMomenta.png");
   mljmomc->SaveAs("MljPUMomenta.pdf");
+
+  */
 }
