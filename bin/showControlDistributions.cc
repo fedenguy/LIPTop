@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
   double jetPtCut = runProcess.getParameter<double>("jetPtCut");
   int jetIdToUse=JETID_LOOSE;
   int eIdToUse=EID_TIGHT;  float eIsoToUse=0.1;
-  int mIdToUse=MID_TIGHT;  float mIsoToUse=0.12;
+  int mIdToUse=MID_TIGHT;  float mIsoToUse=0.2;//0.12;
   bool applyDYweight =  runProcess.getParameter<bool>("applyDYweight");
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
 
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
   int idxForBtaggerForTemplatedEff=0;
   TString btaggerForTemplatedEff=btagger[idxForBtaggerForTemplatedEff]; 
   TString btaggerWPs[]={"L","M","T"};
-  TString jetRanges[]={"inc","30to50","50to80","80to120","120toInf","0to0.5","0.5to1.0","1.0to1.5","1.5to2.5","0to10","11to14","15to18","18toInf"};
+  TString jetRanges[]={"inc","30to50","50to80","80to120","120to200","200to300","300toInf","0to0.5","0.5to1.0","1.0to1.5","1.5to2.5","0to10","11to14","15to18","18toInf"};
   TString jetFlavors[]={"","b","udsg","c"};
   for(size_t ijf=0; ijf<4; ijf++)
     { 
@@ -375,7 +375,9 @@ int main(int argc, char* argv[])
   if(saveSummaryTree)
     {
       gSystem->Exec("mkdir -p " + outdir);
-      TString summaryName = outdir + "/" + proctag + "_summary.root";
+      TString summaryName = outdir + "/" + proctag;
+      if(mcTruthMode!=0) { summaryName += "_filt"; summaryName += mcTruthMode; } 
+      summaryName += "_summary.root";
       gSystem->ExpandPathName(summaryName);
       summaryWeight = xsec / cnorm;
       spyEvents = new ZZ2l2nuSummaryHandler;
@@ -405,11 +407,11 @@ int main(int argc, char* argv[])
       if(!isMC && duplicatesChecker.isDuplicate( ev.run, ev.lumi, ev.event) ) { NumberOfDuplicated++; continue; }
   
       //MC filter for specific processes
-      int nleptons=getNgenLeptons(ev.mccat,ELECTRON)+getNgenLeptons(ev.mccat,MUON)+getNgenLeptons(ev.mccat,TAU);
+      int nleptons=(getNgenLeptons(ev.mccat,ELECTRON)+getNgenLeptons(ev.mccat,MUON)+getNgenLeptons(ev.mccat,TAU))/2;  //->bug: counted twice
       bool isTop=isTTbar(ev.mccat);
       bool isSTop=isSingleTop(ev.mccat);
       if(isMC && mcTruthMode==1 && (!isTop || nleptons<2) ) continue;
-      if(isMC && mcTruthMode==2 && (!isTop || nleptons>=2) ) continue;
+      if(isMC && mcTruthMode==2 && (isTop && nleptons>=2) ) continue;
       
       //require trigger to be consistent with the event to analyse
       if(ev.cat!=MUMU && ev.cat !=EE && ev.cat!=EMU) continue;
@@ -518,7 +520,16 @@ int main(int argc, char* argv[])
 	  catsToFill.push_back(ch);
 
 	  //weight to assign to event	
-	  float weight= (isMC ? puweight*leffSF : 1.0);
+	  //float weight= (isMC ? puweight*leffSF : 1.0);
+	  float weight= (isMC ? puweight : 1.0);
+
+	  //trigger efficiencies
+	  if(isMC)
+	    {
+	      //if(ev.cat==EE)   weight *= 0.955;   //from AN-178/2012 (dilepton xsec)
+	      //if(ev.cat==MUMU) weight *= 0.994;  
+	      //if(ev.cat==EMU)  weight  *= 0.978; 
+	    }
 	  if(systVars[ivar]=="puup" )      { weight *= TotalWeight_plus;  }
 	  if(systVars[ivar]=="pudown" )    { weight *= TotalWeight_minus; }
 	  if(systVars[ivar]=="leffup" )    { weight *= leffSF_plus;  }
@@ -583,12 +594,12 @@ int main(int argc, char* argv[])
 	  bool passMet( (!isSameFlavor && theMET.pt()>ofMetCut) || (isSameFlavor && theMET.pt()>sfMetCut) );
 	  if( isDYJetsMC && passMet && applyDYweight)
 	    {
-	      if(ngoodJets==1 && ev.cat==EE)   weight *= 1.60;
-	      if(ngoodJets==1 && ev.cat==MUMU) weight *= 1.40;
-	      if(ngoodJets==1 && ev.cat==EMU)  weight *= 0.98;
-	      if(ngoodJets>1  && ev.cat==EE)   weight *= 1.73;
-	      if(ngoodJets>1  && ev.cat==MUMU) weight *= 1.66;
-	      if(ngoodJets>1  && ev.cat==EMU)  weight *= 1.04;
+	      if(ngoodJets==1 && ev.cat==EE)   weight *= 1.67;
+	      if(ngoodJets==1 && ev.cat==MUMU) weight *= 1.41;
+	      if(ngoodJets==1 && ev.cat==EMU)  weight *= 0.93;
+	      if(ngoodJets>1  && ev.cat==EE)   weight *= 1.78;
+	      if(ngoodJets>1  && ev.cat==MUMU) weight *= 1.68;
+	      if(ngoodJets>1  && ev.cat==EMU)  weight *= 1.07;
 	    }
 	  TString metCat("none");
 	  if(passMet)              metCat="";
@@ -673,7 +684,8 @@ int main(int argc, char* argv[])
 	  btagsCount["tcheL"]=0;   btagsCount["tcheM"]=0;
 	  btagsCount["csvL"]=0;    btagsCount["csvM"]=0;   btagsCount["csvT"]=0;
 	  btagsCount["jpL"]=0;     btagsCount["jpM"]=0;    btagsCount["jpT"]=0;
-	  btagsCount["tchpT"]=0;
+	  btagsCount["tchpT"]=0;   btagsCount["ivfL"]=0;   btagsCount["ivfM"]=0;
+	  btagsCount["tcheL"]=0;   btagsCount["tcheM"]=0; 
 	  for(size_t ijet=0; ijet<prunedJetColl.size(); ijet++) 
 	    {
 	      TString jetctr(""); jetctr+=ijet;
@@ -692,15 +704,17 @@ int main(int argc, char* argv[])
 	      if(pt>30 && pt<=50)           jetCategs.push_back(1);
 	      if(pt>50 && pt<=80)           jetCategs.push_back(2);
 	      if(pt>80 && pt<=120)          jetCategs.push_back(3);
-	      if(pt>120)                    jetCategs.push_back(4);
-	      if(eta<=0.5)                  jetCategs.push_back(5);
-	      if(eta>0.5 && eta<=1.0)       jetCategs.push_back(6);
-	      if(eta>1.0 && eta<=1.5)       jetCategs.push_back(7);
-	      if(eta>1.5)                   jetCategs.push_back(8);
-	      if(ev.nvtx<=10)               jetCategs.push_back(9);
-	      if(ev.nvtx>10 && ev.nvtx<=14) jetCategs.push_back(10);
-	      if(ev.nvtx>14 && ev.nvtx<=18) jetCategs.push_back(11);
-	      if(ev.nvtx>19)                jetCategs.push_back(12);
+	      if(pt>120 && pt<=200)         jetCategs.push_back(4);
+	      if(pt>200 && pt<=300)         jetCategs.push_back(5);
+	      if(pt>300)                    jetCategs.push_back(6);
+	      if(eta<=0.5)                  jetCategs.push_back(7);
+	      if(eta>0.5 && eta<=1.0)       jetCategs.push_back(8);
+	      if(eta>1.0 && eta<=1.5)       jetCategs.push_back(9);
+	      if(eta>1.5)                   jetCategs.push_back(10);
+	      if(ev.nvtx<=10)               jetCategs.push_back(11);
+	      if(ev.nvtx>10 && ev.nvtx<=14) jetCategs.push_back(12);
+	      if(ev.nvtx>14 && ev.nvtx<=18) jetCategs.push_back(13);
+	      if(ev.nvtx>19)                jetCategs.push_back(14);
 	      if(ivar==0)
 		{
 		  controlHistos.fillHisto("jet"+jetctr,catsToFill,pt,weight);
@@ -754,7 +768,7 @@ int main(int argc, char* argv[])
 	      if(btaggerToTemplate=="jp")   btaggerToTemplateVal=jp;
 	      if(btaggerToTemplate=="tche") btaggerToTemplateVal=tche;
 	      if(btaggerToTemplate=="tchp") btaggerToTemplateVal=tchp;
-	      if(btaggerToTemplate=="ivf") btaggerToTemplateVal=ivfHighEff;
+	      if(btaggerToTemplate=="ivf")  btaggerToTemplateVal=ivfHighEff;
 	      float btaggerForTemplatedEffVal=jp;
 	      if(btaggerForTemplatedEff=="csv")  btaggerForTemplatedEffVal=csv;
 	      if(btaggerForTemplatedEff=="tche") btaggerForTemplatedEffVal=tche;
@@ -769,14 +783,16 @@ int main(int argc, char* argv[])
 		      controlHistos.fillHisto(btaggerToTemplate+jetFlav+systVars[ivar],      catsToFill, btaggerToTemplateVal,      jetCategs[ijcat], weight);
 		      controlHistos.fillHisto(btaggerForTemplatedEff+jetFlav+systVars[ivar], catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
 		    }
-
 		  for(std::map<TString, bool>::iterator it=hasTagger.begin(); it!=hasTagger.end(); it++)
 		    {
 		      TString pfix(it->second?"":"v");
-		      float idisc=btaggerToTemplateVal;
-		      TString idiscName=btaggerToTemplate;
-		      controlHistos.fillHisto(          idiscName        +systVars[ivar]+it->first+pfix,catsToFill, idisc, jetCategs[ijcat], weight);
-		      if(isMC) controlHistos.fillHisto( idiscName+jetFlav+systVars[ivar]+it->first+pfix,catsToFill, idisc, jetCategs[ijcat], weight);
+		      controlHistos.fillHisto(btaggerToTemplate        +systVars[ivar]+it->first+pfix,catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
+		      controlHistos.fillHisto(btaggerForTemplatedEff    +systVars[ivar]+it->first+pfix,catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
+		      if(isMC)
+			{
+			  controlHistos.fillHisto( btaggerToTemplate+jetFlav+systVars[ivar]+it->first+pfix,     catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
+			  controlHistos.fillHisto( btaggerForTemplatedEff+jetFlav+systVars[ivar]+it->first+pfix,catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
+			}
 		    }
 		}
 

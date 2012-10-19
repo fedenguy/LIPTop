@@ -5,10 +5,12 @@
 #
 # CREATE BASE DISTRIBUTIONS AND ESTIMATE BACKGROUNDS
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/29Aug2012_CMSSW_53x_ntuples -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=True @saveSummaryTree=True" -s 8nh
-runPlotter --iLumi 10198 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=True @saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/syst-samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
+runPlotter --iLumi 13016 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/2012/plotter_raw.root --noLog 
+runPlotter --iLumi 13016 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/2012/plotter_syst.root --noPlot
 
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/29Aug2012_CMSSW_53x_ntuples -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh -t DY
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh -t DY
 
 #
 # FIT THE CROSS SECTION

@@ -16,6 +16,20 @@
 	   ]
 	},
 	{
+	 "tag":"t#bar{t} (MG)",
+         "isdata":false,
+         "spimpose":true,
+         "color":"8",
+	 "lcolor":1,
+         "data":[
+		{
+ 	        "dtag":"MC8TeV_TTJetsFullLeptMGDecays",
+		"xsec":165,
+		"br":[0.065]
+                }
+	   ]
+	},
+	{
            "tag":"Z#rightarrow #tau#tau (data)",
            "isdata":true,
            "color":1,

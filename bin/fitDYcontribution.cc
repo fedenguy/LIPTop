@@ -107,11 +107,11 @@ int main(int argc,char *argv[])
       systVars.push_back("jesdown");
       systVars.push_back("jerup");
       systVars.push_back("jerdown");
-      systVars.push_back("signalpowheg");
-      systVars.push_back("signalscaleup");
-      systVars.push_back("signalscaledown");
-      systVars.push_back("signalmatchingup");
-      systVars.push_back("signalmatchingdow");
+      //      systVars.push_back("signalpowheg");
+//       systVars.push_back("signalscaleup");
+//       systVars.push_back("signalscaledown");
+//       systVars.push_back("signalmatchingup");
+//       systVars.push_back("signalmatchingdown");
     }
   const size_t nsystVars=systVars.size();
   
@@ -164,21 +164,22 @@ int main(int argc,char *argv[])
 	  TString ivarName=systVars[ivar];
 	  TString ivarOrigName=ivarName;
 	  if(ivarName.Contains("signal")) ivarName="";
-	 
+	  cout << ivarName << " " << ivarOrigName << endl;
 	  for(size_t iproc=0; iproc<nprocs; iproc++)
 	    {
 	      TH1F *histo = (TH1F *) stdFile->Get(procs[iproc]+"/"+signalRegionHisto[ich]+ivarName);
+	      cout << histo << " " << procs[iproc]+"/"+signalRegionHisto[ich]+ivarName << endl;
 	      if(ivarOrigName.Contains("signal") && procs[iproc]=="t#bar{t}")
 		{
 		  cout << "[WARNING] signal will be replaced from alternative simulation for " << ivarOrigName << endl;
 		  TFile *systReplacementFile=TFile::Open( dyReplacementUrl );
 		  systReplacementFile->cd();
 		  TH1F *repHisto=0;
-		  if(ivarOrigName.Contains("powheg"))       repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} (Powheg)/"+signalRegionHisto[ich]+ivarName); 
-		  if(ivarOrigName.Contains("matchingup"))   repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching up/"+signalRegionHisto[ich]+ivarName); 
-		  if(ivarOrigName.Contains("matchingdown")) repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching down/"+signalRegionHisto[ich]+ivarName); 
-		  if(ivarOrigName.Contains("scaleup"))      repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale up/"+signalRegionHisto[ich]+ivarName); 
-		  if(ivarOrigName.Contains("scaledown"))    repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale down/"+signalRegionHisto[ich]+ivarName); 
+		  if(ivarOrigName.Contains("powheg"))       repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} (Powheg)/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("matchingup"))   repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching up/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("matchingdown")) repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching down/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("scaleup"))      repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale up/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("scaledown"))    repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale down/"+signalRegionHisto[ich]);
 		  if(repHisto==0)
 		      cout << "[WARNING] using default: couldn't find replacement for " << ivarOrigName << endl;
 		  else
@@ -189,7 +190,7 @@ int main(int argc,char *argv[])
 		}
 	      if(rebin[ich]) 
 		histo->Rebin();
-
+	      cout << __LINE__ << endl;
 	      //force the normalization of the shape
 	      if(ivar>0 && !procs[iproc].Contains("Z#rightarrow"))
 		{
@@ -199,7 +200,7 @@ int main(int argc,char *argv[])
 		  if(isnan(sf) || isinf(sf)) continue;
 		  histo->Scale(sf);
 		}
-
+	      cout << __LINE__ << endl;
 	      //now save histogram in the appropriate category
 	      if(procs[iproc].Contains("Z#rightarrow"))   
 		{
@@ -223,6 +224,8 @@ int main(int argc,char *argv[])
  		  otherProcsHisto.push_back( histo );
 		}
 	      else otherProcsHisto[ivar]->Add(histo);
+	      
+	      cout << __LINE__ << endl;
 	      
 	      //total mc
 	      if(iproc==0) 
