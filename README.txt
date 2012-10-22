@@ -5,19 +5,26 @@
 #
 # CREATE BASE DISTRIBUTIONS AND ESTIMATE BACKGROUNDS
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=True @saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012_raw/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
 runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/syst-samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
-runPlotter --iLumi 13016 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/2012/plotter_raw.root --noLog 
+runPlotter --iLumi 13016 --inDir ~/work/top/2012_raw/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/2012/plotter_raw.root --noLog 
 runPlotter --iLumi 13016 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/2012/plotter_syst.root --noPlot
 
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh -t DY
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/10Oct2012_CMSSW53x_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh
+runPlotter --iLumi 13016 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/2012/plotter.root --noLog 
 
 #
 # FIT THE CROSS SECTION
 #
-fitCrossSection --in plotter_dilepton.root --json data/samples_2012.json --syst plotter_syst.root
+fitCrossSection --in ~/work/top/2012/plotter.root --json data/samples_2012.json --syst ~/work/top/2012/plotter_syst.root
 combinedCards.py Name1=DataCard_ee.dat Name2=DataCard_mumu.dat Name3=DataCard_emu.dat > DataCard_combined.dat
 runPLRanalysis --in DataCard_ee.dat,DataCard_mumu.dat,DataCard_emu.dat,DataCard_combined.dat
+
+#
+# LXY measurement
+#
+prepareLxyDistributions --in ~/work/top/2012/plotter.root,~/work/top/2012/plotter_syst.root
+FitSecVtxDistributions templ=lxydil.root
 
 #
 # MEASURE THE CORRECT ASSIGNMENTS (INCLUDING CALIBRATION)
