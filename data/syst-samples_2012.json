@@ -1,7 +1,7 @@
 {
     "proc":[
 	{
-	 "tag":"t#bar{t} (Powheg)",
+	 "tag":"t#bar{t}systpowheg",
          "isdata":false,
          "spimpose":true,
          "color":"8",
@@ -16,7 +16,7 @@
 	   ]
 	},
 	{
-	 "tag":"t#bar{t} (MG)",
+	 "tag":"t#bar{t}systspincorrel",
          "isdata":false,
          "spimpose":true,
          "color":"8",
@@ -30,7 +30,7 @@
 	   ]
 	},
 	{
-           "tag":"Z#rightarrow #tau#tau (data)",
+           "tag":"Z#rightarrow#tau#tausystdata",
            "isdata":true,
            "color":1,
            "fill":0,
@@ -51,7 +51,7 @@
 	    ]
 	},
 	{
-         "tag":"t#bar{t} scale down",
+         "tag":"t#bar{t}systq2down",
          "isdata":false,
          "color":"8",
          "lcolor":1,
@@ -63,7 +63,7 @@
 	   ]
 	},
 	{
-         "tag":"t#bar{t} scale up",
+         "tag":"t#bar{t}systq2up",
          "isdata":false,
          "color":"8",
          "lcolor":1,
@@ -75,7 +75,7 @@
             ]
 	},
 	{
-         "tag":"t#bar{t} matching down",
+         "tag":"t#bar{t}systmepsdown",
          "isdata":false,
          "color":"8",
          "lcolor":1,
@@ -87,7 +87,7 @@
 	   ]
 	},
 	{
-         "tag":"t#bar{t} matching up",
+         "tag":"t#bar{t}systmepsup",
          "isdata":false,
          "color":"8",
          "lcolor":1,
@@ -99,7 +99,7 @@
             ]
 	},
         {
-        "tag":"t#bar{t} (m_{t}=166.5)",
+        "tag":"t#bar{t}166.5",
         "isdata":false,
         "color":"2",
         "lcolor":2,
@@ -114,7 +114,37 @@
      	   ]
 	},
         {
-        "tag":"t#bar{t} (m_{t}=178.5)",
+        "tag":"t#bar{t}169.5",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets_169v5",
+                "xsec":165
+                }
+     	   ]
+	},
+        {
+        "tag":"t#bar{t}175.5",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets_175v5",
+                "xsec":165
+                }
+     	   ]
+	},
+        {
+        "tag":"t#bar{t}178.5",
         "isdata":false,
         "color":"2",
         "lcolor":2,

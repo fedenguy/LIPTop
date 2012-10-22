@@ -136,8 +136,9 @@ PhysicsObjectJetCollection getQCDJetCollection(float minJetPt, bool isMC)
       //wrap the jet info
       float en=pt*cosh(eta);
       LorentzVector p4(pt*TMath::Cos(phi), pt*TMath::Sin(phi), pt*sinh(eta), en);
-      PhysicsObject_Jet pjet(p4,qcdev.Jet_flavour[ijet],qcdev.Jet_Ip2P[ijet],qcdev.Jet_CombSvxP[ijet],qcdev.Jet_ProbaP[ijet],qcdev.Jet_Ip3P[ijet],0,0,0,ijet);
-      pjet.setGenFlavor(qcdev.Jet_flavour[ijet]);
+      PhysicsObject_Jet pjet(p4,0,0,0,0);
+      pjet.setBtagInfo(qcdev.Jet_Ip2P[ijet],qcdev.Jet_CombSvxP[ijet],qcdev.Jet_ProbaP[ijet],qcdev.Jet_Ip3P[ijet],0,0,0);
+      pjet.setGenInfo(qcdev.Jet_flavour[ijet],0,qcdev.Jet_flavour[ijet],false,false);
       jets.push_back(pjet);
     }
 

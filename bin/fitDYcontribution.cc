@@ -115,7 +115,7 @@ int main(int argc,char *argv[])
     }
   const size_t nsystVars=systVars.size();
   
-  TString procs[]={"VV", "Single top", "W#rightarrow l#nu","Z#rightarrow ll","t#bar{t}","other t#bar{t}"};
+  TString procs[]={"VV", "Single top", "W#rightarrow l#nu","Z#rightarrow ll","t#bar{t}","other t#bar{t}","t#bar{t}V"};
 
   TString ch[]               ={"ee1jets",                      "ee",                    "mumu1jets",                      "mumu",                    "emueq1jets",            "emu",      "emueq1jets", "emu"};
   size_t runNsystVars[]      ={1,                              nsystVars,               1,                                nsystVars,                 1,                       nsystVars,  1,            nsystVars};
@@ -137,7 +137,7 @@ int main(int argc,char *argv[])
  
       //get the DY template (data-driven)
       TString dataDir("data");
-      if(ch[ich].BeginsWith("emu")) dataDir="Z#rightarrow #tau#tau (data)";
+      if(ch[ich].BeginsWith("emu")) dataDir="Z#rightarrow#tau#tausystdata";
       TH1F *dyReplacementHisto=(TH1F *) dyReplacementFile->Get(dataDir+"/"+templateHisto[ich]);
       dyReplacementHisto->SetDirectory(0); 
       dyReplacementHisto->SetName(templateName[ich]+"model");
@@ -175,11 +175,12 @@ int main(int argc,char *argv[])
 		  TFile *systReplacementFile=TFile::Open( dyReplacementUrl );
 		  systReplacementFile->cd();
 		  TH1F *repHisto=0;
-		  if(ivarOrigName.Contains("powheg"))       repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} (Powheg)/"+signalRegionHisto[ich]);
-		  if(ivarOrigName.Contains("matchingup"))   repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching up/"+signalRegionHisto[ich]);
-		  if(ivarOrigName.Contains("matchingdown")) repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} matching down/"+signalRegionHisto[ich]);
-		  if(ivarOrigName.Contains("scaleup"))      repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale up/"+signalRegionHisto[ich]);
-		  if(ivarOrigName.Contains("scaledown"))    repHisto = (TH1F *) systReplacementFile->Get("t#bar{t} scale down/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("powheg"))       repHisto = (TH1F *) systReplacementFile->Get("t#bar{t}systpowheg/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("spincorrel"))   repHisto = (TH1F *) systReplacementFile->Get("t#bar{t}systspincorrel/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("matchingup"))   repHisto = (TH1F *) systReplacementFile->Get("t#bar{t}systmepsup/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("matchingdown")) repHisto = (TH1F *) systReplacementFile->Get("t#bar{t}systmepsdown/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("scaleup"))      repHisto = (TH1F *) systReplacementFile->Get("t#bar{t}systq2up/"+signalRegionHisto[ich]);
+		  if(ivarOrigName.Contains("scaledown"))    repHisto = (TH1F *) systReplacementFile->Get("t#bar{t}systq2down/"+signalRegionHisto[ich]);
 		  if(repHisto==0)
 		      cout << "[WARNING] using default: couldn't find replacement for " << ivarOrigName << endl;
 		  else

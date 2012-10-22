@@ -21,13 +21,13 @@ combinedCards.py Name1=DataCard_ee.dat Name2=DataCard_mumu.dat Name3=DataCard_em
 runPLRanalysis --in DataCard_ee.dat,DataCard_mumu.dat,DataCard_emu.dat,DataCard_combined.dat
 
 #
-# LXY measurement
+# Lxy MEASUREMENT
 #
 prepareLxyDistributions --in ~/work/top/2012/plotter.root,~/work/top/2012/plotter_syst.root
 FitSecVtxDistributions templ=lxydil.root
 
 #
-# MEASURE THE CORRECT ASSIGNMENTS (INCLUDING CALIBRATION)
+# CORRECT ASSIGNMENTS MEASUREMENT (INCLUDING CALIBRATION)
 #
 MljAnalysisCalibration --in test/results/ --json data/samples_2012.json
 
@@ -41,7 +41,11 @@ mv QCDweights.root data/
 runLocalAnalysisOverSamples.py -e runQCDAnalysis -j $CMSSW_BASE/src/LIP/Top/data/samples_qcd_2012.json -d /store/cmst3/user/psilva/16_08_12_QCD -o $CMSSW_BASE/src/LIP/Top/test/results -c test/runAnalysis_cfg.py.templ -p "@jetPtCut=30 @sfMetCut=40 @ofMetCut=0 @weightsFile='data/QCDweights.root'" -s 8nh
 runPlotter --iLumi 5041 --inDir test/results/ --outDir test/results/plots --json data/samples_qcd_2012.json
 
-#check me below
+
+
+
+
+#instructions below are not up to date...
 
 #
 # RUN KIN RECONSTRUCTION
@@ -74,22 +78,6 @@ runLocalAnalysisOverSamples.py -e showMassDistribution -j ../data/samples-signal
 sleep 50
 done
 
-#
-# DY control
-#
-# count events under the Z mass peak ee/mumu
-python bin/macros/getDileptonCutflow.py -c dilmassctr -b 2 -i plotter.root 
-
-# fit the sum MT distribution for the emu channel
-root -l bin/macros/fitDYdistribution.C
-
-#
-# EVENT YIELDS
-# 
-python bin/macros/getDileptonCutflow.py -c evtflow -b 4 -i plotter.root 
-
-
-
 # create a single event summary file
 hadd EventSummaries.root ${HOME}/scratch0/*_summary.root 
 rm ${HOME}/scratch0/*_summary.root
@@ -113,5 +101,4 @@ python runHFCMeasurement.py -l 2165 -j ../../data/samples-signal.json -i ~/scrat
 mount_store.sh
 
 #when you're done unmount it
-fusermount -u store
-rm -rf store
+fusermount -u store && rm -rf store
