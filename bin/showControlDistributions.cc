@@ -203,8 +203,6 @@ int main(int argc, char* argv[])
   float btaggerMax[] = {1.2,   2.5,   20,    20,     8};
   int idxForBtaggerToTemplate=1;
   TString btaggerToTemplate=btagger[idxForBtaggerToTemplate];
-  int idxForBtaggerForTemplatedEff=0;
-  TString btaggerForTemplatedEff=btagger[idxForBtaggerForTemplatedEff]; 
   TString btaggerWPs[]={"L","M","T"};
   TString jetRanges[]={"inc","30to50","50to80","80to120","120to200","200to300","300toInf","0to0.5","0.5to1.0","1.0to1.5","1.5to2.5","0to10","11to14","15to18","18toInf"};
   TString jetFlavors[]={"","b","udsg","c"};
@@ -219,6 +217,17 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"tagjetpt", "; Taggable jet p_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"tagjeteta", "; Taggable jet #eta; Events", 30, 0.,3.) );
     }
+  TH1 *hflav=controlHistos.addHistogram( new TH1F("flavcount","Flavor at generator level",64,0,64) );
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      for(int k=0;k<4;k++)
+	{
+	  char buf[50]; sprintf(buf,"%db%dc%dl",i,j,k);
+	  int bin(i | j<<2 | k<<4);
+	  hflav->GetXaxis()->SetBinLabel(bin,buf);
+	  cout << bin << " ";
+	}
+  cout << endl;
   const size_t nJetRanges=sizeof(jetRanges)/sizeof(TString);
   for(size_t i=0; i<sizeof(btagger)/sizeof(TString); i++)
     {
@@ -239,13 +248,10 @@ int main(int argc, char* argv[])
 
 	  //use templates based on a given discriminator except in the case we're measuring the discriminator efficiency itself (switch to alternative)
 	  int idxToUse=idxForBtaggerToTemplate;
-	  if(btagger[i]==btaggerToTemplate) idxToUse=idxForBtaggerForTemplatedEff;
-
-
-	  TH2 *hinc=(TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+systVars[j],";Discriminator;Jets", 50, btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  TH2 *hb=(TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"b"+systVars[j],";b-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  TH2 *hc=(TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"c"+systVars[j],";c-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  TH2 *hudsg= (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"udsg"+systVars[j],";udsg-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	  TH2 *hinc  = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+systVars[j],";Discriminator;Jets", 50, btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	  TH2 *hb    = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"b"+systVars[j],";b-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	  TH2 *hc    = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"c"+systVars[j],";c-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	  TH2 *hudsg = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"udsg"+systVars[j],";udsg-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
 	  for(int ybin=1; ybin<=hb->GetYaxis()->GetNbins(); ybin++)
 	    {
 	      hinc->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
@@ -769,6 +775,37 @@ int main(int argc, char* argv[])
 		    }
 		}
 
+	      //count flavors
+	      if(ivar==0)
+		{
+		  std::vector<LorentzVector> genP4;
+		  int ngenb(0),ngenc(0),ngenl(0);
+		  for(int ngen=0; ngen<ev.nmcparticles; ngen++)
+		    {
+		      if(abs(ev.mc_id[ngen])>5) continue;
+		      LorentzVector p4(ev.mc_px[ngen],ev.mc_py[ngen],ev.mc_pz[ngen],ev.mc_en[ngen]);
+		      if(fabs(p4.eta())>2.5 || p4.pt()<25) continue;
+		      
+		      bool hasOverlap(false);
+		      for(size_t igp4=0; igp4<genP4.size(); igp4++)
+			{
+			  float dR = deltaR(p4,genP4[igp4]);
+			  if(dR>0.1) continue;
+			  hasOverlap=true;
+			}
+		      if(hasOverlap) continue;
+		      
+		      if(abs(ev.mc_id[ngen])==5)      ngenb++;
+		      else if(abs(ev.mc_id[ngen])==4) ngenc++;
+		      else                         ngenl++;
+		    }
+		  ngenb=min(4,ngenb);
+		  ngenc=min(4,ngenc);
+		  ngenl=min(4,ngenl);
+		  int bin(ngenb | ngenc<<2 | ngenl<<4);
+		  controlHistos.fillHisto("flavcount", catsToFill, hflav->GetBinCenter(bin),  weight);
+		}
+	      
 	      //b-tagging
 	      std::map<TString, bool> hasTagger;
 	      float tche = prunedJetColl[ijet].btag1;
@@ -799,30 +836,15 @@ int main(int argc, char* argv[])
 	      if(btaggerToTemplate=="tche") btaggerToTemplateVal=tche;
 	      if(btaggerToTemplate=="tchp") btaggerToTemplateVal=tchp;
 	      if(btaggerToTemplate=="ivf")  btaggerToTemplateVal=ivfHighEff;
-	      float btaggerForTemplatedEffVal=jp;
-	      if(btaggerForTemplatedEff=="csv")  btaggerForTemplatedEffVal=csv;
-	      if(btaggerForTemplatedEff=="tche") btaggerForTemplatedEffVal=tche;
-	      if(btaggerForTemplatedEff=="tchp") btaggerForTemplatedEffVal=tchp;
-	      if(btaggerForTemplatedEff=="ivf") btaggerForTemplatedEffVal=ivfHighEff;
 	      for(size_t ijcat=0; ijcat<jetCategs.size(); ijcat++)
 		{
 		  controlHistos.fillHisto(btaggerToTemplate+systVars[ivar],      catsToFill, btaggerToTemplateVal,      jetCategs[ijcat], weight);
-		  controlHistos.fillHisto(btaggerForTemplatedEff+systVars[ivar], catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
-		  if(isMC) 
-		    {
-		      controlHistos.fillHisto(btaggerToTemplate+jetFlav+systVars[ivar],      catsToFill, btaggerToTemplateVal,      jetCategs[ijcat], weight);
-		      controlHistos.fillHisto(btaggerForTemplatedEff+jetFlav+systVars[ivar], catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
-		    }
+		  if(isMC) controlHistos.fillHisto(btaggerToTemplate+jetFlav+systVars[ivar],      catsToFill, btaggerToTemplateVal,      jetCategs[ijcat], weight);
 		  for(std::map<TString, bool>::iterator it=hasTagger.begin(); it!=hasTagger.end(); it++)
 		    {
 		      TString pfix(it->second?"":"v");
 		      controlHistos.fillHisto(btaggerToTemplate        +systVars[ivar]+it->first+pfix,catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
-		      controlHistos.fillHisto(btaggerForTemplatedEff    +systVars[ivar]+it->first+pfix,catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
-		      if(isMC)
-			{
-			  controlHistos.fillHisto( btaggerToTemplate+jetFlav+systVars[ivar]+it->first+pfix,     catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
-			  controlHistos.fillHisto( btaggerForTemplatedEff+jetFlav+systVars[ivar]+it->first+pfix,catsToFill, btaggerForTemplatedEffVal, jetCategs[ijcat], weight);
-			}
+		      if(isMC) controlHistos.fillHisto( btaggerToTemplate+jetFlav+systVars[ivar]+it->first+pfix,     catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
 		    }
 		}
 

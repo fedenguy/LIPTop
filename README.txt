@@ -34,11 +34,11 @@ MljAnalysisCalibration --in test/results/ --json data/samples_2012.json
 #
 # QCD DIJET ANALYSIS
 #
-runLocalAnalysisOverSamples.py -e runQCDAnalysis -j $CMSSW_BASE/src/LIP/Top/data/samples_qcd_2012.json -d /store/cmst3/user/psilva/16_08_12_QCD -o $CMSSW_BASE/src/LIP/Top/test/results -c test/runAnalysis_cfg.py.templ -p "@jetPtCut=30 @sfMetCut=40 @ofMetCut=0" -s 8nh
+runLocalAnalysisOverSamples.py -e runQCDAnalysis -j $CMSSW_BASE/src/LIP/Top/data/samples_qcd_2012.json -d /store/group/phys_btag/performance/CMSSW_5_3_2_patch4/MC/QCD_TuneZ2star_8TeV_pythia6_Summer12_DR53X-PU_S10_START53_V7A -o $CMSSW_BASE/src/LIP/Top/test/results -c test/runAnalysis_cfg.py.templ -p "@jetPtCut=30 @sfMetCut=40 @ofMetCut=0 @applyDYweight=False" -s 8nh
 runPlotter --iLumi 5041 --inDir test/results/ --outDir test/results/plots --json data/samples_qcd_2012.json
 root -b -q "bin/HFC/getQCDWeights.C+(\"plotter_btag_2012.root\",\"plotter_qcd.root\")"
 mv QCDweights.root data/
-runLocalAnalysisOverSamples.py -e runQCDAnalysis -j $CMSSW_BASE/src/LIP/Top/data/samples_qcd_2012.json -d /store/cmst3/user/psilva/16_08_12_QCD -o $CMSSW_BASE/src/LIP/Top/test/results -c test/runAnalysis_cfg.py.templ -p "@jetPtCut=30 @sfMetCut=40 @ofMetCut=0 @weightsFile='data/QCDweights.root'" -s 8nh
+runLocalAnalysisOverSamples.py -e runQCDAnalysis -j $CMSSW_BASE/src/LIP/Top/data/samples_qcd_2012.json -d /store/cmst3/user/psilva/16_08_12_QCD -o $CMSSW_BASE/src/LIP/Top/test/results -c test/runAnalysis_cfg.py.templ -p "@jetPtCut=30 @sfMetCut=40 @ofMetCut=0 @applyDYweight=False @weightsFile='data/QCDweights.root'" -s 8nh
 runPlotter --iLumi 5041 --inDir test/results/ --outDir test/results/plots --json data/samples_qcd_2012.json
 
 

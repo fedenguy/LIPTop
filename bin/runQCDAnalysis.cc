@@ -10,6 +10,7 @@
 #include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h" 
+#include "TGraph2D.h"
 
 #include <fstream>
 #include <iostream>
@@ -23,10 +24,10 @@ struct QCDevent_t
   int  Jet_flavour[50], Jet_nFirstTrkInc[50], Jet_nLastTrkInc[50], Muon_IdxJet[50]; 
   float pthat, PVz;
   float Jet_pt[50], Jet_eta[50], Jet_phi[50];                //JET kinematics
-  float Jet_Ip1P[50], Jet_Ip2P[50], Jet_Ip3P[50];            //leading IP sig, TCHE, TCHP
+  float Jet_Ip2P[50], Jet_Ip3P[50];            //leading IP sig, TCHE, TCHP
   float Jet_Svx[50], Jet_SvxHP[50];                          //SSVHE, SSVHP
-  float Jet_ProbaP[50], Jet_ProbaN[50], Jet_Proba[50];       //JP, JPn, JP
-  float Jet_BprobP[50], Jet_BprobN[50], Jet_Bprob[50];       //JBP, JPBn, JBP
+  float Jet_ProbaP[50], Jet_ProbaN[50];       //JP, JPn, JP
+  float Jet_BprobP[50], Jet_BprobN[50];       //JBP, JPBn, JBP
   float Jet_CombSvxP[50], Jet_CombSvxN[50], Jet_CombSvx[50]; //CSV, CSVn, CSV
   float Muon_pt[50], Muon_eta[50], Muon_ptrel[50], Muon_IP[50], Muon_IPsig[50], Muon_Proba[50], Muon_chi2[50], Muon_chi2Tk[50]; 
   int Muon_nMuHit[50], Muon_nTkHit[50], Muon_nPixHit[50], Muon_nOutHit[50], Muon_isGlobal[50], Muon_nMatched[50];
@@ -60,17 +61,14 @@ TTree *getQCDTreeFrom(TFile *inF)
   tchain->SetBranchAddress("Jet_eta", qcdev.Jet_eta);
   tchain->SetBranchAddress("Jet_phi", qcdev.Jet_phi);
   tchain->SetBranchAddress("Jet_flavour", qcdev.Jet_flavour);
-  tchain->SetBranchAddress("Jet_Ip1P", qcdev.Jet_Ip1P);
   tchain->SetBranchAddress("Jet_Ip2P", qcdev.Jet_Ip2P);
   tchain->SetBranchAddress("Jet_Ip3P", qcdev.Jet_Ip3P);
   tchain->SetBranchAddress("Jet_Svx", qcdev.Jet_Svx);
   tchain->SetBranchAddress("Jet_SvxHP", qcdev.Jet_SvxHP);
   tchain->SetBranchAddress("Jet_ProbaP", qcdev.Jet_ProbaP);
   tchain->SetBranchAddress("Jet_ProbaN", qcdev.Jet_ProbaN);
-  tchain->SetBranchAddress("Jet_Proba", qcdev.Jet_Proba);
   tchain->SetBranchAddress("Jet_BprobP", qcdev.Jet_BprobP);
   tchain->SetBranchAddress("Jet_BprobN", qcdev.Jet_BprobN);
-  tchain->SetBranchAddress("Jet_Bprob", qcdev.Jet_Bprob);
   tchain->SetBranchAddress("Jet_CombSvxP", qcdev.Jet_CombSvxP);
   tchain->SetBranchAddress("Jet_CombSvxN", qcdev.Jet_CombSvxN);
   tchain->SetBranchAddress("Jet_CombSvx", qcdev.Jet_CombSvx);
@@ -318,21 +316,20 @@ int main(int argc, char* argv[])
 
 
   //get the jet pt weights
-  std::map<TString, TGraph *> jetWeights;
+  std::map<TString, TGraph2D *> jetWeights;
   for(size_t iwf=0; iwf<jetPtWeightsFile.size(); iwf++)
     {
       TString inUrl("${CMSSW_BASE}/src/LIP/Top/"); inUrl += jetPtWeightsFile[iwf].c_str();
       gSystem->ExpandPathName(inUrl);
       TFile *inF=TFile::Open(inUrl);
       cout << "Retrieving jet weights from " << inUrl << endl;
-      bool isEta(inUrl.Contains("_eta"));
       if(inF)
 	{
 	  for(size_t iflav=0; iflav<nJetFlavors; iflav++)
 	    {
-	      TH1 *hwgt=(TH1 *)inF->Get(jetFlavors[iflav]+(isEta?"jetetawgt":"jetptwgt"));
+	      TH2 *hwgt=(TH2 *)inF->Get(jetFlavors[iflav]+("jetetaptwgt"));
 	      if(hwgt==0) continue;
-	      jetWeights[jetFlavors[iflav]+(isEta?"eta":"pt")]=new TGraph(hwgt);
+	      jetWeights[jetFlavors[iflav]]=new TGraph2D(*hwgt);
 	    }
 	  inF->Close();
 	}
@@ -383,17 +380,10 @@ int main(int argc, char* argv[])
 	  float pt=jets[ijet].pt();
 	  float eta=fabs(jets[ijet].eta());
 	  float jetWgt=1.0;
-	  for(int iwgt=0; iwgt<2; iwgt++)
+	  if(jetWeights.find(jetFlav)!=jetWeights.end())
 	    {
-	      TString pfix(iwgt==0?"pt":"eta");
-	      if(jetWeights.find(jetFlav+pfix)!=jetWeights.end())
-		{
-		  TGraph *wgtGr=jetWeights[jetFlav+pfix];
-		  if(wgtGr)
-		    {
-		      jetWgt=wgtGr->Eval(iwgt==0?pt:eta);
-		    }
-		}
+	      TGraph2D *wgtGr=jetWeights[jetFlav];
+	      if(wgtGr) jetWgt=wgtGr->Interpolate(pt,eta);
 	    }
 	  
 	  //reset the weight

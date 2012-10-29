@@ -7,54 +7,54 @@
 	"lcolor":1,
 	"data":[
 	     {	
-		"dtag":"JetTree_QCD_Pt15to30",
+		"dtag":"JetTree_Pt-15to30_390on402",
 		"xsec":989200000,
-		"br":[0.000000091532712]
+		"br":[0.000002766]
 	     },
 	     {	
-		"dtag":"JetTree_QCD_Pt30to50",
+		"dtag":"JetTree_Pt-30to50",
 		"xsec":66090000,
-		"br":[0.000000166666667]
+		"br":[0.000002420]
 	     },
 	     {	
-		"dtag":"JetTree_QCD_Pt50to80",
+		"dtag":"JetTree_Pt-50to80",
 		"xsec":8082000,
-		"br":[0.00000016677941]
+		"br":[0.000002595]
 	     },
 	     {	
-		"dtag":"JetTree_QCD_Pt80to120",
+		"dtag":"JetTree_Pt-80to120",
 		"xsec":1024000,
-		"br":[0.000000167186952]
+		"br":[0.000001183]
 	     },
 	     {	
-		"dtag":"JetTree_QCD_Pt120to170",
+		"dtag":"JetTree_Pt-120to170",
 		"xsec":157800, 
-		"br":[0.000000167063945]
+		"br":[0.000001129]
 	     },
      	     {	
-		"dtag":"JetTree_QCD_Pt170to300",
+		"dtag":"JetTree_Pt-170to300",
 		"xsec":34020,
-		"br":[0.000000240644276]
+		"br":[0.000003368]
 	     },
      	     {	
-		"dtag":"JetTree_QCD_Pt300to470",
+		"dtag":"JetTree_Pt-300to470",
 		"xsec":1757,
-		"br":[0.00000016871088]
+		"br":[0.000003146]
 	     },
      	     {	
-		"dtag":"JetTree_QCD_Pt470to600",
+		"dtag":"JetTree_Pt-470to600",
 		"xsec":115.2,
-		"br":[0.000000250322415]
+		"br":[0.000003040]
 	     },
      	     {	
-		"dtag":"JetTree_QCD_Pt600to800",
+		"dtag":"JetTree_Pt-600to800",
 		"xsec":27.01,
-		"br":[0.000000250453321]
+		"br":[0.000003707]
 	     },
      	     {	
-		"dtag":"JetTree_QCD_Pt800toInf",
+		"dtag":"JetTree_Pt-800to1000",
 		"xsec":3.57,
-		"br":[0.000000250089845]
+		"br":[0.000003137]
 	     }
 	  ]
     	}
