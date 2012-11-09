@@ -36,6 +36,7 @@
 
 using namespace std;
 
+TString outUrl("./");
 TString inFileUrl("");
 TString systFileUrl("");
 TString jsonFileUrl("");
@@ -43,7 +44,7 @@ TString histo("finalevtflow");
 std::set<TString> systVars;
 std::vector<int> binsToProject;
 std::vector<std::string> channels;
-float lumiUnc(0.04);
+float lumiUnc(0.044);
 float selEffUnc(0.02);
 float iEcm(8);
 
@@ -84,14 +85,16 @@ std::map<TString,float> getDYUncertainties(TString ch)
   if(ch=="mumu") dybin=1;
   if(ch=="emu")  dybin=2;
 
-  //build the uncertainty map (for an inclusive channel I'm averaging the unc...yes, I know it's wrong )
+  //build the uncertainty map (for an inclusive channel I'm averaging the unc - it doesn't really matter as it will be combined in the end)
   std::map<TString,float> dysfUncs; 
-  float stat[]        = {0.17/2.16,  0.09/1.39, 0.13/1.33};   dysfUncs["stat"]               = (dybin==-1 ? (stat[0]+stat[1]+stat[2])/3                      : stat[dybin]);
-  float jes[]         = {0.02,       0.02,      0.0 };        dysfUncs["jes"]                = (dybin==-1 ? (jes[0]+jes[1]+jes[2])/3                         : jes[dybin]);
-  float jer[]         = {0.03,       0.03,      0.0 };        dysfUncs["jer"]                = (dybin==-1 ? (jer[0]+jer[1]+jer[2])/3                         : jer[dybin]);
-  float pu[]          = {0.02,       0.01,      0.0 };        dysfUncs["pu"]                 = (dybin==-1 ? (pu[0]+pu[1]+pu[2])/3                            : pu[dybin]);
-  float mcsignal[]    = {0.06,       0.06,      0.06 };       dysfUncs["mcsignal"]           = (dybin==-1 ? (mcsignal[0]+mcsignal[1]+mcsignal[2])/3          : mcsignal[dybin]);
-  float dy_template[] = {0.1,        0.1,       0.1 };  
+  float stat[]        = {0.064,      0.038,     0.079};     dysfUncs["stat"]         = (dybin==-1 ? (stat[0]+stat[1]+stat[2])/3             : stat[dybin]);
+  float jes[]         = {0.021,      0.019,     0.041};     dysfUncs["jes"]          = (dybin==-1 ? (jes[0]+jes[1]+jes[2])/3                : jes[dybin]);
+  float jer[]         = {0.014,      0.014,     0.013 };    dysfUncs["jer"]          = (dybin==-1 ? (jer[0]+jer[1]+jer[2])/3                : jer[dybin]);
+  float pu[]          = {0.02,       0.01,      0.008 };    dysfUncs["pu"]           = (dybin==-1 ? (pu[0]+pu[1]+pu[2])/3                   : pu[dybin]);
+  float mcsignal[]    = {0.087,      0.010,     0.053 };    dysfUncs["mcsignal"]     = (dybin==-1 ? (mcsignal[0]+mcsignal[1]+mcsignal[2])/3 : mcsignal[dybin]);
+  float q2[]          = {0.014,      0.014,     0.001 };    dysfUncs["q2"]           = (dybin==-1 ? (q2[0]+q2[1]+q2[2])/3                   : q2[dybin]);
+  float meps[]        = {0.011,      0.011,     0.001 };    dysfUncs["meps"]         = (dybin==-1 ? (meps[0]+meps[1]+meps[2])/3             : meps[dybin]);
+  float dy_template[] = {0.08,       0.06,      0.01 };  
   if(dybin==-1)
     {
       dysfUncs["dy_ee_template"]   = dy_template[0];
@@ -108,12 +111,13 @@ std::map<TString,float> getDYUncertainties(TString ch)
 //
 TString convertNameForDataCard(TString title)
 {
-  if(title=="Di-boson")          return "vv";
+  if(title=="VV")                return "vv";
   if(title=="QCD")               return "qcd";
   if(title=="W#rightarrow l#nu") return "w"; 
   if(title=="other t#bar{t}")    return "ttbar";
   if(title=="Z#rightarrow ll")   return "dy"; 
   if(title=="Single top")        return "st";
+  if(title=="t#bar{t}V")         return "ttv";
   if(title=="t#bar{t}")          return "signal";
   return title;
 }
@@ -156,6 +160,7 @@ void TLatexToTex(TString &expr)
 void printHelp()
 {
   printf("Options\n");
+  printf("--out       --> output director\n");
   printf("--in        --> input file from plotter\n");
   printf("--syst      --> input file with syst shapes\n");
   printf("--json      --> json file with the sample descriptor\n");
@@ -219,6 +224,7 @@ Shape_t getShapeFromFile(TFile* inF, TString ch, JSONWrapper::Object &Root, TFil
 	  hshape->SetLineColor(lcolor); 
 	  hshape->SetMarkerColor(mcolor);
 	  hshape->SetFillStyle(fill);  
+	  hshape->SetFillColor(fcolor);
 	  hshape->SetLineWidth(lwidth); 
 	  hshape->SetMarkerStyle(marker); 
 	  hshape->SetLineStyle(lstyle);
@@ -238,27 +244,40 @@ Shape_t getShapeFromFile(TFile* inF, TString ch, JSONWrapper::Object &Root, TFil
 	      //get alternative shapes for signal from systematics file
 	      if(systF)
 		{
-		  TH1F *hmcsig=(TH1F *)systF->Get("t#bar{t} (Powheg)/"+histoName);
-		  if(hmcsig){  
-		    for(int ibin=1; ibin<=hshape->GetXaxis()->GetNbins(); ibin++) { 
-		      if(find(binsToProject.begin(),binsToProject.end(),ibin) != binsToProject.end()) continue;
-		      hmcsig->SetBinContent(ibin,0);
-		      hmcsig->SetBinError(ibin,0);
-		    }
-		    hmcsig->SetDirectory(0); 
-		    hmcsig->Scale(hshape->Integral()/hmcsig->Integral()); 
-		    hmcsig->SetName(hmcsig->GetName()+TString("mcsignalup"));
-		    hmcsig->SetTitle(proc);
-		    TH1F *hmcsigdown=(TH1F *) hmcsig->Clone(hmcsig->GetName()+TString("mcsignaldown"));
-		    for(int ibin=1; ibin<=hmcsigdown->GetXaxis()->GetNbins();ibin++)
-		      {
-			float var=hmcsig->GetBinContent(ibin)-hshape->GetBinContent(ibin);
-			float newVal(hshape->GetBinContent(ibin)-var);
-			hmcsigdown->SetBinContent(ibin,newVal);
+		  TString signalVars[]={"powheg","q2up","q2down","mepsup","mepsdown"};
+		  for(size_t isigvar=0; isigvar<sizeof(signalVars)/sizeof(TString); isigvar++)
+		    {
+		      TH1F *hmcsig=(TH1F *)systF->Get("t#bar{t}syst"+signalVars[i]+"/"+histoName);
+		      if(hmcsig==0) continue;
+		      for(int ibin=1; ibin<=hshape->GetXaxis()->GetNbins(); ibin++) { 
+			if(find(binsToProject.begin(),binsToProject.end(),ibin) != binsToProject.end()) continue;
+			hmcsig->SetBinContent(ibin,0);
+			hmcsig->SetBinError(ibin,0);
 		      }
-		    shape.signalVars["mcsignalup"]   = hmcsig;
-		    shape.signalVars["mcsignaldown"] = hmcsigdown;
-		  }
+		      hmcsig->SetDirectory(0); 
+		      hmcsig->Scale(hshape->Integral()/hmcsig->Integral()); 
+		      hmcsig->SetName(hmcsig->GetName()+TString("mcsignalup"));
+		      hmcsig->SetTitle(proc);
+
+		      //if variation corresponds already to a signed variation save it directly
+		      //otherwise create an artificial symmetric variation to build the +/- envelope of the nominal shape
+		      if(signalVars[i].EndsWith("up") || signalVars[i].EndsWith("down"))  
+			{
+			  shape.signalVars[signalVars[isigvar]]=hmcsig;
+			}
+		      else
+			{
+			  shape.signalVars[signalVars[isigvar]+"up"]   = hmcsig;
+			  TH1F *hmcsigdown=(TH1F *) hmcsig->Clone(hmcsig->GetName()+TString("mcsignaldown"));
+			  for(int ibin=1; ibin<=hmcsigdown->GetXaxis()->GetNbins();ibin++)
+			    {
+			      float var=hmcsig->GetBinContent(ibin)-hshape->GetBinContent(ibin);
+			      float newVal(hshape->GetBinContent(ibin)-var);
+			      hmcsigdown->SetBinContent(ibin,newVal);
+			    }
+			  shape.signalVars[signalVars[isigvar]+"down"] = hmcsigdown;
+			}
+		    }
 		}
             }
 	    else{
@@ -334,7 +353,7 @@ Shape_t getShapeFromFile(TFile* inF, TString ch, JSONWrapper::Object &Root, TFil
 //
 void getYieldsFromShapes(const map<TString, Shape_t> &allShapes)
 {
-  FILE* pFile = fopen("CrossSectionYields.tex","w");
+  FILE* pFile = fopen(outUrl+"CrossSectionYields.tex","w");
   TH1F *dataTempl=allShapes.begin()->second.data;
   const std::vector<TH1F *> &bckgTempl=allShapes.begin()->second.bckg;
   for(std::vector<int>::iterator bIt = binsToProject.begin(); bIt != binsToProject.end(); bIt++)
@@ -353,78 +372,78 @@ void getYieldsFromShapes(const map<TString, Shape_t> &allShapes)
       }
       Ccol += "}\\hline\\hline\n"; fprintf(pFile,"%s",Ccol.Data());
       Cval += "\\\\\\hline\n";      fprintf(pFile,"%s",Cval.Data());
-            
+
       //event yields
       std::map<TString, TString > CByields;
       TString CSyields,CSpByields,CDyields;
       int ich(0);
-      for(std::map<TString,Shape_t>::const_iterator cIt=allShapes.begin(); cIt!= allShapes.end(); cIt++,ich++) {
-
-	const Shape_t &shape=cIt->second;
-
-	//data
-	if(ich==0) CDyields = "data ";
-	CDyields += " & "; CDyields += (int) shape.data->GetBinContent(*bIt);
-
-	float totalSyst(0);
-
-	//signal
-	TString sigProc=shape.signal->GetTitle();
-	if(ich==0) { CSyields = sigProc; TLatexToTex(CSyields); }
-	std::map<TString,float> sigRateSysts;
-	if(shape.crossSections.find(sigProc) != shape.crossSections.end())
-	  {
-	    std::pair<float,float> xsec=shape.crossSections.find(sigProc)->second;
-	    sigRateSysts["xsec"]=xsec.second/xsec.first;
+      for(std::map<TString,Shape_t>::const_iterator cIt=allShapes.begin(); cIt!= allShapes.end(); cIt++,ich++) 
+	{
+	  const Shape_t &shape=cIt->second;
+	  
+	  //data
+	  if(ich==0) CDyields = "data ";
+	  CDyields += " & "; CDyields += (int) shape.data->GetBinContent(*bIt);
+	  
+	  float totalSyst(0);
+	  
+	  //signal
+	  TString sigProc=shape.signal->GetTitle();
+	  if(ich==0) { CSyields = sigProc; TLatexToTex(CSyields); }
+	  std::map<TString,float> sigRateSysts;
+	  if(shape.crossSections.find(sigProc) != shape.crossSections.end())
+	    {
+	      std::pair<float,float> xsec=shape.crossSections.find(sigProc)->second;
+	      sigRateSysts["xsec"]=xsec.second/xsec.first;
 	  }
-	sigRateSysts["lumi"]=lumiUnc;
-	sigRateSysts["seleff"]=selEffUnc;
-	float sSyst=getIntegratedSystematics(shape.signal,shape.signalVars,sigRateSysts,*bIt);
-	totalSyst += pow(sSyst,2); 
-	CSyields += " & ";
-	CSyields += toLatexRounded( shape.signal->GetBinContent(*bIt), shape.signal->GetBinError(*bIt), sSyst);
-
-	//background
-	for(std::vector<TH1F *>::const_iterator bckgIt=bckgTempl.begin(); bckgIt!=bckgTempl.end(); bckgIt++)
-	  {
-	    TString proc=(*bckgIt)->GetTitle();
-	    bool procFound(false);
-	    for(std::vector<TH1F *>::const_iterator bckgItt=shape.bckg.begin(); bckgItt!=shape.bckg.end(); bckgItt++)
-	      {
-		if(proc!=TString((*bckgItt)->GetTitle())) continue;
-		float bSyst(-1);
-		if(true)
-		  {
-		    std::map<TString,float> rateSysts;
-		    if(shape.dataDrivenBckg.find(proc)==shape.dataDrivenBckg.end())
-		      {
-			if(shape.crossSections.find(proc) != shape.crossSections.end())
-			  {
-			    std::pair<float,float> xsec=shape.crossSections.find(proc)->second;
-			    rateSysts["xsec"]=xsec.second/xsec.first;
-			  }
-			rateSysts["lumi"]=lumiUnc;
-		      }
-		    std::map<TString, TH1F*> bckgVars;
-		    if(shape.bckgVars.find(proc)!=shape.bckgVars.end()) bckgVars =shape.bckgVars.find(proc)->second;
-		    bSyst=getIntegratedSystematics(*bckgItt,bckgVars,rateSysts,*bIt);
-		    totalSyst += pow(bSyst,2); 
-		  }
-
-		if(ich==0) { CByields[proc]=proc; TLatexToTex(CByields[proc]); }
-		CByields[proc] += " & "; CByields[proc] += toLatexRounded( (*bckgItt)->GetBinContent(*bIt), (*bckgItt)->GetBinError(*bIt), bSyst); 
-		procFound=true;
-		break;
-	      }
-	    if(procFound) continue;
-	    CByields[proc] += " & ";
-	  }	  
-
-	//signal + background
-	totalSyst=sqrt(totalSyst);
-	if(ich==0) { CSpByields = shape.totalSplusB->GetTitle(); TLatexToTex(CSpByields); }
-	CSpByields += " & "; CSpByields += toLatexRounded( shape.totalSplusB->GetBinContent(*bIt), shape.totalSplusB->GetBinError(*bIt),totalSyst);
-      }
+	  sigRateSysts["lumi"]=lumiUnc;
+	  sigRateSysts["seleff"]=selEffUnc;
+	  float sSyst=getIntegratedSystematics(shape.signal,shape.signalVars,sigRateSysts,*bIt);
+	  totalSyst += pow(sSyst,2); 
+	  CSyields += " & ";
+	  CSyields += toLatexRounded( shape.signal->GetBinContent(*bIt), shape.signal->GetBinError(*bIt), sSyst);
+	  
+	  //background
+	  for(std::vector<TH1F *>::const_iterator bckgIt=bckgTempl.begin(); bckgIt!=bckgTempl.end(); bckgIt++)
+	    {
+	      TString proc=(*bckgIt)->GetTitle();
+	      bool procFound(false);
+	      for(std::vector<TH1F *>::const_iterator bckgItt=shape.bckg.begin(); bckgItt!=shape.bckg.end(); bckgItt++)
+		{
+		  if(proc!=TString((*bckgItt)->GetTitle())) continue;
+		  float bSyst(-1);
+		  if(true)
+		    {
+		      std::map<TString,float> rateSysts;
+		      if(shape.dataDrivenBckg.find(proc)==shape.dataDrivenBckg.end())
+			{
+			  if(shape.crossSections.find(proc) != shape.crossSections.end())
+			    {
+			      std::pair<float,float> xsec=shape.crossSections.find(proc)->second;
+			      rateSysts["xsec"]=xsec.second/xsec.first;
+			    }
+			  rateSysts["lumi"]=lumiUnc;
+			}
+		      std::map<TString, TH1F*> bckgVars;
+		      if(shape.bckgVars.find(proc)!=shape.bckgVars.end()) bckgVars =shape.bckgVars.find(proc)->second;
+		      bSyst=getIntegratedSystematics(*bckgItt,bckgVars,rateSysts,*bIt);
+		      totalSyst += pow(bSyst,2); 
+		    }
+		  
+		  if(ich==0) { CByields[proc]=proc; TLatexToTex(CByields[proc]); }
+		  CByields[proc] += " & "; CByields[proc] += toLatexRounded( (*bckgItt)->GetBinContent(*bIt), (*bckgItt)->GetBinError(*bIt), bSyst); 
+		  procFound=true;
+		  break;
+		}
+	      if(procFound) continue;
+	      CByields[proc] += " & ";
+	    }	  
+	  
+	  //signal + background
+	  totalSyst=sqrt(totalSyst);
+	  if(ich==0) { CSpByields = shape.totalSplusB->GetTitle(); TLatexToTex(CSpByields); }
+	  CSpByields += " & "; CSpByields += toLatexRounded( shape.totalSplusB->GetBinContent(*bIt), shape.totalSplusB->GetBinError(*bIt),totalSyst);
+	}
       for(std::map<TString,TString>::iterator cbyIt=CByields.begin(); cbyIt!=CByields.end(); cbyIt++)
 	{ 
 	  cbyIt->second += "\\\\\n";  
@@ -485,7 +504,7 @@ void saveShapeForMeasurement(TH1F *h, TDirectory *oDir,TString syst)
 //
 void convertShapesToDataCards(const map<TString, Shape_t> &allShapes)
 {
-  TFile *fOut = TFile::Open("CrossSectionShapes.root","RECREATE");
+  TFile *fOut = TFile::Open(outUrl+"CrossSectionShapes.root","RECREATE");
   for(std::map<TString, Shape_t>::const_iterator it=allShapes.begin(); it!=allShapes.end(); it++)
     {
       TString ch(it->first); if(ch.IsNull()) ch="inclusive";
@@ -494,7 +513,7 @@ void convertShapesToDataCards(const map<TString, Shape_t> &allShapes)
       TString shapesFile("DataCard_"+ch+".dat");
       const Shape_t &shape=it->second;
       
-      FILE* pFile = fopen(shapesFile,"w");
+      FILE* pFile = fopen(outUrl+shapesFile,"w");
 
       fprintf(pFile, "imax 1\n");
       fprintf(pFile, "jmax *\n");
@@ -680,6 +699,7 @@ int main(int argc, char* argv[])
   for(int i=1;i<argc;i++){
     string arg(argv[i]);
     if(arg.find("--help")        !=string::npos)              { printHelp(); return -1;} 
+    else if(arg.find("--out")     !=string::npos && i+1<argc) { outUrl = argv[i+1]; outUrl+="/";  i++;  printf("out = %s\n", outUrl.Data());  }
     else if(arg.find("--in")     !=string::npos && i+1<argc)  { inFileUrl = argv[i+1];  i++;  printf("in = %s\n", inFileUrl.Data());  }
     else if(arg.find("--syst")   !=string::npos && i+1<argc)  { systFileUrl = argv[i+1];  i++;  printf("syst = %s\n", systFileUrl.Data());  }
     else if(arg.find("--json")   !=string::npos && i+1<argc)  { jsonFileUrl  = argv[i+1];  i++;  printf("json = %s\n", jsonFileUrl.Data()); }
@@ -713,13 +733,15 @@ int main(int argc, char* argv[])
   for(std::map<TString, Shape_t>::const_iterator it=shapes.begin(); it!=shapes.end(); it++)
     {
       TString ch(it->first); if(ch.IsNull() || ch=="inclusive") continue;
-      combCardCmd += "Name"; combCardCmd += icard; combCardCmd +="=DataCard_"+ch+".dat ";
-      plrAnalysisCmd += "DataCard_"+ch+".dat,";
+      combCardCmd += "Name"; combCardCmd += icard; combCardCmd +="="+outUrl+"DataCard_"+ch+".dat ";
+      plrAnalysisCmd += outUrl+"DataCard_"+ch+".dat,";
       icard++;
     }
-  combCardCmd += " > DataCard_combined.dat";
-  plrAnalysisCmd += "DataCard_combined.dat";
+  combCardCmd += " > "+outUrl+"DataCard_combined.dat";
+  plrAnalysisCmd += outUrl+"DataCard_combined.dat";
+  gSystem->Exec("mv DataCard* " + outUrl);
   gSystem->Exec(combCardCmd.Data());
   gSystem->Exec(plrAnalysisCmd.Data());
+  gSystem->Exec("mv PLR* " + outUrl);
 }
 

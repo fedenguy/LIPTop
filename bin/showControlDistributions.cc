@@ -89,8 +89,8 @@ int main(int argc, char* argv[])
   double ofMetCut = runProcess.getParameter<double>("ofMetCut");
   double jetPtCut = runProcess.getParameter<double>("jetPtCut");
   int jetIdToUse=JETID_LOOSE;
-  int eIdToUse=EID_TIGHT;  float eIsoToUse=0.1;
-  int mIdToUse=MID_TIGHT;  float mIsoToUse=0.2;//0.12;
+  int eIdToUse=EID_MEDIUM;  float eIsoToUse=0.1;
+  int mIdToUse=MID_LOOSE;   float mIsoToUse=0.12;//0.2;
   bool applyDYweight =  runProcess.getParameter<bool>("applyDYweight");
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
 
@@ -198,9 +198,9 @@ int main(int argc, char* argv[])
   ///////////////////////////////////
   // b-tagging                     //
   ///////////////////////////////////
-  TString btagger[]  = {"csv", "jp", "tchp", "tche", "ivf"};
-  float btaggerMin[] = {-0.2,  0.0,   -2,    -2,     -2 };
-  float btaggerMax[] = {1.2,   2.5,   20,    20,     8};
+  TString btagger[]  = {"csv", "jp", "tchp", "tche", "ivf", "ssvhe", "ssvhp"};
+  float btaggerMin[] = {-0.2,  0.0,   -2,    -2,     -2,    -2,      -2     };
+  float btaggerMax[] = {1.2,   2.5,   20,    20,     8,     8,       8      };
   int idxForBtaggerToTemplate=1;
   TString btaggerToTemplate=btagger[idxForBtaggerToTemplate];
   TString btaggerWPs[]={"L","M","T"};
@@ -210,7 +210,11 @@ int main(int argc, char* argv[])
     { 
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxy", "; SecVtx L_{xy} [cm]; Jets / (0.1 cm)", 50, 0.,5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxysig", "; SecVtx #sigma_{L_{xy}}/ L_{xy}; Jets", 50, 0.,0.5) );
+      controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetsvpt", "; SecVtx p_{T} [GeV]; Jets", 50, 0.,100) );
+      controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetsvptfrac", "; SecVtx p_{T}/Jet p_{T}; Jets", 50, 0.,1) );
+      controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetsvdr", "; #Delta R(SecVtx,Jet); Jets", 50, 0.,0.5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetmass", "; SecVtx Mass [GeV]; Events / (0.2 GeV)", 50, 0.,10.) );
+      controlHistos.addHistogram( new TH2F (jetFlavors[ijf]+"jetmassvslxy", "; SecVtx Mass [GeV]; SecVtx L_{xy} [cm] Events / (0.2 GeV x 0.1 cm)", 50, 0.,10.,50,0.,5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetpt", "; Jet p_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jeteta", "; Jet #eta; Events", 30, 0.,3.) );
       controlHistos.addHistogram( new TH2F (jetFlavors[ijf]+"jetptvseta", "; Jet p_{T} [GeV]; Jet #eta; Events / (10 GeV)", 50, 0.,500., 5, 0., 2.5) );
@@ -231,6 +235,7 @@ int main(int argc, char* argv[])
   const size_t nJetRanges=sizeof(jetRanges)/sizeof(TString);
   for(size_t i=0; i<sizeof(btagger)/sizeof(TString); i++)
     {
+      controlHistos.addHistogram( new TH1F("inc"+btagger[i],";Discriminator;Jets", 50, btaggerMin[i],btaggerMax[i]) );
       TH1 *hl=controlHistos.addHistogram( new TH1F(btagger[i]+"Lbtagsextended",";b-tag multiplicity;Events", 3*3*5, 0.,3*3*5.) );
       TH1 *hm=controlHistos.addHistogram( new TH1F(btagger[i]+"Mbtagsextended",";b-tag multiplicity;Events", 3*3*5, 0.,3*3*5.) );
       TH1 *ht=controlHistos.addHistogram( new TH1F(btagger[i]+"Tbtagsextended",";b-tag multiplicity;Events", 3*3*5, 0.,3*3*5.) );
@@ -244,33 +249,31 @@ int main(int argc, char* argv[])
       
       for(size_t j=0; j<nSystVars; j++)
 	{  
-	  controlHistos.addHistogram( new TH1F("inc"+btagger[i]+systVars[j],";Discriminator;Jets", 50, btaggerMin[i],btaggerMax[i]) );
-
 	  //use templates based on a given discriminator except in the case we're measuring the discriminator efficiency itself (switch to alternative)
-	  int idxToUse=idxForBtaggerToTemplate;
-	  TH2 *hinc  = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+systVars[j],";Discriminator;Jets", 50, btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  TH2 *hb    = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"b"+systVars[j],";b-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  TH2 *hc    = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"c"+systVars[j],";c-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  TH2 *hudsg = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"udsg"+systVars[j],";udsg-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
-	  for(int ybin=1; ybin<=hb->GetYaxis()->GetNbins(); ybin++)
-	    {
-	      hinc->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
-	      hb->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
-	      hc->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
-	      hudsg->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
-	    }
-	  
 	  for(size_t k=0; k<sizeof(btagger)/sizeof(TString); k++)
 	    {
+	      int idxToUse=idxForBtaggerToTemplate;
+	      TH2 *hinc  = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+systVars[j],";Discriminator;Jets", 50, btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	      TH2 *hb    = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"b"+systVars[j],";b-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	      TH2 *hc    = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"c"+systVars[j],";c-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	      TH2 *hudsg = (TH2 *)controlHistos.addHistogram( new TH2F(btagger[idxToUse]+"udsg"+systVars[j],";udsg-tags;Range;Jets", 50,btaggerMin[idxToUse],btaggerMax[idxToUse],nJetRanges,0,nJetRanges) );
+	      for(int ybin=1; ybin<=hb->GetYaxis()->GetNbins(); ybin++)
+		{
+		  hinc->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
+		  hb->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
+		  hc->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
+		  hudsg->GetYaxis()->SetBinLabel(ybin,jetRanges[ybin-1]);
+		}
+	      if(int(k)==idxToUse) continue;
 	      for(size_t iwp=0; iwp<sizeof(btaggerWPs)/sizeof(TString); iwp++)
 		{
 		  for(size_t ipf=0; ipf<2; ipf++)
 		    {
 		      TString pfix(ipf==0?"":"v");
 		      controlHistos.addHistogram( (TH2 *)hinc->Clone( btagger[idxToUse]       +systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
-		      controlHistos.addHistogram( (TH2 *)hb->Clone(   btagger[idxToUse]+"b"   +systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
-		      controlHistos.addHistogram( (TH2 *)hc->Clone(   btagger[idxToUse]+"c"   +systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
-		      controlHistos.addHistogram( (TH2 *)hudsg->Clone(btagger[idxToUse]+"udsg"+systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
+		      controlHistos.addHistogram( (TH2 *)hb->Clone(   btagger[idxForBtaggerToTemplate]+"b"   +systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
+		      controlHistos.addHistogram( (TH2 *)hc->Clone(   btagger[idxForBtaggerToTemplate]+"c"   +systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
+		      controlHistos.addHistogram( (TH2 *)hudsg->Clone(btagger[idxForBtaggerToTemplate]+"udsg"+systVars[j]+btagger[k]+btaggerWPs[iwp]+pfix) );
 		    }
 		}
 	    }
@@ -328,7 +331,8 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( (TH1F *)h->Clone("prentightjets") );
       controlHistos.addHistogram( (TH1F *)h->Clone("prencutbasedjets") );
        
-      controlHistos.addHistogram( new TH1F ("met"+systVars[ivar], "; #slash{E}_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
+      controlHistos.addHistogram( new TH1F ("met"+systVars[ivar], ";E^{miss}_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
+      controlHistos.addHistogram( new TH1F ("mvamet"+systVars[ivar], ";MVA E^{miss}_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
       controlHistos.addHistogram( new TH1F ("rho"+systVars[ivar]  ,"; #rho [GeV]; Events / (10 GeV)", 50, 0., 25.) );
         
       for(size_t k=0; k<sizeof(thetallcats)/sizeof(TString); k++)
@@ -441,6 +445,13 @@ int main(int argc, char* argv[])
 	  if(hasMtrigger && hasMMtrigger) continue;
 	}
       }
+      else
+	{
+	  if(ev.cat==EE   && !hasEEtrigger) continue;
+	  if(ev.cat==MUMU && !(hasMMtrigger || hasMtrigger) ) continue;
+	  if(ev.cat==EMU  && !hasEMtrigger) continue;
+	}
+      
  
       //the channel to which the event belons
       bool isSameFlavor(false);
@@ -518,7 +529,7 @@ int main(int argc, char* argv[])
       std::vector<PhysicsObjectJetCollection> jetsVar;
       LorentzVectorCollection metsVar;
       //METUtils::computeVariation(phys.ajets, phys.leptons, phys.met[0], jetsVar, metsVar, totalUnc);   //AK5PF
-      METUtils::computeVariation(phys.jets, phys.leptons, phys.met[0], jetsVar, metsVar, totalUnc);  //AK5PFchs
+      METUtils::computeVariation(phys.jets, phys.leptons, phys.met[2], jetsVar, metsVar, totalUnc);  //AK5PFchs
 
       //do the selection (taking into account the different varied collections)
       bool passBaseSelection(false);
@@ -532,12 +543,12 @@ int main(int argc, char* argv[])
 	  //float weight= (isMC ? puweight*leffSF : 1.0);
 	  float weight= (isMC ? puweight : 1.0);
 
-	  //trigger efficiencies
+	  //trigger efficiency scale factor from AN-178/2012 (dilepton xsec)
 	  if(isMC)
 	    {
-	      if(ev.cat==EE)   weight *= 0.893;   //from AN-178/2012 (dilepton xsec)
-	      if(ev.cat==MUMU) weight *= 0.927;  
-	      if(ev.cat==EMU)  weight  *= 0.870; 
+	      if(ev.cat==EE)   weight *= 0.955;   
+	      if(ev.cat==MUMU) weight *= 0.994;  
+	      if(ev.cat==EMU)  weight *= 0.978; 
 	    }
 	  if(systVars[ivar]=="puup" )      { weight *= TotalWeight_plus;  }
 	  if(systVars[ivar]=="pudown" )    { weight *= TotalWeight_minus; }
@@ -603,12 +614,12 @@ int main(int argc, char* argv[])
 	  bool passMet( (!isSameFlavor && theMET.pt()>ofMetCut) || (isSameFlavor && theMET.pt()>sfMetCut) );
 	  if( isDYJetsMC && passMet && applyDYweight)
 	    {
-	      if(ngoodJets==1 && ev.cat==EE)   weight *= 1.58;
-	      if(ngoodJets==1 && ev.cat==MUMU) weight *= 1.59;
-	      if(ngoodJets==1 && ev.cat==EMU)  weight *= 1.04;
-	      if(ngoodJets>1  && ev.cat==EE)   weight *= 1.69;
-	      if(ngoodJets>1  && ev.cat==MUMU) weight *= 1.72;
-	      if(ngoodJets>1  && ev.cat==EMU)  weight *= 1.13;
+	      if(ngoodJets<=1 && ev.cat==EE)   weight *= 1.52596;
+	      if(ngoodJets<=1 && ev.cat==MUMU) weight *= 1.52849;
+	      if(ngoodJets==1 && ev.cat==EMU)  weight *= 1.0098;
+	      if(ngoodJets>1  && ev.cat==EE)   weight *= 1.69493;
+	      if(ngoodJets>1  && ev.cat==MUMU) weight *= 1.49356;
+	      if(ngoodJets>1  && ev.cat==EMU)  weight *= 1.0106;
 	    }
 	  TString metCat("none");
 	  if(passMet)              metCat="";
@@ -654,6 +665,7 @@ int main(int argc, char* argv[])
 	    {
 	      controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELJETS,weight);
 	      controlHistos.fillHisto("met"+systVars[ivar],catsToFill,theMET.pt(),weight);
+	      controlHistos.fillHisto("mvamet"+systVars[ivar],catsToFill,phys.met[7].pt(),weight);
 	      controlHistos.fillHisto("rho"+systVars[ivar],catsToFill,ev.rho,weight);
 	    }
 	  if(!passMet) continue;
@@ -696,7 +708,7 @@ int main(int argc, char* argv[])
 	  btagsCount["tchpT"]=0;   btagsCount["ivfL"]=0;   btagsCount["ivfM"]=0;
 	  btagsCount["tcheL"]=0;   btagsCount["tcheM"]=0; 
 	  TString leadingLxyJetFlav("");
-	  float leadingLxy(-1), leadingLxySig(-1), leadingLxyMass(-1);
+	  float leadingLxy(-1), leadingLxySig(-1), leadingLxyMass(-1),leadingLxyPt(-1),leadingLxyDr(-1),leadingLxyJetPt(-1);
 	  for(size_t ijet=0; ijet<prunedJetColl.size(); ijet++) 
 	    {
 	      TString jetctr(""); jetctr+=ijet;
@@ -733,7 +745,10 @@ int main(int argc, char* argv[])
 		  leadingLxy=prunedJetColl[ijet].lxy;
 		  leadingLxySig=prunedJetColl[ijet].lxyerr/leadingLxy;
 		  leadingLxyMass=prunedJetColl[ijet].svmass;
+		  leadingLxyPt=prunedJetColl[ijet].svpt;
+		  leadingLxyDr=prunedJetColl[ijet].svdr;
 		  leadingLxyJetFlav=jetFlav;
+		  leadingLxyJetPt=prunedJetColl[ijet].pt();
 		}
 
 	      //control distributions
@@ -767,14 +782,19 @@ int main(int argc, char* argv[])
 		{
 		  controlHistos.fillHisto("jetlxy",catsToFill,leadingLxy,weight);
 		  controlHistos.fillHisto("jetlxysig",catsToFill,leadingLxySig,weight);
+		  controlHistos.fillHisto("jetsvdr",catsToFill,leadingLxyDr,weight);
+		  controlHistos.fillHisto("jetsvpt",catsToFill,leadingLxyPt,weight);
+		  controlHistos.fillHisto("jetsvptfrac",catsToFill,leadingLxyPt/leadingLxyJetPt,weight);
 		  controlHistos.fillHisto("jetmass",catsToFill,leadingLxyMass,weight);
+		  controlHistos.fillHisto("jetmassvslxy",catsToFill,leadingLxyMass,leadingLxy,weight);
 		  if(isMC)
 		    {
+		      controlHistos.fillHisto(leadingLxyJetFlav+"jetmassvslxy",catsToFill,leadingLxyMass,leadingLxy,weight);
 		      controlHistos.fillHisto(leadingLxyJetFlav+"jetlxy",catsToFill,leadingLxy,weight);
 		      controlHistos.fillHisto(leadingLxyJetFlav+"jetmass",catsToFill,leadingLxyMass,weight);
 		    }
 		}
-
+	      
 	      //count flavors
 	      if(ivar==0)
 		{
@@ -810,7 +830,7 @@ int main(int argc, char* argv[])
 	      std::map<TString, bool> hasTagger;
 	      float tche = prunedJetColl[ijet].btag1;
 	      bool hasTCHEL(tche>1.7);  btagsCount["tcheL"] += hasTCHEL; hasTagger["tcheL"]=hasTCHEL;
-	      bool hasTCHEM(tche>1.93); btagsCount["tcheM"] += hasTCHEM; hasTagger["tcheM"]=hasTCHEM; 
+	      bool hasTCHEM(tche>3.3); btagsCount["tcheM"] += hasTCHEM; hasTagger["tcheM"]=hasTCHEM; 
 	      float csv  = prunedJetColl[ijet].btag2;
 	      bool hasCSVL(csv>0.244);  btagsCount["csvL"] += hasCSVL;   hasTagger["csvL"]=hasCSVL;
 	      bool hasCSVM(csv>0.679);  btagsCount["csvM"] += hasCSVM;   hasTagger["csvM"]=hasCSVM;
@@ -823,9 +843,15 @@ int main(int argc, char* argv[])
 	      bool hasTCHPT(tchp>3.41); btagsCount["tchpT"] += hasTCHPT; hasTagger["tchpT"]=hasTCHPT;
 	      float ivfHighEff = prunedJetColl[ijet].btag5;
 	      float ivfHighPur = prunedJetColl[ijet].btag6;
-	      bool hasIVFHighEff(ivfHighEff>0);       btagsCount["ivfL"] += hasIVFHighEff;
-	      bool hasIVFHighPur(ivfHighPur>0);       btagsCount["ivfM"] += hasIVFHighPur;
+	      bool hasIVFHighEff(ivfHighEff>0);       btagsCount["ivfL"] += hasIVFHighEff; hasTagger["ivfL"]=hasIVFHighEff;
+	      bool hasIVFHighPur(ivfHighPur>0);       btagsCount["ivfM"] += hasIVFHighPur; hasTagger["ivfM"]=hasIVFHighPur;
+	      float ssvhe      = prunedJetColl[ijet].ssvhe;
+	      float ssvhp      = prunedJetColl[ijet].ssvhp;
+	      bool hasSSVHEM(ssvhe>1.74);             btagsCount["ssvheM"] += hasSSVHEM;   hasTagger["ssvheM"]=hasSSVHEM;
+	      bool hasSSVHPT(ssvhp>2.00);             btagsCount["ssvhpT"] += hasSSVHPT;   hasTagger["ssvhpT"]=hasSSVHPT;
 
+	      controlHistos.fillHisto("incssvhe"+systVars[ivar], catsToFill, ssvhe,  weight);
+	      controlHistos.fillHisto("incssvhp"+systVars[ivar], catsToFill, ssvhp,  weight);
 	      controlHistos.fillHisto("inctche"+systVars[ivar], catsToFill, tche,  weight);
 	      controlHistos.fillHisto("inctchp"+systVars[ivar], catsToFill, tchp,  weight);
 	      controlHistos.fillHisto("inccsv"+systVars[ivar],  catsToFill, csv,   weight);

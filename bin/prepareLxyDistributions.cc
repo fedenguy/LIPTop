@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
 	      proc.ReplaceAll(" ","");
 	      proc.ReplaceAll("tbart","ttbar");
 	      proc.ToLower();
+	      if(proc.Contains("ztotautausystdata")) continue;
 	      TString mtop("0");
 	      if(proc.Contains("ttbar")) 
 		{

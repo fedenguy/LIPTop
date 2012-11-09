@@ -329,7 +329,7 @@ int main(int argc, char* argv[])
 	    {
 	      TH2 *hwgt=(TH2 *)inF->Get(jetFlavors[iflav]+("jetetaptwgt"));
 	      if(hwgt==0) continue;
-	      jetWeights[jetFlavors[iflav]]=new TGraph2D(*hwgt);
+	      jetWeights[jetFlavors[iflav]]=new TGraph2D(hwgt);
 	    }
 	  inF->Close();
 	}

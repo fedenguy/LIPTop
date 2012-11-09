@@ -17,7 +17,7 @@
                 "dtag":"MC8TeV_ZZ",
                 "split":2,
                 "xsec":7.92,
-		"br":[0.0403896,1.14]
+		"br":[0.0403896]
              },
             {
                 "dtag":"MC8TeV_WZ",
@@ -34,32 +34,32 @@
 	"lcolor":1,
 	"data":[
 	     {	
-		"dtag":"MC8TeV_QCDPt30to80 no",
+		"dtag":"MC8TeV_QCDPt30to80",
 		"xsec":74330000,
 		"br":[0.0621]
 	     },
 	     {	
-		"dtag":"MC8TeV_QCDPt80to170 no", 
+		"dtag":"MC8TeV_QCDPt80to170", 
 		"xsec":1191000,
 		"br":[0.1539]
 	     },
 	     {	
-		"dtag":"MC8TeV_QCDPt170to250 no",
+		"dtag":"MC8TeV_QCDPt170to250",
 		"xsec":30990,
 		"br":[0.148]
 	     },
 	     {	
-		"dtag":"MC8TeV_QCDPt250to350 no",
+		"dtag":"MC8TeV_QCDPt250to350",
 		"xsec":4250,
 		"br":[0.131]
 	     },
 	     {	
-		"dtag":"MC8TeV_QCDPt350toInf no",
+		"dtag":"MC8TeV_QCDPt350toInf",
 		"xsec":810,
 		"br":[0.11]
 	     },
      	     {	
-		"dtag":"MC8TeV_QCDMuPt20toInf no",
+		"dtag":"MC8TeV_QCDMuPt20toInf",
 		"xsec":364000000,
 		"br":[0.00037]
 	     }
@@ -73,7 +73,6 @@
          "data":[
    		{
                  "dtag":"MC8TeV_WJets",
-                 "split":1,
                  "xsec":36263
                 }
           ]
@@ -87,7 +86,6 @@
          "data":[
                 {
                 "dtag":"MC8TeV_TTJets",
-                "split":1,
                 "xsec":225.197
                 }
 	   ]
@@ -100,12 +98,10 @@
          "data":[
                 {
                 "dtag":"MC8TeV_TTWJets",
-                "split":1,
                 "xsec":0.232
                 },
                 {
                 "dtag":"MC8TeV_TTZJets",
-                "split":1,
                 "xsec":0.208
                 }
           ]
@@ -118,44 +114,33 @@
          "data":[
                 {
                 "dtag":"MC8TeV_SingleTbar_tW",
-                "dset":"",
-                "split":1,
                 "xsec":11.1
                 },
                 {
                 "dtag":"MC8TeV_SingleT_tW",
-                "dset":"",
-                "split":1,
                 "xsec":11.1
                 },
                 {
                 "dtag":"MC8TeV_SingleTbar_t",
-                "dset":"",
-                "split":1,
                 "xsec":30.7
                 },
                 {
                 "dtag":"MC8TeV_SingleT_t",
-                "dset":"",
-                "split":1,
                 "xsec":56.4
                 },
                 {
                 "dtag":"MC8TeV_SingleTbar_s",
-                "dset":"",
-                "split":1,
                 "xsec":1.76
                 },
                 {
                 "dtag":"MC8TeV_SingleT_s",
-                "dset":"",
-                "split":1,
                 "xsec":3.79
                 }
           ]
         },
 	{
          "tag":"t#bar{t}",
+	 "issignal":true,
          "isdata":false,
          "color":"614",
          "lcolor":1,
@@ -163,8 +148,6 @@
          "data":[
                 {
                 "dtag":"MC8TeV_TTJets",
-                "dset":"/TTJets_TuneZ2star_8TeV-madgraph-tauola/Summer12-PU_S7_START50_V15-v1/AODSIM",
-                "split":1,
                 "xsec":225.197
                 }
           ]
@@ -224,19 +207,19 @@
                 },
                 {
 	         "dtag":"Data8TeV_DoubleElectron2012B",
-                 "split":2
+                 "split":4
                 },
                 {
 	         "dtag":"Data8TeV_DoubleMu2012B",
-                 "split":2
+                 "split":4
                 },
                 {
 	         "dtag":"Data8TeV_SingleMu2012B",
-                 "split":2
+                 "split":4
                 },
                 {
                  "dtag":"Data8TeV_MuEG2012B",
-                 "split":2
+                 "split":4
                 },
                 {
 	         "dtag":"Data8TeV_DoubleElectron2012C_v1",
@@ -264,26 +247,26 @@
                 },
                 {
 	         "dtag":"Data8TeV_SingleMu2012C_v2",
-                 "split":2
+                 "split":4
                 },
                 {
                  "dtag":"Data8TeV_MuEG2012C_v2",
                  "split":2
                 },
                 {
-	         "dtag":"Data8TeV_DoubleElectron2012D_a",
+	         "dtag":"Data8TeV_DoubleElectron2012D_203894to205618",
                  "split":2
                 },
                 {
-	         "dtag":"Data8TeV_DoubleMu2012D_a",
+	         "dtag":"Data8TeV_DoubleMu2012D_203894to205618",
                  "split":2
                 },
                 {
-	         "dtag":"Data8TeV_SingleMu2012D_a",
+	         "dtag":"Data8TeV_SingleMu2012D_203894to205618",
                  "split":2
                 },
                 {
-                 "dtag":"Data8TeV_MuEG2012D_a",
+                 "dtag":"Data8TeV_MuEG2012D_203894to205618",
                  "split":2
                 }
 	    ]
