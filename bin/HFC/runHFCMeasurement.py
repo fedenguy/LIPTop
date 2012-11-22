@@ -21,6 +21,7 @@ def usage() :
     print '  -l : luminosity (pb)'
     print '  -j : json file containing the samples'
     print '  -i : event summary file'
+    print '  -t : event summary type (0-trees, 1-histos)'
     print '  -f : fit type'
     print '  -a : algo=TCHEL'
     print '  -c : override discriminator cut for algo'
@@ -31,7 +32,7 @@ def usage() :
 #parse the options
 try:
     # retrive command line options
-    shortopts  = "b:l:j:i:n:p:f:a:c:m:h?"
+    shortopts  = "b:l:j:i:n:p:f:t:a:c:m:h?"
     opts, args = getopt.getopt( sys.argv[1:], shortopts )
 except getopt.GetoptError:
     # print help information and exit:
@@ -45,6 +46,7 @@ btagWP='TCHEL'
 lumi=100
 samplesDB=''
 ifile=''
+fileType=0
 jetbin=0
 fitType=-1
 btagWPcut=-1
@@ -56,6 +58,7 @@ for o,a in opts:
     elif o in('-l'): lumi=float(a)
     elif o in('-j'): samplesDB = a
     elif o in('-i'): ifile=a
+    elif o in('-t'): fileType=int(a)
     elif o in('-f'): fitType=int(a)
     elif o in('-b'): jetbin=int(a)
     elif o in('-a'): btagWP=a
@@ -72,13 +75,11 @@ inF=ROOT.TFile.Open(ifile)
 jsonFile = open(samplesDB,'r')
 procList=json.load(jsonFile,encoding='utf-8').items()
 
-#run over sample
-evHandler       = eventHandlerFactory()
-
 #create the fitter and configure fit from file
 hfcFitter = HFCMeasurement(fitType)
 
-fitParamsFile = open('hfcFitter_cfg.json','r')
+#fitParamsFile = open('hfcFitter_cfg.json','r')
+fitParamsFile = open('hfcFitter_2012_cfg.json','r')
 fitParams=json.load(fitParamsFile,encoding='utf-8')
 
 vareb=0
@@ -100,10 +101,24 @@ for ch in ['emu','mumu','ee'] :
     catParams=fitParams[ch]
     for jbin in [2,3] :
         key=str(jbin)+'jets'
+
+        localEffb=btagAlgos[btagWP]['effb'][0]
+        try :
+            locallEffb=catParams[key][btagWP+'effb']
+        except:
+            print 'Assuming global eff_b'
+
+        localEffq=btagAlgos[btagWP]['effq'][0]
+        try :
+            locallEffq=catParams[key][btagWP+'effq']
+        except:
+            print 'Assuming global eff_q'
+
+
         hfcFitter.setParametersForCategory(catParams[key]['fcorrect'][0]  +varfcorrect*catParams[key]['fcorrect'][1],     catParams[key]['fcorrect'][1],
                                            catParams[key]['fttbar'][0]    +varttbar*catParams[key]['fttbar'][1],       catParams[key]['fttbar'][1],
                                            catParams[key]['fsingletop'][0]+varst*catParams[key]['fsingletop'][1],   catParams[key]['fsingletop'][1],
-                                           catParams[key][btagWP+'effb']/btagAlgos[btagWP]['effb'][0], catParams[key][btagWP+'effq']/btagAlgos[btagWP]['effq'][0],
+                                           localEffb/btagAlgos[btagWP]['effb'][0], localEffq/btagAlgos[btagWP]['effq'][0],
                                            jbin, ch)
 
 fitParamsFile.close()
@@ -111,50 +126,59 @@ fitParamsFile.close()
 print "****************************************************"
 print "Using " + btagWP + " with cut " + str(btagWPcut)
 
-
-ensembleHandler = eventHandlerFactory()
-for proc in procList :
+#run over sample
+if(fileType==0) :
+    
+    evHandler       = eventHandlerFactory()
+    ensembleHandler = eventHandlerFactory()
+    for proc in procList :
         
-    #run over processes
-    id=0
-    for desc in proc[1] :
-        isdata = getByLabel(desc,'isdata',False)
-        if(not isdata) : continue
+        #run over processes
+        id=0
+        for desc in proc[1] :
+            isdata = getByLabel(desc,'isdata',False)
+            if(not isdata) : continue
         
-        #run over items in process
-        data = desc['data']
-        for d in data :
-            tag = getByLabel(d,'dtag','')
+            #run over items in process
+            data = desc['data']
+            for d in data :
+                tag = getByLabel(d,'dtag','')
 
-            #get tree of events from file
-            t=inF.Get(tag+'/data')
+                #get tree of events from file
+                t=inF.Get(tag+'/data')
                 
-            try :
-                t.GetEntriesFast()
-            except:
-                continue
+                try :
+                    t.GetEntriesFast()
+                except:
+                    continue
         
-            attResult=evHandler.attachToTree(t)
-            nevtsSel = evHandler.getEntries()
-            if(attResult is False) : continue
+                attResult=evHandler.attachToTree(t)
+                nevtsSel = evHandler.getEntries()
+                if(attResult is False) : continue
                 
-            #clone (will use the same address as the original tree)
-            id=id+1
-            if(id==1):
-                ROOT.gROOT.cd()
-                ensembleHandler.initTree(t.CloneTree(0), False)
-                ensembleHandler.getTree().SetDirectory(0)
-                
-            #generate number of events for ensemble
-            for ievt in xrange(0,nevtsSel) :
-                evHandler.getEntry(ievt)
-                ensembleHandler.fillTree()
-                                
-#take control of the filled tree now
-ensembleHandler.attachToTree( ensembleHandler.getTree() )
+                #clone (will use the same address as the original tree)
+                id=id+1
+                if(id==1):
+                    ROOT.gROOT.cd()
+                    ensembleHandler.initTree(t.CloneTree(0), False)
+                    ensembleHandler.getTree().SetDirectory(0)
+    
+                #generate number of events for ensemble
+                for ievt in xrange(0,nevtsSel) :
+                    evHandler.getEntry(ievt)
+                    ensembleHandler.fillTree()
+                    
+    #take control of the filled tree now
+    ensembleHandler.attachToTree( ensembleHandler.getTree() )
+    #run the fitter
+    hfcFitter.fitHFCtoEnsemble( ensembleHandler,1,True) #True )
 
-#run the fitter
-hfcFitter.fitHFCtoEnsemble( ensembleHandler,1,True) #True )
+#get the histo and fit it
+else:
+    btagHisto = inF.Get(btagWP)
+    hfcFitter.fitHFCtoMeasurement(btagHisto,1,True)
+
+
 print "Dilepton exclusive"
 for icat in xrange(0,6):
     print str(icat) + ' ' + str(hfcFitter.model.rFit[icat]) + ' +' + str(hfcFitter.model.rFitAsymmErrHi[icat]) + ' ' + str(hfcFitter.model.rFitAsymmErrLo[icat])
