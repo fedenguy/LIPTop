@@ -175,7 +175,8 @@ if(fileType==0) :
 
 #get the histo and fit it
 else:
-    btagHisto = inF.Get(btagWP)
+    
+    btagHisto = inF.Get('data/'+btagWP+'btagsextended')
     hfcFitter.fitHFCtoMeasurement(btagHisto,1,True)
 
 
