@@ -11,7 +11,7 @@
  	        "dtag":"MC8TeV_TTTo2L2Nu2B_powheg",
                 "split":2,
                 "xsec":225.197,
-		"br":[0.0985326486]
+		"br":[0.10608049]
                 }
 	   ]
 	},
@@ -36,11 +36,10 @@
          "color":"8",
 	 "lcolor":1,
          "data":[
-		{
- 	        "dtag":"MC8TeV_TTJetsFullLeptMGDecays",
-                "xsec":225.197,
-		"br":[0.0985326486]
-                }
+                {
+                "dtag":"MC8TeV_TTJets",
+                "xsec":225.197
+		}
 	   ]
 	},
 	{
@@ -117,6 +116,22 @@
             ]
 	},
         {
+        "tag":"t#bar{t}163.5",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets_163v5",
+                "xsec":225.197,
+		"br":[1.2949376]
+                }
+     	   ]
+	},
+        {
         "tag":"t#bar{t}166.5",
         "isdata":false,
         "color":"2",
@@ -149,6 +164,21 @@
      	   ]
 	},
         {
+        "tag":"t#bar{t}172.5",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets",
+                "xsec":225.197
+                }
+     	   ]
+	},
+        {
         "tag":"t#bar{t}175.5",
         "isdata":false,
         "color":"2",
@@ -177,6 +207,22 @@
  	        "dtag":"MC8TeV_TTJets_178v5",
                 "xsec":225.197,
 		"br":[0.8231841526]
+                }
+     	   ]
+	},
+        {
+        "tag":"t#bar{t}181.5",
+        "isdata":false,
+        "color":"2",
+        "lcolor":2,
+	"fill":0,
+	"spimpose":1,
+	"mctruthmode":1,
+	"data":[
+       		{
+ 	        "dtag":"MC8TeV_TTJets_181v5",
+                "xsec":225.197,
+		"br":[0.7586206]
                 }
      	   ]
 	}

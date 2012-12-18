@@ -74,13 +74,17 @@ int main(int argc, char* argv[])
 	      proc.ToLower();
 	      if(proc.Contains("ztotautausystdata")) continue;
 	      TString mtop("0");
+	      if(proc=="ttbar") continue;
 	      if(proc.Contains("ttbar")) 
 		{
 		  mtop="1725";
+		  if(proc.Contains("163.5")) { mtop="1635"; proc.ReplaceAll("163.5",""); }
 		  if(proc.Contains("166.5")) { mtop="1665"; proc.ReplaceAll("166.5",""); }
 		  if(proc.Contains("169.5")) { mtop="1695"; proc.ReplaceAll("169.5",""); }
+		  if(proc.Contains("172.5")) { mtop="1725"; proc.ReplaceAll("172.5",""); }
 		  if(proc.Contains("175.5")) { mtop="1755"; proc.ReplaceAll("175.5",""); }
 		  if(proc.Contains("178.5")) { mtop="1785"; proc.ReplaceAll("178.5",""); }
+		  if(proc.Contains("181.5")) { mtop="1815"; proc.ReplaceAll("181.5",""); }
 		}
 	      	            
 	      for(size_t idist=0; idist<sizeof(dists)/sizeof(TString); idist++)

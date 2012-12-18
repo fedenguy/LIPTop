@@ -64,7 +64,7 @@ struct CombinedHFCModel_t
   RooAbsPdf *fttbar_constrain[MAXCATEGORIES];
   RooRealVar *fsingletop[MAXCATEGORIES], *fsingletopExp[MAXCATEGORIES];
   RooAbsPdf *fsingletop_constrain[MAXCATEGORIES];
-
+  
   RooWorkspace *ws;
   RooStats::ModelConfig *modelConfig;
   
@@ -82,37 +82,45 @@ class HFCMeasurement
 {
  public:
 
-  enum EventCategories {EE_2JETS, EE_3JETS, MUMU_2JETS, MUMU_3JETS, EMU_2JETS, EMU_3JETS};
-  enum FitTypes        {FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ, FIT_R_CONSTRAINED };
-  enum NuisanceTypes   {GAUSSIAN, UNIFORM, LOGNORMAL };
-  enum RunMode         {FITINCLUSIVEONLY, FITEXCLUSIVECATEGORIES };
-  SelectionMonitor controlHistos_;    
-  CombinedHFCModel_t model;
+  enum FitTypes        {FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ};
+  
   
   /**
      @short CTOR
    */
-  HFCMeasurement(int fitType=FIT_R, int nuisanceType=GAUSSIAN,int maxJets=3,double smR=1.0) : 
-    isInit_(false), fitType_(fitType), nuisanceType_(nuisanceType), maxJets_(maxJets),  smR_(smR), nMeasurements_(0)  
-    {
-      bookMonitoringHistograms();
-      switch(fitType_)
-	{
-	case FIT_EB:              fitTypeTitle_="#varepsilon_{b}";                    fitTypeName_="effb";                        break;
-	case FIT_R_AND_EB:        fitTypeTitle_="R vs #varepsilon_{b}";               fitTypeName_="rvseffb";                     break;
-	case FIT_R_AND_XSEC:      fitTypeTitle_="R vs #sigma";                        fitTypeName_="rvssigma";                    break;
-	case FIT_EB_AND_XSEC:     fitTypeTitle_="#varepsilon_{b} vs #sigma";          fitTypeName_="effbvssigma";                 break;
-	case FIT_EB_AND_EQ:       fitTypeTitle_="#varepsilon_{b} vs #varepsilon_{q}"; fitTypeName_="effbvseffq";                  break;
-	case FIT_R_CONSTRAINED:   fitTypeTitle_="R";                                  fitTypeName_="r";                           break;
-	default:                  fitTypeTitle_="R";                                  fitTypeName_="r";           fitType_=FIT_R; break;
-	}
-    }
+  HFCMeasurement(int fitType, TString fitConfig, TString wpConfig="");
+
+  /**
+     @short parses configuration file and adds/updates values to the model
+  */
+  void parseFitConfig(TString url);
+
+  /**
+     @short init the PDFs for the fit
+  */
+  void initHFCModel();
     
-    /**
-       @short DTOR
-    */
-    ~HFCMeasurement() { }
-        
+  /**
+     @short DTOR
+  */
+  ~HFCMeasurement() { }
+  
+ private:
+
+  RooWorkspace *ws_;
+  RooStats::ModelConfig *mc_;
+  std::set<string> sampleCats_;
+  
+ public:
+  
+
+  enum EventCategories {EE_2JETS, EE_3JETS, MUMU_2JETS, MUMU_3JETS, EMU_2JETS, EMU_3JETS};
+  enum NuisanceTypes   {GAUSSIAN, UNIFORM, LOGNORMAL };
+  enum RunMode         {FITINCLUSIVEONLY, FITEXCLUSIVECATEGORIES };
+  SelectionMonitor controlHistos_;    
+  CombinedHFCModel_t model;
+
+    //check me this point fwd        
     /**
        @short steer the fit
     */
@@ -179,16 +187,6 @@ class HFCMeasurement
      */
     void printConfiguration(std::ostream &os);
 
-    /**
-       @short save results
-    */
-    void saveMonitoringHistograms(TString tag);
-
-
-    /**
-       @short reads the current configuration and instantiates the PDFs for the fit
-     */
-    void initHFCModel();
 
     /**
        @short resets the current model values to the default ones
@@ -201,14 +199,7 @@ class HFCMeasurement
     void runHFCFit(int runMode,bool debug);
 
 
-    /**
-       @short monitoring histogram handling 
-     */
-    void bookMonitoringHistograms();
-    void resetHistograms();
-
     //internal parameters
-    bool isInit_;
     int fitType_, nuisanceType_;
     TString fitTypeTitle_, fitTypeName_;
     int maxJets_;
@@ -221,6 +212,9 @@ class HFCMeasurement
     int nMeasurements_;
 
     RooStats::FeldmanCousins *fc_;
+
+ private :
+
 
 };
 

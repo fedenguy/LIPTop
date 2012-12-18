@@ -72,9 +72,29 @@
          "lcolor":1,
          "data":[
    		{
-                 "dtag":"MC8TeV_WJets",
+                 "dtag":"MC8TeV_W0Jets",
                  "xsec":36263
-                }
+                },
+ 	       {
+                "dtag":"MC8TeV_W1Jets",
+                "xsec":36263,
+		"br":[0.1776316]
+               },
+	       {
+                "dtag":"MC8TeV_W2Jets",
+                "xsec":36263,
+		"br":[0.0575658]
+               },
+	       {
+                "dtag":"MC8TeV_W3Jets",
+                "xsec":36263,
+		"br":[0.0170724]
+               },
+	       {
+                "dtag":"MC8TeV_W4Jets",
+                "xsec":36263,
+		"br":[0.0070395]
+               }
           ]
         },
 	{
@@ -146,9 +166,11 @@
          "lcolor":1,
 	 "mctruthmode":1,
          "data":[
-                {
-                "dtag":"MC8TeV_TTJets",
-                "xsec":225.197
+		{
+ 	        "dtag":"MC8TeV_TTJetsFullLeptMGDecays",
+                "xsec":225.197,
+		"br":[0.10608049],
+		"split":5
                 }
           ]
         },
@@ -159,9 +181,33 @@
 	 "lcolor":1,
 	 "data":[
 	      {
-               "dtag":"MC8TeV_DYJetsToLL_50toInf",
+               "dtag":"MC8TeV_DY0JetsToLL_50toInf",
                "split":10,
                 "xsec":3532.8
+              },
+	      {
+                "dtag":"MC8TeV_DY1JetsToLL_50toInf",
+                "split":5,
+                "xsec":3532.8,
+		"br":[0.1901694915]
+              },
+	      {
+                "dtag":"MC8TeV_DY2JetsToLL_50toInf",
+                "split":5,
+                "xsec":3532.8,
+		"br":[0.0613559322]
+              },
+	       {
+                "dtag":"MC8TeV_DY3JetsToLL_50toInf",
+                "split":4,
+                "xsec":3532.8,
+		"br":[0.0173220339]
+              },
+	      {
+                "dtag":"MC8TeV_DY4JetsToLL_50toInf",
+                "split":5,
+                "xsec":3532.8,
+		"br":[0.0078101695]
               },
 	      {
                "dtag":"MC8TeV_DYJetsToLL_10to50",
@@ -254,19 +300,19 @@
                  "split":2
                 },
                 {
-	         "dtag":"Data8TeV_DoubleElectron2012D_203894to205618",
+	         "dtag":"Data8TeV_DoubleElectron2012D_203894to206940",
                  "split":2
                 },
                 {
-	         "dtag":"Data8TeV_DoubleMu2012D_203894to205618",
+	         "dtag":"Data8TeV_DoubleMu2012D_203894to206940",
                  "split":2
                 },
                 {
-	         "dtag":"Data8TeV_SingleMu2012D_203894to205618",
+	         "dtag":"Data8TeV_SingleMu2012D_203894to206940",
                  "split":2
                 },
                 {
-                 "dtag":"Data8TeV_MuEG2012D_203894to205618",
+                 "dtag":"Data8TeV_MuEG2012D_203894to206940",
                  "split":2
                 }
 	    ]

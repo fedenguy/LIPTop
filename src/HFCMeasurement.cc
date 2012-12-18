@@ -1,6 +1,7 @@
 #include "LIP/Top/interface/HFCMeasurement.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
+#include "CMGTools/HtoZZ2l2nu/src/JSONWrapper.cc"
 
 #include "RooNumIntConfig.h"
 #include "RooNLLVar.h"
@@ -10,314 +11,369 @@
 #include "RooStats/ProfileLikelihoodTestStat.h"
 
 #include  "TGraphErrors.h"
+#include "TSystem.h"
 
 using namespace RooFit;
 using namespace RooStats;
 using namespace std;
 
-//
-void HFCMeasurement::bookMonitoringHistograms()
-{
-  setStyle();
 
-  //main histogram
-  TH1D *bmh=new TH1D("btags",";b-tag multiplicity;Events",maxJets_+1,0,maxJets_+1);
-  for(int ibin=1; ibin<=bmh->GetXaxis()->GetNbins(); ibin++)
+HFCMeasurement::HFCMeasurement(int fitType,TString fitConfig, TString wpConfig)
+{ 
+  fitType_=fitType;
+  switch(fitType_)
     {
-      TString label("="); label += (ibin-1); label+="b-tags";  
-      if(ibin==bmh->GetXaxis()->GetNbins()) label.ReplaceAll("=","#geq");
-      bmh->GetXaxis()->SetBinLabel(ibin,label);
-    }
-  controlHistos_.addHistogram( bmh );      
-  controlHistos_.addHistogram( (TH1D *)bmh->Clone("avgbtags") );
-   
-  //replicate for exclusive jet categories
-  for(int ijets=2; ijets<=maxJets_; ijets++)
-    {
-      TString tag(""); tag += ijets;
-      controlHistos_.addHistogram( (TH1D *)bmh->Clone( "btags_" + tag ) );
-      controlHistos_.addHistogram( (TH1D *)bmh->Clone( "avgbtags_" + tag ) );
+    case FIT_EB:              fitTypeTitle_="#varepsilon_{b}";                    fitTypeName_="effb";                        break;
+    case FIT_R_AND_EB:        fitTypeTitle_="R vs #varepsilon_{b}";               fitTypeName_="rvseffb";                     break;
+    case FIT_R_AND_XSEC:      fitTypeTitle_="R vs #sigma";                        fitTypeName_="rvssigma";                    break;
+    case FIT_EB_AND_XSEC:     fitTypeTitle_="#varepsilon_{b} vs #sigma";          fitTypeName_="effbvssigma";                 break;
+    case FIT_EB_AND_EQ:       fitTypeTitle_="#varepsilon_{b} vs #varepsilon_{q}"; fitTypeName_="effbvseffq";                  break;
+    default:                  fitTypeTitle_="R";                                  fitTypeName_="r";           fitType_=FIT_R; break;
     }
 
-  //instantiate for different categories
-  controlHistos_.initMonitorForStep("ee");
-  controlHistos_.initMonitorForStep("emu");
-  controlHistos_.initMonitorForStep("mumu");
+  mc_ = 0;
+  ws_ = new RooWorkspace("w");
+  parseFitConfig(fitConfig);
+  parseFitConfig(wpConfig);
+  initHFCModel();
 }
 
-//
-void HFCMeasurement::resetHistograms()
-{
-  SelectionMonitor::StepMonitor_t &mons=controlHistos_.getAllMonitors();
-  for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
-    {
-      for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
-	{
-	  TString hname=hit->second->GetName();
-	  if(hname.Contains("btags") && !hname.Contains("avg") ) hit->second->Reset("ICE");
-	}
-    }
-}
 
 //
-void HFCMeasurement::saveMonitoringHistograms(TString tag)
+void HFCMeasurement::parseFitConfig(TString url)
 {
-  //open file
-  TFile *fout=TFile::Open("HFCMeasurement.root","UPDATE");
-  fout->cd();
+  //check if path is ok
+  if(gSystem->AccessPathName(url)) return;
 
-  TDirectory *baseOutDir=fout->mkdir("localAnalysis/"+tag);
-  SelectionMonitor::StepMonitor_t &mons=controlHistos_.getAllMonitors();
-  for(SelectionMonitor::StepMonitor_t::iterator it=mons.begin(); it!=mons.end(); it++)
+  char expBuf[500];  //free buffer	  
+  RooArgSet nuis,constr;
+
+  //read parameters from file
+  JSONWrapper::Object jsonF(url.Data(), true);
+  
+  std::vector<JSONWrapper::Object> params=jsonF.daughters();
+  for(size_t iparam=0; iparam<params.size(); iparam++)
     {
-      TDirectory *dir=baseOutDir->mkdir(it->first);
-      dir->cd();
-      for(SelectionMonitor::Monitor_t::iterator hit=it->second.begin(); hit!= it->second.end(); hit++)
+      std::vector<JSONWrapper::Object> &dau = params[iparam].daughters();
+      for(size_t icat=0; icat<dau.size(); icat++)
 	{
-	  fixExtremities(hit->second,true,true);
+	  JSONWrapper::Object &descript=dau[icat];
+	  string param=jsonF.key[iparam]+"_"+params[iparam].key[icat];
+	  sampleCats_.insert(params[iparam].key[icat]);
+
+	  std::vector<std::string> uncs = descript.key;
+
+	  //for each parameter instantiate a formula, per category of the type: x\prod_i(1+theta_i)
+	  //where theta_i are the nuisances which will be varied with a given prior
+	  RooRealVar *cenVal=ws_->var((param+"_cen").c_str());
+	  if(cenVal==0)
+	    {
+	      string formula("@0");
+	      RooArgList varsInFormula;
+
+	      //central value
+	      sprintf(expBuf,"%s_cen[%f]",param.c_str(),descript["val"].toDouble());
+	      cenVal=(RooRealVar *)ws_->factory(expBuf);
+	      varsInFormula.add(*cenVal);
 	  
-	  TString hname=hit->second->GetName();
-	  bool doAverage(hname.Contains("avg") && nMeasurements_>0);
-	  if(doAverage) hit->second->Scale(1./nMeasurements_);
-	  hit->second->Write();
+	      //modifiers
+	      int uncCntr(0);
+	      for(size_t iunc=0; iunc<uncs.size(); iunc++)
+		{
+		  if(uncs[iunc]=="val") continue;
+		  
+		  //add new constraint if required
+		  RooRealVar *nuisVar=ws_->var(uncs[iunc].c_str());
+		  RooRealVar *modVar=ws_->var((uncs[iunc]+"_sigma").c_str());
+		  if(nuisVar==0)
+		    {
+		      sprintf(expBuf,"Gaussian::%s_constr(%s[0,-1,1],0.0,1.0)",uncs[iunc].c_str(), uncs[iunc].c_str());
+		      RooGaussian *nuisConstr=(RooGaussian *)ws_->factory(expBuf);
+		      constr.add( *nuisConstr );
+
+		      nuisVar = ws_->var( uncs[iunc].c_str() );
+		      nuis.add( *nuisVar );
+
+		      sprintf(expBuf,"%s_sigma[%f]",uncs[iunc].c_str(),descript[uncs[iunc].c_str()].toDouble());
+		      modVar=(RooRealVar *)ws_->factory(expBuf);
+		    }
+		  
+		  //add to formula
+		  sprintf(expBuf,"*(1+@%d*@%d)",uncCntr+1,uncCntr+2);
+		  formula+=expBuf;
+		  uncCntr+=2;
+		  varsInFormula.add( *modVar );
+		  varsInFormula.add( *nuisVar );
+		}
+	      
+	      //final formula
+	      RooFormulaVar formulaVar(param.c_str(),formula.c_str(),varsInFormula);
+	      ws_->import(formulaVar);
+	    }
+
+	  else
+	    {
+	      //if parameter has already been parsed, update the values only
+	      cenVal->setVal(descript["val"].toDouble());
+	      for(size_t iunc=0; iunc<uncs.size(); iunc++)
+		{
+		  if(uncs[iunc]=="val") continue;
+		  
+		  //add new constraint if required
+		  RooRealVar *nuisVar=ws_->var((uncs[iunc]+"_sigma").c_str());
+		  if(nuisVar==0) cout << "[Warning] failed to update uncertainty for: " << uncs[iunc] << " ...neglecting this source" << endl; 
+		  else nuisVar->setVal(descript[ uncs[iunc].c_str() ].toDouble());
+		}
+	    }
 	}
     }
   
-  //close file
-  fout->Close();
-  fout->Delete();
+  if(ws_->set("nuisances")!=0) nuis.add( *(ws_->set("nuisances")) );
+  ws_->defineSet("nuisances",nuis);
+
+  if(ws_->set("constr")!=0) constr.add( *(ws_->set("constr")) );
+  ws_->defineSet("constr",constr);
+ 
 }
 
 //
 void HFCMeasurement::initHFCModel()
 {
-  if(isInit_) return;
+  if(ws_==0) return;
+  if(ws_->var("r")!=0) return;
 
-  //b-tag multiplicity is the observable
-  model.bmult    = new RooRealVar("bmult","N_{btags}",0.,float(maxJets_+1));
-  model.bmult->setBins(maxJets_+1);
-  model.bmultObs = new RooRealVar("bmultobs","events",0.,9999999999999999999.);
+  char expBuf[200];
 
-  //what do we want to fit from the observables
-  bool fitR(fitType_==FIT_R || fitType_==FIT_R_AND_XSEC || fitType_==FIT_R_AND_EB || fitType_==FIT_R_CONSTRAINED);
-  bool fitEb(fitType_==FIT_EB || fitType_==FIT_R_AND_EB || fitType_==FIT_EB_AND_XSEC || fitType_==FIT_EB_AND_EQ);
-  bool fitEq(fitType_==FIT_EB_AND_EQ);
+  //observables
+  ws_->factory("bmultobs[0.,99999999999.]");
+  sprintf(expBuf,"bmult[0,%f]",float(maxJets_+1));
+  ws_->factory(expBuf);
+  ws_->var("bmult")->setBins(maxJets_+1);
+  RooCategory sample("sample","sample");
 
-  //R=B(t->Wb)/B(t->Wq)
-  if(!fitR)                              model.r = new RooRealVar("r","R",smR_);
-  else if(fitType_==FIT_R_AND_EB)        model.r = new RooRealVar("r","R",1.0,0.96,1.06);
-  // else if(fitType_==FIT_R_CONSTRAINED)   model.r = new RooRealVar("r","R",1.0,0.,1.0);
-  else                                   model.r = new RooRealVar("r","R",1.0,0.,2.0);
+  //
+  //parameters of interest
+  //
+  RooArgSet poi;
 
-  //b-tagging effiency
-  model.abseb                = new RooRealVar("abseb","abs#varepsilon_{b}",effb_);
-  if(fitType_==FIT_R_AND_EB || fitType_==FIT_R_CONSTRAINED) model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.90,1.1); 
-  else if(fitEb)             model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_,0.7,min(1./effb_,1.3));
-  else                     { model.sfeb    = new RooRealVar("sfeb","SF #varepsilon_{b}",sfb_);                          model.sfeb->setError( sfbUnc_ );  }
-  model.sfebExp              = new RooRealVar("sfebexp","<SF #varepsilon_{b}>",sfb_);
-  model.sfeb_constrain       = new RooGaussian("sfeb_constrain","#varepsilon_{b} constrain",*model.sfeb,*model.sfebExp,RooConst(sfbUnc_));
-  model.eb                   = new RooFormulaVar("eb","@0*@1",RooArgSet(*model.abseb,*model.sfeb));
-  if(fitType_==FIT_R_CONSTRAINED) model.pdfConstrains.add(*model.sfeb_constrain);
+  float minR(0.0), maxR(2.0);
+  if(fitType_==FIT_R_AND_EB)                                                    { minR=0.96; maxR=1.06; }
+  if(fitType_== FIT_EB || fitType_==FIT_EB_AND_XSEC || fitType_==FIT_EB_AND_EQ) { minR=1.0; maxR=1.0;   }
+  sprintf(expBuf,"r[1,%f,%f]",minR,maxR);
+  RooRealVar *r = (RooRealVar *)ws_->factory(expBuf);
+  if(minR!=maxR) poi.add( *ws_->var("r") );
   
-  //mistag efficiency 
-  model.abseq = new RooRealVar("abseq","abs#varepsilon_{q}",effq_);
-  if(fitEq || fitType_==FIT_R_CONSTRAINED)   model.sfeq       = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_,0.5,min(1./effq_,1.5));
-  else      { model.sfeq       = new RooRealVar("sfeq","SF #varepsilon_{q}",sfq_);                                      model.sfeq->setError(sfqUnc_); }
-  model.sfeqExp                = new RooRealVar("sfeqexp","<SF #varepsilon_{q}>",sfq_); 
-  model.sfeq_constrain         = new RooGaussian("sfeq_constrain","#varepsilon_{q} constrain",*model.sfeq,*model.sfeqExp,RooConst(sfqUnc_));
-  model.eq                     = new RooFormulaVar("eq","@0*@1",RooArgSet(*model.abseq,*model.sfeq));
-  if(fitType_==FIT_EB_AND_EQ || fitType_==FIT_R_CONSTRAINED)    model.pdfConstrains.add(*model.sfeq_constrain);
+  float minSFb(1.0),maxSFb(1.0);
+  if(fitType_==FIT_R_AND_EB)                                                    { minSFb=0.9; maxSFb=1.1; }
+  if(fitType_== FIT_EB || fitType_==FIT_EB_AND_XSEC || fitType_==FIT_EB_AND_EQ) { minSFb=0.7; maxSFb=1.3; }
+  sprintf(expBuf,"sfeb[1,%f,%f]",minSFb,maxSFb);
+  RooRealVar *sfeb=(RooRealVar *)ws_->factory(expBuf);
+  if(minSFb!=maxSFb) poi.add( *ws_->var("sfeb") );
 
-  //this is a correction for acceptance (keep constant for now)
-  model.acc1  = new RooRealVar("accr1","A(R=1)",1.0);
-  model.acc05 = new RooRealVar("accr05","A(R=0.5)",1.0);
-  model.acc0  = new RooRealVar("accr0","A(R=0)",1.0);
+  float minSFq(1.0),maxSFq(1.0);
+  if(fitType_==FIT_EB_AND_EQ) { minSFq=0.7; maxSFq=1.8; }
+  sprintf(expBuf,"sfeq[1,%f,%f]",minSFq,maxSFq);
+  RooRealVar *sfeq=(RooRealVar *)ws_->factory(expBuf);
+  if(minSFq!=maxSFq) poi.add( *ws_->var("sfeq") );
 
-  //the fit is divided in categories (i b-tags, j jets)  : add exclusive jet multiplicity models
-  int icat(0);
-  model.sample = new RooCategory("sample","sample");
-  for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
+  float minXsec(1.0),maxXsec(1.0);
+  if(fitType_== FIT_R_AND_XSEC || fitType_==FIT_EB_AND_XSEC) { minXsec=0.8; maxXsec=1.2; }
+  sprintf(expBuf,"xsec[1,%f,%f]",minXsec,maxXsec);
+  RooRealVar *xsec =  (RooRealVar *)ws_->factory(expBuf);
+  if(minXsec!=maxXsec) poi.add( *ws_->var("xsec") );
+
+
+  //
+  // model
+  //
+  //acceptance corrections
+  RooRealVar *acc1  = (RooRealVar *) ws_->factory("a1[1.0]");
+  RooRealVar *acc05 = (RooRealVar *) ws_->factory("a05[1.0]");
+  RooRealVar *acc0  = (RooRealVar *) ws_->factory("a0[1.0]");
+  
+  std::map<string,string> basePdfsPerCat; //auxiliary
+  for(std::set<string>::iterator cIt=sampleCats_.begin(); cIt!=sampleCats_.end(); cIt++)
     {
-      TString tag=*cIt;
+      string tag=*cIt;
+      int njets(2);
+      if(tag.find("eq3")!=string::npos) njets=3;
+      if(tag.find("eq4")!=string::npos) njets=4;
 
-      //define the categories for this sub-sample
-      if(icat==EE_3JETS || icat==MUMU_3JETS || icat==EMU_3JETS)
+      //sample composition base parameters
+      RooAbsReal *fcorrect = ws_->function(("fcorrect_"+tag).c_str());
+      RooAbsReal *ktt      = ws_->function(("ktt_"+tag).c_str());
+      RooAbsReal *kt       = ws_->function(("kt_"+tag).c_str());
+      RooAbsReal *mu       = ws_->function(("mu_"+tag).c_str());
+      if(fcorrect==0 || ktt==0 || kt==0 || mu==0)
 	{
-	  model.sample->defineType("n0btags_"+tag);
-	  model.sample->defineType("n1btags_"+tag);
-	  model.sample->defineType("n2btags_"+tag);
-	  model.sample->defineType("n3btags_"+tag);
+	  cout << "[Warning] unable to instantiate model for " << tag << " check the configuration file for sample composition parameters" << endl;
+	  continue;
 	}
-      else
-	{
-	  model.sample->defineType("n0btags_"+tag);
-	  model.sample->defineType("n1btags_"+tag);
-	  model.sample->defineType("n2btags_"+tag);
-	}
-
-      //occupancy of this category
-      model.jetocc[icat] = new RooRealVar("jetocc"+tag,"occ"+tag,1);
       
-      //fraction of correct assignments
-      bool addFcorrectAsConstrain(true);
-      if(fitEq || fitType_==FIT_R_AND_EB)  { model.fcorrect[icat] = new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag]); addFcorrectAsConstrain=false; }
-      else                                 model.fcorrect[icat] = new RooRealVar("fcorrect_"+tag,"f_{correct}^{"+tag+"}",fcorrect_[tag],fcorrect_[tag]-3*fcorrectUnc_[tag],fcorrect_[tag]+3*fcorrectUnc_[tag]);
-      model.fcorrectExp[icat] = new RooRealVar("fcorrectexp_"+tag,"<f_{correct}^{"+tag+"}>",fcorrect_[tag]);
-      if(nuisanceType_==GAUSSIAN)
-	{
-	  model.fcorrect_constrain[icat]       = new RooGaussian("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],*model.fcorrectExp[icat],RooConst(fcorrectUnc_[tag]));
-	}
-      else if(nuisanceType_==UNIFORM)
-	{
-	  addFcorrectAsConstrain=false;
-	}
-      else if(nuisanceType_==LOGNORMAL)
-	{
-	  model.fcorrect_constrain[icat]       = new RooLognormal("ctr_fcorrect_"+tag,"f_{correct}^{"+tag+"} constrain",*model.fcorrect[icat],RooConst(fcorrect_[tag]),RooConst(exp(fcorrectUnc_[tag])));
-	}
-      if(addFcorrectAsConstrain) model.pdfConstrains.add(*model.fcorrect_constrain[icat]);
+      sprintf(expBuf,"FormulaVar::fttbar_%s('max(min(@0*@1*@2,1.0),0.0)',{%s,%s,%s})",tag.c_str(),ktt->GetName(),mu->GetName(),xsec->GetName());
+      RooAbsReal * fttbar = (RooAbsReal *)ws_->factory(expBuf);
 
-      //ttbar fraction in the sample
-      bool addFttbarAsContrain(true);
-      if(fttbar_[tag]==1.0 || fitEq ||  fitType_==FIT_R_AND_EB)  { model.fttbar[icat] = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag]); addFttbarAsContrain=false; }
-      else                                                         model.fttbar[icat] = new RooRealVar("fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"}",fttbar_[tag],fttbar_[tag]-3*fttbarUnc_[tag],fttbar_[tag]+3*fttbarUnc_[tag]);
-      model.fttbarExp[icat] = new RooRealVar("fttbarexp_"+tag,"<f_{t#bar{t}}^{"+tag+"}>",fttbar_[tag]);
-      model.fttbar_constrain[icat]         = new RooGaussian("ctr_fttbar_"+tag,"f_{t#bar{t}}^{"+tag+"} constrain",*model.fttbar[icat],*model.fttbarExp[icat],RooConst(fttbarUnc_[tag]));
-      if(addFttbarAsContrain) model.pdfConstrains.add(*model.fttbar_constrain[icat]);
+      //probability to select/reconstruct N(t->Wq)
+      sprintf(expBuf,"FormulaVar::alpha_%s('max(min((2*%d*@0)/(@1*(2.+@2)),1.0),0.0)',{%s,%s,%s})",tag.c_str(),njets,fcorrect->GetName(),fttbar->GetName(),kt->GetName());
+      RooAbsReal *alpha = (RooAbsReal *)ws_->factory(expBuf);
 
-      //single top fraction in the sample
-      bool addFsingleTopAsContrain(true);
-      if(fsingletop_[tag]==0 || fitEq ||  fitType_==FIT_R_AND_EB)  { model.fsingletop[icat] = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag]); addFsingleTopAsContrain=false; }
-      else                                                           model.fsingletop[icat] = new RooRealVar("fsingletop_"+tag,"f_{t}^{"+tag+"}",fsingletop_[tag],fsingletopUnc_[tag]-3*fsingletopUnc_[tag],fsingletop_[tag]+3*fsingletopUnc_[tag]);
-      model.fsingletopExp[icat] = new RooRealVar("fsingletopexp_"+tag,"<f_{t}^{"+tag+"}>",fsingletop_[tag]);
-      model.fsingletop_constrain[icat]       = new RooGaussian("ctr_fsingletop_"+tag,"f_{t}^{"+tag+"} constrain",*model.fsingletop[icat],*model.fsingletopExp[icat],RooConst(fsingletopUnc_[tag]));
-      if(addFsingleTopAsContrain) model.pdfConstrains.add(*model.fsingletop_constrain[icat]);
-      
-      //sample composition variables i.e. alpha and alpha_i
-      float nPairsVal=4;
-      if(icat==EE_3JETS || icat==MUMU_3JETS || icat==EMU_3JETS) nPairsVal=6;
-      RooRealVar *npairs = new RooRealVar("npairs_"+tag,"npairs_"+tag,nPairsVal);
-      model.alpha[icat]  = new RooFormulaVar("alpha_"+tag,  "(@0*@1)/(@2*(2.+@3))",   RooArgSet(*npairs, *model.fcorrect[icat], *model.fttbar[icat], *model.fsingletop[icat]));
-      model.alpha2[icat] = new RooFormulaVar("alpha2_"+tag, "pow(@0,2)*@1",           RooArgSet(*model.alpha[icat],*model.fttbar[icat]));
-      model.alpha1[icat] = new RooFormulaVar("alpha1_"+tag, "(2*@0*(1-@0)+@0*@2)*@1", RooArgSet(*model.alpha[icat],*model.fttbar[icat],*model.fsingletop[icat]));
-      model.alpha0[icat] = new RooFormulaVar("alpha0_"+tag, "1-@0-@1",                RooArgSet(*model.alpha2[icat],*model.alpha1[icat]));
+      //sample composition in terms of N(t->Wq)
+      sprintf(expBuf,"FormulaVar::alpha2_%s('max(min(pow(@0,2)*@1,1.0),0.0)',{%s,%s})",tag.c_str(),alpha->GetName(),fttbar->GetName());
+      RooAbsReal *alpha2=(RooAbsReal *)ws_->factory(expBuf);
+      sprintf(expBuf,"FormulaVar::alpha1_%s('max(min((2*@0*(1-@0)+@0*@2)*@1,1.0),0.0)',{%s,%s,%s})",tag.c_str(),alpha->GetName(),fttbar->GetName(),kt->GetName());
+      RooAbsReal *alpha1=(RooAbsReal *)ws_->factory(expBuf);
+      sprintf(expBuf,"FormulaVar::alpha0_%s('max(min(1-@0-@1,1.0),0.0)',{%s,%s})",tag.c_str(),alpha2->GetName(),alpha1->GetName());
+      RooAbsReal *alpha0=(RooAbsReal *)ws_->factory(expBuf);
+
+      //b-tagging base parameters
+      RooAbsReal *abseb       = ws_->function(("abseb_"+tag).c_str());
+      RooAbsReal *abseq       = ws_->function(("abseq_"+tag).c_str());
+      if(abseb==0 || abseq==0)
+	{
+	  cout << "[Warning] unable to instantiate model for " << tag << " check the configuration file for b-tagging parameters" << endl;
+	  continue;
+	}
       
       //modify locally the b-tag/mistag rates with correction factors
-      model.ebcorr[icat] = new RooFormulaVar("eb_"+tag,"@0*@1", RooArgSet(*model.eb,RooConst(btagEffCorr_[tag])));
-      model.eqcorr[icat] = new RooFormulaVar("eq_"+tag,"@0*@1", RooArgSet(*model.eq,RooConst(ltagEffCorr_[tag])));
-      
-      //define the base PDFs (kernel)
-      RooArgList stdArgList;
-      stdArgList.add(*model.r);                     // @0  R
-      stdArgList.add(*model.ebcorr[icat]);          // @1  eff_b
-      stdArgList.add(*model.eqcorr[icat]);          // @2  eff_q
-      stdArgList.add(*model.alpha2[icat]);          // @3  alpha_2
-      stdArgList.add(*model.alpha1[icat]);          // @4  alpha_1
-      stdArgList.add(*model.alpha0[icat]);          // @5  alpha_0 
-      stdArgList.add(*model.acc1);                  // @6  acc_1
-      stdArgList.add(*model.acc05);                 // @7  acc05
-      stdArgList.add(*model.acc0);                  // @8  acc0
-      
-      RooGenericPdf *basepdf0btags2jets = new RooGenericPdf("kernelpdf0btags_"+tag,
-							    "@3*( pow(@0*(1-@1),2)*@6 + 2*@0*(1-@0)*(1-@1)*(1-@2)*@7 + pow((1-@0)*(1-@2),2)*@8) +"
-							    "@4*( pow(@0,2)*(1-@1)*(1-@2)*@6 + @0*(1-@0)*((1-@1)+(1-@2))*(1-@2)*@7 + pow((1-@0)*(1-@2),2)*@8)+"
-							    "@5*( pow(1-@2,2) )",
-							    stdArgList);
-      
-      RooGenericPdf *basepdf1btags2jets = new RooGenericPdf("kernelpdf1btags_"+tag,
-							    "@3*( 2*pow(@0,2)*(1-@1)*@1*@6 + 2*@0*(1-@0)*((1-@1)*@2+@1*(1-@2))*@7 + 2*pow((1-@0),2)*(1-@2)*@2*@8) +"
-							    "@4*( pow(@0,2)*(@1*(1-@2)+(1-@1)*@2)*@6 + @0*(1-@0)*(@1*(1-@2)+(1-@1)*@2+2*@2*(1-@2))*@7 + 2*pow((1-@0),2)*@2*(1-@2)*@8 ) +"
-							    "@5*( 2*@2*(1-@2) )",
-							    stdArgList);
+      sprintf(expBuf,"FormulaVar::eb_%s('max(min(@0*@1,1.0),0.0)',{%s,%s})",tag.c_str(),abseb->GetName(),sfeb->GetName());
+      RooAbsReal *eb=(RooAbsReal *)ws_->factory(expBuf);
 
-      RooGenericPdf *basepdf2btags2jets = new RooGenericPdf("kernelpdf2btags_"+tag,
-							    "@3*( pow(@0*@1,2)*@6 + 2*@0*(1-@0)*@1*@2*@7 + pow((1-@0)*@2,2)*@8 ) + "
-							    "@4*( pow(@0,2)*@1*@2*@6 + @0*(1-@0)*((@1+@2)*@2)*@7 + pow((1-@0)*@2,2)*@8 ) +"
-							    "@5*( pow(@2,2) )",
-							    stdArgList);
+      sprintf(expBuf,"FormulaVar::eq_%s('max(min(@0*@1,1.0),0.0)',{%s,%s})",tag.c_str(),abseq->GetName(),sfeq->GetName());
+      RooAbsReal *eq=(RooAbsReal *)ws_->factory(expBuf);
+
+      //define the base PDFs (kernel)
+      RooArgList stdArg;
+      stdArg.add(*r);             // @0  R
+      stdArg.add(*eb);            // @1  eff_b
+      stdArg.add(*eq);            // @2  eff_q
+      stdArg.add(*alpha2);        // @3  alpha_2
+      stdArg.add(*alpha1);        // @4  alpha_1
+      stdArg.add(*alpha0);        // @5  alpha_0 
+      stdArg.add(*acc1);          // @6  acc_1
+      stdArg.add(*acc05);         // @7  acc05
+      stdArg.add(*acc0);          // @8  acc0
       
-      //check if extension is needed
-      if(icat==EE_3JETS || icat==MUMU_3JETS || icat==EMU_3JETS)
+      RooGenericPdf *pdf2j0t = new RooGenericPdf(("pdf2j0t_"+tag).c_str(),
+						 "@3*( pow(@0*(1-@1),2)*@6 + 2*@0*(1-@0)*(1-@1)*(1-@2)*@7 + pow((1-@0)*(1-@2),2)*@8) +"
+						 "@4*( pow(@0,2)*(1-@1)*(1-@2)*@6 + @0*(1-@0)*((1-@1)+(1-@2))*(1-@2)*@7 + pow((1-@0)*(1-@2),2)*@8)+"
+						 "@5*( pow(1-@2,2) )",
+						 stdArg);
+      
+      RooGenericPdf *pdf2j1t = new RooGenericPdf(("pdf2j1t_"+tag).c_str(),
+						 "@3*( 2*pow(@0,2)*(1-@1)*@1*@6 + 2*@0*(1-@0)*((1-@1)*@2+@1*(1-@2))*@7 + 2*pow((1-@0),2)*(1-@2)*@2*@8) +"
+						 "@4*( pow(@0,2)*(@1*(1-@2)+(1-@1)*@2)*@6 + @0*(1-@0)*(@1*(1-@2)+(1-@1)*@2+2*@2*(1-@2))*@7 + 2*pow((1-@0),2)*@2*(1-@2)*@8 ) +"
+						 "@5*( 2*@2*(1-@2) )",
+						 stdArg);
+
+      RooGenericPdf *pdf2j2t = new RooGenericPdf(("pdf2j2t_"+tag).c_str(),
+						 "@3*( pow(@0*@1,2)*@6 + 2*@0*(1-@0)*@1*@2*@7 + pow((1-@0)*@2,2)*@8 ) + "
+						 "@4*( pow(@0,2)*@1*@2*@6 + @0*(1-@0)*((@1+@2)*@2)*@7 + pow((1-@0)*@2,2)*@8 ) +"
+						 "@5*( pow(@2,2) )",
+						 stdArg);
+      
+      //b-tags from extra jets are assumed to be effective mistags (i.e. may include b-jets from non-top decays)
+      if(njets>4)
 	{
-	  //b-tags from extra jets are assumed to be mistags
-	  RooGenericPdf *basepdf0btagsextrajet = new RooGenericPdf("pdf0btagsextrajet_"+tag,"(1-@0)",RooArgList(*model.eq));
-	  RooGenericPdf *basepdf1btagsextrajet = new RooGenericPdf("pdf1btagsextrajet_"+tag,"@0",RooArgList(*model.eq));
-	  
-	  //
-	  RooGenericPdf *basepdf0btags3jets = new RooGenericPdf("basepdf0btags3Jets_"+tag, "@0*@1",       RooArgList(*basepdf0btags2jets, *basepdf0btagsextrajet) );  
-	  RooGenericPdf *basepdf1btags3jets = new RooGenericPdf("basepdf1btags3Jets_"+tag, "@0*@1+@2*@3", RooArgList(*basepdf0btags2jets, *basepdf1btagsextrajet, *basepdf1btags2jets, *basepdf0btagsextrajet) );
-	  RooGenericPdf *basepdf2btags3jets = new RooGenericPdf("basepdf2btags3Jets_"+tag, "@0*@1+@2*@3", RooArgList(*basepdf1btags2jets, *basepdf1btagsextrajet, *basepdf2btags2jets, *basepdf0btagsextrajet) );
-	  RooGenericPdf *basepdf3btags3jets = new RooGenericPdf("basepdf3btags3Jets_"+tag, "@0*@1",       RooArgList(*basepdf2btags2jets, *basepdf1btagsextrajet) );
-	  
-	  //add for the different categories
-	  model.pdfForCategory["n0btags_"+tag] = basepdf0btags3jets;
-	  model.pdfForCategory["n1btags_"+tag] = basepdf1btags3jets;
-	  model.pdfForCategory["n2btags_"+tag] = basepdf2btags3jets;
-	  model.pdfForCategory["n3btags_"+tag] = basepdf3btags3jets;
+	  cout << "[Warning] failed to instantiate pdf for " << tag << endl;
+	  break;
+	} 
+      else if(njets==2)
+	{
+	  ws_->import(*pdf2j0t);
+	  ws_->import(*pdf2j1t);
+	  ws_->import(*pdf2j2t);
 	}
       else
 	{
-	  //add for the different categories
-	  model.pdfForCategory["n0btags_"+tag] = basepdf0btags2jets;
-	  model.pdfForCategory["n1btags_"+tag] = basepdf1btags2jets;
-	  model.pdfForCategory["n2btags_"+tag] = basepdf2btags2jets;
+	  RooGenericPdf *pdf1ej0t = new RooGenericPdf(("pdf1ej0t_"+tag).c_str(), "(1-@0)",      RooArgList(*eq));
+	  RooGenericPdf *pdf1ej1t = new RooGenericPdf(("pdf1ej1t_"+tag).c_str(), "@0",          RooArgList(*eq));
+	  RooGenericPdf *pdf3j0t  = new RooGenericPdf(("pdf3j0t_"+tag).c_str(),  "@0*@1",       RooArgList(*pdf2j0t, *pdf1ej0t) );  
+	  RooGenericPdf *pdf3j1t  = new RooGenericPdf(("pdf3j1t_"+tag).c_str(),  "@0*@1+@2*@3", RooArgList(*pdf2j0t, *pdf1ej1t, *pdf2j1t, *pdf1ej0t) );
+	  RooGenericPdf *pdf3j2t  = new RooGenericPdf(("pdf3j2t_"+tag).c_str(),  "@0*@1+@2*@3", RooArgList(*pdf2j1t, *pdf1ej1t, *pdf2j2t, *pdf1ej0t) );
+	  RooGenericPdf *pdf3j3t  = new RooGenericPdf(("pdf3j3t_"+tag).c_str(),  "@0*@1",       RooArgList(*pdf2j2t, *pdf1ej1t) );
+	  if(njets==3)
+	    {
+	      ws_->import(*pdf3j0t);
+	      ws_->import(*pdf3j1t);
+	      ws_->import(*pdf3j2t);
+	      ws_->import(*pdf3j3t);
+	    }
+	  else
+	    {
+	      RooGenericPdf *pdf4j0t  = new RooGenericPdf(("pdf4j0t_"+tag).c_str(),  "@0*@1",       RooArgList(*pdf3j0t, *pdf1ej0t) );  
+	      RooGenericPdf *pdf4j1t  = new RooGenericPdf(("pdf4j1t_"+tag).c_str(),  "@0*@1+@2*@3", RooArgList(*pdf3j0t, *pdf1ej1t, *pdf3j1t, *pdf1ej0t) );
+	      RooGenericPdf *pdf4j2t  = new RooGenericPdf(("pdf4j2t_"+tag).c_str(),  "@0*@1+@2*@3", RooArgList(*pdf3j1t, *pdf1ej1t, *pdf3j2t, *pdf1ej0t) );
+	      RooGenericPdf *pdf4j3t  = new RooGenericPdf(("pdf4j3t_"+tag).c_str(),  "@0*@1",       RooArgList(*pdf3j2t, *pdf1ej1t) );
+	      RooGenericPdf *pdf4j4t  = new RooGenericPdf(("pdf4j4t_"+tag).c_str(),  "@0*@1",       RooArgList(*pdf3j2t, *pdf1ej1t) );
+	      ws_->import(*pdf4j0t);
+	      ws_->import(*pdf4j1t);
+	      ws_->import(*pdf4j2t);
+	      ws_->import(*pdf4j3t);
+	      ws_->import(*pdf4j4t);
+	    }
+	}
+      
+      //each n-jets n-b-tags is a category
+      for(int ijet=0; ijet<=njets; ijet++)
+	{
+	  sprintf(expBuf,"%dj%dt_%s",njets,ijet,tag.c_str());
+	  sample.defineType((string("n")+expBuf).c_str());
+	  basePdfsPerCat[string("n")+expBuf]=string("pdf")+expBuf;
 	}
     }
 
 
-  // the model will be a simultaneous PDF
-  RooSimultaneous *simPdf = new RooSimultaneous("simmodel","simmodel",*model.sample);
-  for(std::map<TString, RooAbsPdf *>::iterator it = model.pdfForCategory.begin();   it != model.pdfForCategory.end(); it++)  simPdf->addPdf( *(it->second), it->first );
-  model.eventYields = new RooRealVar("eventyields","Event yields",1,0,9999999.); 
-  model.pdf = new RooExtendPdf("hfcmodel","hfcmodel",*simPdf,*model.eventYields);
-      
-  //this is the constrained model with nuisance parameters
-  RooArgSet argSet(*model.pdf);  argSet.add(model.pdfConstrains);
-  model.constrPdf = new RooProdPdf("hfcconstrmodel","hfconstrmodel",argSet);
-
-  //create a workspace
-  model.ws = new RooWorkspace("w");
-  model.modelConfig = new ModelConfig("hfcfit",model.ws);
-  model.modelConfig->SetPdf(*model.constrPdf);
-  model.modelConfig->SetParametersOfInterest(RooArgSet(*model.r));
-  model.modelConfig->SetObservables(RooArgSet(*model.bmult,*model.bmultObs,*model.sample));
-  RooArgSet nuisPars(*model.sfebExp,*model.sfeqExp);
-  for(size_t icat=0; icat<categoryKeys_.size(); icat++) 
+  //the model will be a (constrained +) extended + simultaneous PDF
+  RooSimultaneous *basemodel = new RooSimultaneous("basemodel","basemodel",sample);
+  for(std::map<string, string>::iterator it=basePdfsPerCat.begin(); it!=basePdfsPerCat.end(); it++)
     {
-      nuisPars.add(*model.fcorrectExp[icat]);
-      nuisPars.add(*model.fttbarExp[icat]);
-      nuisPars.add(*model.fsingletopExp[icat]);
+      RooAbsPdf *pdf=ws_->pdf(it->second.c_str());
+      if(pdf==0) continue;
+      basemodel->addPdf( *pdf, it->first.c_str() );
     }
-  model.modelConfig->SetNuisanceParameters(nuisPars);
+  RooRealVar *yields = (RooRealVar *)ws_->factory("yields[1,0,999999999.]");
+  RooAbsPdf *model=0;
+  if(ws_->set("constr")!=0)
+    {
+      RooExtendPdf *extmodel = new RooExtendPdf("extmodel","extmodel",*basemodel,*yields);
+      RooArgSet modelFactors(*extmodel); 
+      modelFactors.add( *(ws_->set("constr")) );
+      model = (RooAbsPdf *)(new RooProdPdf("model","model",modelFactors));
+    }
+  else
+    {
+      model = (RooAbsPdf *)(new RooExtendPdf("model","model",*basemodel,*yields));
+    }
+  ws_->import(*model);
 
-  //all done here
-  isInit_=true;
+  //finalize workspace
+  ws_->defineSet("observables","bmultobs,bmult,sample");
+  ws_->defineSet("poi",poi);  
+  RooArgSet *nullParams = (RooArgSet *)ws_->allVars().snapshot();
+  ws_->saveSnapshot("default",*nullParams,kTRUE);
+  ws_->Print("v");
+
+  //instantiate a model configurator
+
+  mc_ = new ModelConfig("mc",ws_);
+  mc_->SetPdf(*model);
+  mc_->SetParametersOfInterest(*(ws_->set("poi")));
+  mc_->SetObservables(*(ws_->set("observables")));
+  mc_->SetNuisanceParameters(*(ws_->set("nuisances")));
 }
 
 
 //
 void HFCMeasurement::resetModelValues()
 {
-  if(!isInit_) return;
-  model.r->setVal(smR_);
-  model.abseb->setVal(effb_);
-  model.sfeb->setVal(sfb_);
-  model.abseq->setVal(effq_);
-  model.sfeq->setVal(sfq_);
-  int icat=0;
-  for(std::set<TString>::iterator cIt=categoryKeys_.begin(); cIt!=categoryKeys_.end(); cIt++,icat++)
-    {
-      TString tag=*cIt;
-      model.fcorrect[icat]->setVal(fcorrect_[tag]);
-      model.fttbar[icat]->setVal(fttbar_[tag]);
-      model.fsingletop[icat]->setVal(fsingletop_[tag]);
-      model.jetocc[icat]->setVal(0);
-    }
+  if(ws_==0) return;
+  ws_->loadSnapshot("default");
 }
 
 //
 void HFCMeasurement::fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos, int runMode, bool debug)
 {
+  /*
   if(btagHistos.size()==0) return;
 
   //restart all over again
@@ -349,12 +405,15 @@ void HFCMeasurement::fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos, int ru
   //run the fit
   nMeasurements_++;
   runHFCFit(runMode,debug);
+
+  */
 }
 
 
 //
 void HFCMeasurement::fitHFCtoEnsemble(ZZ2l2nuSummaryHandler  &evHandler, int runMode, bool debug )
 {
+  /*
   if(evHandler.getEntries()==0) return;
 
   //restart all over again
@@ -412,6 +471,8 @@ void HFCMeasurement::fitHFCtoEnsemble(ZZ2l2nuSummaryHandler  &evHandler, int run
   
   //run the fit
   runHFCFit(runMode,debug);
+
+  */
 }
 
 
@@ -419,6 +480,8 @@ void HFCMeasurement::fitHFCtoEnsemble(ZZ2l2nuSummaryHandler  &evHandler, int run
 void HFCMeasurement::runHFCFit(int runMode, bool debug)
 {
   
+  /*
+
   //build a categorized dataset
   int icat(0);
   RooDataSet *data = new RooDataSet("data","data",RooArgSet( *model.bmult, *model.bmultObs, *model.sample), RooFit::WeightVar(*model.bmultObs) );
@@ -616,13 +679,12 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
       //ProfileLikelihoodTestStat* testStat = dynamic_cast<ProfileLikelihoodTestStat*>(toymcsampler->GetTestStatistic());
       //testStat->SetOneSided(true);
 
-      /*
-	cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
-	PointSetInterval* interval = (PointSetInterval*)fc_->GetInterval();
-	ConfidenceBelt* belt = fc_->GetConfidenceBelt();
-	model.rFitLowerLimit=interval->LowerLimit(*model.r);
-	model.rFitUpperLimit=interval->UpperLimit(*model.r);
-      */
+// 	cout << "Starting Feldman-Cousins computation: you can go and take a loooooong coffee " << endl;
+// 	PointSetInterval* interval = (PointSetInterval*)fc_->GetInterval();
+// 	ConfidenceBelt* belt = fc_->GetConfidenceBelt();
+// 	model.rFitLowerLimit=interval->LowerLimit(*model.r);
+// 	model.rFitUpperLimit=interval->UpperLimit(*model.r);
+
       
       //get the thresholds
       if(debug)
@@ -633,45 +695,44 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 	  model.ws->writeToFile("HeavyFlavorWS.root");
 
 	  //display in canvas
-	  /*
-	    TCanvas *c = new TCanvas("HFCIntervalForFeldmanCousins","HFCIntervalForFeldmanCousins",600,600);
-	    c->SetWindowSize(600,600);     
-	    TGraph *frame = new TGraph;
-	    RooDataSet* parameterScan = (RooDataSet*) fc_->GetPointsToScan();
-	    for(Int_t i=0; i<parameterScan->numEntries(); ++i)
-	    {
-	    RooArgSet *tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
-	    double arMax = belt->GetAcceptanceRegionMax(*tmpPoint);
-	    double poiVal = tmpPoint->getRealValue(model.r->GetName()) ;	  
-	    frame->SetPoint(i,poiVal,arMax);
-	    }
-	    frame->Draw("ap");
-	    frame->GetXaxis()->SetTitle("R");
-	    frame->GetYaxis()->SetTitle("Acceptance region max");
+// 	    TCanvas *c = new TCanvas("HFCIntervalForFeldmanCousins","HFCIntervalForFeldmanCousins",600,600);
+// 	    c->SetWindowSize(600,600);     
+// 	    TGraph *frame = new TGraph;
+// 	    RooDataSet* parameterScan = (RooDataSet*) fc_->GetPointsToScan();
+// 	    for(Int_t i=0; i<parameterScan->numEntries(); ++i)
+// 	    {
+// 	    RooArgSet *tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
+// 	    double arMax = belt->GetAcceptanceRegionMax(*tmpPoint);
+// 	    double poiVal = tmpPoint->getRealValue(model.r->GetName()) ;	  
+// 	    frame->SetPoint(i,poiVal,arMax);
+// 	    }
+// 	    frame->Draw("ap");
+// 	    frame->GetXaxis()->SetTitle("R");
+// 	    frame->GetYaxis()->SetTitle("Acceptance region max");
 	  
-	    char buf[100];
-	    sprintf(buf,"%3.2f < R < %3.2f",model.rFitLowerLimit,model.rFitUpperLimit);
-	    TPaveText *pave = new TPaveText(0.15,0.96,0.41,0.99,"NDC");
-	    pave->SetBorderSize(0);
-	    pave->SetFillStyle(0);
-	    pave->SetTextAlign(12);
-	    pave->SetTextFont(42);
-	    pave->AddText("CMS preliminary");
-	    pave->Draw();
+// 	    char buf[100];
+// 	    sprintf(buf,"%3.2f < R < %3.2f",model.rFitLowerLimit,model.rFitUpperLimit);
+// 	    TPaveText *pave = new TPaveText(0.15,0.96,0.41,0.99,"NDC");
+// 	    pave->SetBorderSize(0);
+// 	    pave->SetFillStyle(0);
+// 	    pave->SetTextAlign(12);
+// 	    pave->SetTextFont(42);
+// 	    pave->AddText("CMS preliminary");
+// 	    pave->Draw();
 	    
-	    pave = new TPaveText(0.4,0.96,0.94,0.99,"NDC");
-	    pave->SetFillStyle(0);
-	    pave->SetBorderSize(0);
-	    pave->SetTextAlign(32);
-	    pave->SetTextFont(42);
-	    pave->AddText(buf);
-	    pave->Draw();
+// 	    pave = new TPaveText(0.4,0.96,0.94,0.99,"NDC");
+// 	    pave->SetFillStyle(0);
+// 	    pave->SetBorderSize(0);
+// 	    pave->SetTextAlign(32);
+// 	    pave->SetTextFont(42);
+// 	    pave->AddText(buf);
+// 	    pave->Draw();
 	    
-	    c->SaveAs("HFCIntervalForFeldmanCousins.png");
-	    c->SaveAs("HFCIntervalForFeldmanCousins.pdf");
-	    c->SaveAs("HFCIntervalForFeldmanCousins.C");
-	    }
-	  */
+// 	    c->SaveAs("HFCIntervalForFeldmanCousins.png");
+// 	    c->SaveAs("HFCIntervalForFeldmanCousins.pdf");
+// 	    c->SaveAs("HFCIntervalForFeldmanCousins.C");
+//	    }
+	
 	}
     }
   
@@ -1038,6 +1099,8 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
     }
 
   delete data;
+*/
+
 }
 
 
@@ -1045,6 +1108,9 @@ void HFCMeasurement::runHFCFit(int runMode, bool debug)
 //
 void HFCMeasurement::printConfiguration(std::ostream &os)
 {
+
+  /*
+
   os << "[HFCMeasurement::printConfiguration]" << endl;
   os << "Fit type:" << fitTypeTitle_ << endl;
   os << "Using: 2<= N_{jets}<=" << maxJets_ << endl;
@@ -1067,4 +1133,7 @@ void HFCMeasurement::printConfiguration(std::ostream &os)
       os << "\t f_{ttbar}:" << fttbar_[tag] << " +/- " << fttbarUnc_[tag] << endl;
       os << "\t k_{single top}:" << fsingletop_[tag] << " +/- " << fsingletopUnc_[tag] << endl;
     }
+
+
+  */
 }

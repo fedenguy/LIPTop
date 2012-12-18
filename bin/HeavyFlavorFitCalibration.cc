@@ -15,12 +15,9 @@
 #include "CMGTools/HtoZZ2l2nu/interface/plotter.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
 
-#include "LIP/Top/interface/EventSummaryHandler.h"
-#include "LIP/Top/interface/MisassignmentMeasurement.h"
 #include "LIP/Top/interface/HFCMeasurement.h"
 
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
-#include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
 
 #include <vector>
 
@@ -105,15 +102,22 @@ int main(int argc, char* argv[])
       if(arg.find("--run")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&runMode);                            i++;  printf("runMode = %d\n", runMode);           }
       if(arg.find("--btag")!=string::npos && i+1<argc)  { btagWP=argv[i+1];                                           i++;  printf("btag WP  = %s\n", btagWP.Data());    }
     } 
-  if(url=="" || fitParFile=="") { printHelp(); return 0; }
+  //  if(url=="" || fitParFile=="") { printHelp(); return 0; }
+  if(fitParFile=="") { printHelp(); return 0; }
   
 
-  bool freezeResults(true);
-  std::map<TString,Double_t> fitPars=parseParametersFrom(fitParFile);
-  runCalibration(url, fitType, nuisanceType, runMode, btagWP, fitPars, maxPE, dataLumi, syst, freezeResults );
-  
-  cout << report.str() << endl;
+  HFCMeasurement fitter(HFCMeasurement::FIT_R, fitParFile);
+
+  /*  
+      bool freezeResults(true);
+      std::map<TString,Double_t> fitPars=parseParametersFrom(fitParFile);
+      runCalibration(url, fitType, nuisanceType, runMode, btagWP, fitPars, maxPE, dataLumi, syst, freezeResults );
+      
+      cout << report.str() << endl;
+  */
 }
+
+/*
 	  
 //
 void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TString btagWP, 
@@ -552,3 +556,6 @@ void runCalibration(TString url, int fitType, int nuisanceType, int runMode, TSt
   outF->Close();
 
 }
+
+
+*/

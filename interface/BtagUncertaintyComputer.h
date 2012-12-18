@@ -1,60 +1,66 @@
 #ifndef btagunccomp_h
 #define btagunccomp_h
-
+//from A. Rizzi
 namespace btag
 {
-  typedef std::pair<double,double> Weight_t;
-
-  
-  class UncertaintyComputer
+  class Weight 
   {
   public:
+    struct JetInfo {
+      JetInfo(float mceff,float datasf) : eff(mceff), sf(datasf) {}
+      float eff;
+      float sf;
+    };
     
-    UncertaintyComputer(double meb,double msfb,double msfb_err,double mel,double msfl, double msfl_err) 
-      : eb(meb), sfb(msfb), sfb_err(msfb_err), el(mel), sfl(msfl), sfl_err(msfl_err)
-      {}
-    ~UncertaintyComputer() {}
-    
-    inline void compute(double nb, double nl)
-    {
-      //central values (based on the MC b-tag/mistag rates + data/MC scale factors)
-      p0 = pow(1-sfb*eb,nb)*pow(1-sfl*el,nl);
-     
-      p1 = (nb>0 ? nb*sfb*eb*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl) : 0);
-      p1 += (nl>0 ? nl*sfl*el*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-1) : 0);
+    Weight(int jmin, int jmax) : maxTags(jmax), minTags(jmin) {}
       
-      p2 = 1-p0-p1;
-      
-      //errors (quadratic propagation of the uncertainty of the scale factor)
-      p0_err = (nb>0 ? pow(nb*sfb_err*eb*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl),2)  : 0. );
-      p0_err += (nl>0 ? pow(nl*sfl_err*el*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-1),2) : 0. );
-      p0_err = sqrt(p0_err);
-      
-      double a = (nb>1         ? nb*(nb-1)*pow(sfb_err*eb,2)*pow(1-sfb*eb,nb-2)*pow(1-sfl*el,nl) : 0.);
-      a       -= (nb>0 && nl>0 ? nb*sfb_err*eb*nl*sfl_err*el*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl-1) : 0.);
-      double b = (nl>1         ? nl*(nl-1)*pow(sfl_err*el,2)*pow(1-sfb*eb,nb)*pow(1-sfl*el,nl-2) : 0.);
-      b       -= (nb>0 && nl>0 ? nb*sfb_err*eb*nl*sfl_err*el*pow(1-sfb*eb,nb-1)*pow(1-sfl*el,nl-1) : 0.);
-      p1_err = sqrt(pow(a,2)+pow(b,2));
-      
-      p2_err = sqrt( pow(p1_err,2) + pow(p0_err,2) );
-    }
-    
-    inline std::vector<Weight_t> getWeights()
+      bool filter(int t) { return (t >= minTags && t <= maxTags); }
+      float weight(vector<JetInfo> jets, int tags);
+  
+  private:
+      int maxTags;
+      int minTags;
+  };
+  
+  float BTagWeight::weight(vector<JetInfo> jets, int tags)
+  {
+    if(!filter(tags)) return 0;
+    int njets=jets.size();
+    int comb= 1 << njets;
+    float pMC=0;
+    float pData=0;
+    for(int i=0;i < comb; i++)
       {
-	std::vector<Weight_t> results;
-	results.push_back( std::make_pair(p0,p0_err) );
-	results.push_back( std::make_pair(p1,p1_err) );
-	results.push_back( std::make_pair(p2,p2_err) );
-	return results;
+	float mc=1.;
+	float data=1.;
+	int ntagged=0;
+	for(int j=0;j<njets;j++)
+	  {
+	    bool tagged = ((i >> j) & 0x1) == 1;
+	    if(tagged) 
+	      {
+		ntagged++;
+		mc*=jets[j].eff;
+		data*=jets[j].eff*jets[j].sf;
+	      }
+	    else
+	     {
+	       mc*=(1.-jets[j].eff);
+	       data*=(1.-jets[j].eff*jets[j].sf);
+	     }
+	  }       
+	
+	if(filter(ntagged))
+	  {
+	    std::cout << mc << " " << data << endl;
+	    pMC+=mc;
+	    pData+=data;
+	  }
       }
     
-  private:
-    double p0,p1,p2;
-    double p0_err,p1_err,p2_err;
-    double eb,sfb,sfb_err;
-    double el,sfl,sfl_err;
-  };
-
+    if(pMC==0) return 0; 
+    return pData/pMC;
+  }
 }
 
 #endif

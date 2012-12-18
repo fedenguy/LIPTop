@@ -5,10 +5,10 @@
 #
 # CREATE BASE DISTRIBUTIONS AND ESTIMATE BACKGROUNDS
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/HCP2012_ntuples/ -o ~/work/top/2012_raw/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/syst-samples_2012.json -d /store/cmst3/user/psilva/HCP2012_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
-runPlotter --iLumi 14063 --inDir ~/work/top/2012_raw/ --outDir ~/work/top/2012_raw/plots --json data/samples_2012.json --outFile ~/work/top/plotter_raw.root --noLog  --plotExt .pdf --showUnc
-runPlotter --iLumi 14063 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/syst-samples_2012.json --outFile ~/work/top/plotter_syst.root --noPlot
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012_raw/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/syst-samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
+runPlotter --iLumi 16689 --inDir ~/work/top/2012_raw/ --outDir ~/work/top/2012_raw/plots --json data/samples_2012.json --outFile ~/work/top/plotter_raw.root --noLog  --plotExt .pdf --showUnc
+runPlotter --iLumi 16689 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/syst-samples_2012.json --outFile ~/work/top/plotter_syst.root --noPlot
 
 #
 # FIT DY
@@ -16,8 +16,8 @@ runPlotter --iLumi 14063 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots
 fitDYcontribution --in ~/work/top/plotter_raw.root --ttrep ~/work/top/plotter_syst.root  --out Img/ --smooth
 
 
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/HCP2012_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh
-runPlotter --iLumi 14063 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/plotter.root --noLog --plotExt .pdf --showUnc
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh
+runPlotter --iLumi 16689 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/plotter.root --noLog --plotExt .pdf --showUnc
 
 #compute DY fit systematics
 fitDYcontribution --in ~/work/top/plotter.root --ttrep ~/work/top/plotter_syst.root --out Img/ --smooth --syst

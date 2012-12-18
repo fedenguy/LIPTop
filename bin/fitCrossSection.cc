@@ -248,6 +248,9 @@ Shape_t getShapeFromFile(TFile* inF, TString ch, JSONWrapper::Object &Root, TFil
 		  for(size_t isigvar=0; isigvar<sizeof(signalVars)/sizeof(TString); isigvar++)
 		    {
 		      TH1F *hmcsig=(TH1F *)systF->Get("t#bar{t}syst"+signalVars[i]+"/"+histoName);
+		      // TH1F *normHisto=hshape; 
+		      //if(signalVars[isigvar].Contains("meps") || signalVars[isigvar].Contains("q2"))
+		      //normHisto=(TH1F *)systF->Get("t#bar{t}systspincorrel/"+histoName);
 		      if(hmcsig==0) continue;
 		      for(int ibin=1; ibin<=hshape->GetXaxis()->GetNbins(); ibin++) { 
 			if(find(binsToProject.begin(),binsToProject.end(),ibin) != binsToProject.end()) continue;

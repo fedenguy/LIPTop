@@ -70,13 +70,15 @@ import ROOT
 ROOT.gSystem.Load('${CMSSW_BASE}/lib/${SCRAM_ARCH}/libLIPTop.so')
 from ROOT import HFCMeasurement, eventHandlerFactory
 
+#create the fitter and configure it from file
+hfcFitter = HFCMeasurement('hfcParams_cfg.json',fitType,fitParams)
+
+sys.exit(-1)
+
 
 inF=ROOT.TFile.Open(ifile)
 jsonFile = open(samplesDB,'r')
 procList=json.load(jsonFile,encoding='utf-8').items()
-
-#create the fitter and configure fit from file
-hfcFitter = HFCMeasurement(fitType)
 
 #fitParamsFile = open('hfcFitter_cfg.json','r')
 fitParamsFile = open('hfcFitter_2012_cfg.json','r')

@@ -21,6 +21,7 @@
 #include "CMGTools/HtoZZ2l2nu/interface/ZZ2l2nuPhysicsEvent.h"
 #include "CMGTools/HtoZZ2l2nu/interface/SmartSelectionMonitor.h"
 #include "CMGTools/HtoZZ2l2nu/interface/METUtils.h"
+#include "CMGTools/HtoZZ2l2nu/interface/MacroUtils.h"
 
 #include "LIP/Top/interface/MisassignmentMeasurement.h"
 
@@ -28,12 +29,48 @@
 #include "FWCore/FWLite/interface/AutoLibraryLoader.h"
 #include "PhysicsTools/Utilities/interface/LumiReWeighting.h"
 
+#include "RooRealVar.h"
+#include "RooConstVar.h"
+#include "RooDataHist.h"
+#include "RooDataSet.h"
+#include "RooHistPdf.h"
+#include "RooMCStudy.h"
+#include "RooGaussian.h"
+#include "RooProdPdf.h"
+#include "RooAddPdf.h"
+#include "RooPlot.h"
+#include "Roo1DTable.h"
+#include "RooHist.h"
+#include "RooMinuit.h"
+#include "RooFitResult.h"
+#include "RooWorkspace.h"
+#include "RooCategory.h"
+#include "RooNLLVar.h"
+#include "RooProfileLL.h"
+#include "RooSimultaneous.h"
+#include "RooMinuit.h"
+
 #include <vector>
 
 using namespace std;
+using namespace RooFit;
+
+struct MljFitResults_t
+{
+  Double_t ncorrectMC,ncorrectMC_err,ncorrectData,ncorrectData_err;
+  Double_t nwrongMC,nwrongMC_err,nwrongData,nwrongData_err;
+  Double_t fcorrectMC,fcorrectMC_err,fcorrectData,fcorrectData_err;
+  Double_t sfcorrect, sfcorrect_err;
+  Double_t rho;
+  RooFitResult *fitRes;
+};
+
+
 
 stringstream report; 
-float dataLumi         = 5041.0;
+int iEcm               = 8;
+float dataLumi         = 16689;
+float baseRelUnc       = 0.044;
 int maxJets            = 4;
 int maxMixTries        = 100;
 float sfMetCut         = 40;
@@ -41,14 +78,19 @@ TString jesUncFile     = "${CMSSW_BASE}/src/CMGTools/HtoZZ2l2nu/data/GR_R_42_V23
 JetCorrectionUncertainty *jetCorUnc=0;
 TChain *dataChain, *signalChain;
 std::map<TString, TChain *> bckgChain;
-SmartSelectionMonitor controlHistos;
+std::map<TString, TChain *> systChain;
+std::map<TString, TH1 *> controlHistos;
 TRandom2 calibRndGen;
 
 //
 void printHelp();
-void fillEventsChain(TString url,JSONWrapper::Object &jsonF);
+void fillEventsChain(TString url,JSONWrapper::Object &jsonF,bool isSyst=false);
 void buildMljTemplates();
-void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, bool isDY,bool isVV);
+void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, bool isDY,bool isVV,TString systVar="");
+void fitMljData(TString reportUrl);
+MljFitResults_t runFit(TH1 *data, TH1 *correct, TH1 *model, TH1 *misassigned, bool isData, TString tag);
+void fixTemplate(TH1 *h);
+TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose=0, bool doLog=false, bool norm=false);
 
 ////CHECK ME
 std::map<TString,Int_t> procYields;
@@ -70,7 +112,43 @@ void printHelp()
 }
 
 //
-void fillEventsChain(TString url, JSONWrapper::Object &jsonF)
+void fixTemplate(TH1 *h)
+{
+  if(h==0) return;
+
+  //add underflow
+  double fbin  = h->GetBinContent(0) + h->GetBinContent(1);
+  double fbine = sqrt(h->GetBinError(0)*h->GetBinError(0)
+		      + h->GetBinError(1)*h->GetBinError(1));
+  h->SetBinContent(1,fbin);
+  h->SetBinError(1,fbine);
+  h->SetBinContent(0,0);
+  h->SetBinError(0,0);
+
+  //add overflow
+  int nbins = h->GetNbinsX();
+  fbin  = h->GetBinContent(nbins) + h->GetBinContent(nbins+1);
+  fbine = sqrt(h->GetBinError(nbins)*h->GetBinError(nbins) 
+	       + h->GetBinError(nbins+1)*h->GetBinError(nbins+1));
+  h->SetBinContent(nbins,fbin);
+  h->SetBinError(nbins,fbine);
+  h->SetBinContent(nbins+1,0);
+  h->SetBinError(nbins+1,0);
+
+  //do not let the flavor templates to have 0 in any bin 
+  //it will prevent the binned fit to converge properly
+  //if(!isData)
+  {
+    for(int ibin=1; ibin<=h->GetXaxis()->GetNbins(); ibin++)
+      {
+	if(h->GetBinContent(ibin)>0) continue;
+	h->SetBinContent(ibin,0.00001);
+      }
+  }
+}
+
+//
+void fillEventsChain(TString url, JSONWrapper::Object &jsonF, bool isSyst)
 {
   //iterate over the processes
   std::vector<JSONWrapper::Object> Process = jsonF["proc"].daughters();
@@ -79,9 +157,13 @@ void fillEventsChain(TString url, JSONWrapper::Object &jsonF)
       TString procCtr(""); procCtr+=i;
       TString proc=(Process[i])["tag"].toString();
       bool isData(Process[i]["isdata"].toBool()); 
+      if(isSyst) isData=false;
       bool isSignal(false);
       if(Process[i].isTag("issignal")) isSignal=Process[i]["issignal"].toBool();
-
+      if(isSyst) isSignal=false;
+      TString postfix("");
+      if(Process[i].isTag("mctruthmode")) postfix ="_filt" + Process[i]["mctruthmode"].toString();
+      
       TChain *c=0;
       if(isData)
 	{
@@ -100,20 +182,36 @@ void fillEventsChain(TString url, JSONWrapper::Object &jsonF)
 	{
 	  int split=1;
 	  if(Samples[id].isTag("split"))split = Samples[id]["split"].toInt();
-	  if(!isSignal && !isData)
+	  
+	  if(!isSignal && !isData && !isSyst)
 	    {
 	      c = new TChain;
 	      bckgChain[ (Samples[id])["dtag"].toString() ] = c;
 	    }
-	  
+	  if(isSyst)
+	    {
+	      TString systName("");
+	      if(proc.Contains("systpowheg"))  systName="powheg";
+	      if(proc.Contains("systmcatnlo")) systName="mcatnlo";
+	      if(proc.Contains("systq2down"))  systName="q2down";
+	      if(proc.Contains("systq2up"))  systName="q2up";
+	      if(proc.Contains("systmepsdown"))  systName="mepsdown";
+	      if(proc.Contains("systmepsup"))  systName="mepsup";
+	      if(systName=="") continue;
+	      c = new TChain;
+	      systChain[ systName ] = c;
+	    }
+
 	  //in case there was splitting of the analysis 
 	  for(int isplit=0; isplit<split; isplit++)
 	    {
 	      TString tname((Samples[id])["dtag"].toString());
 	      if(split>1) { tname += "_"; tname+=isplit; }
-	      TString fname(url+tname+"_summary.root");
+	      TString fname(url+tname+postfix+"_summary.root");
+
 	      //logic is inverted in the ROOT API...
 	      if(!gSystem->AccessPathName(fname))  c->AddFile(fname,TChain::kBigNumber,tname+"/data");
+	      else                                 cout << "[Warning] skipping " << fname << endl;
 	    }
   
 	}
@@ -131,34 +229,34 @@ void fillEventsChain(TString url, JSONWrapper::Object &jsonF)
 //
 void buildMljTemplates()
 {
-  TH1F *baseMlj= new TH1F("mlj",";Invariant Mass [GeV];Lepton-jet pairs",100,0,1000);
-  TString systVars[] = {"","jesup","jesdown","jerup","jerdown"};
-  TString mljVars[]  = {"","correct","misassigned","wrong","unmatched","rot","swap"};
-  for(size_t iSystVar=0; iSystVar<sizeof(systVars)/sizeof(TString); iSystVar++)
-    for(size_t imljVar=0; imljVar<sizeof(mljVars)/sizeof(TString); imljVar++)
-      controlHistos.addHistogram( (TH1F *) baseMlj->Clone(mljVars[imljVar]+"mlj"+systVars[iSystVar]) );
-  baseMlj->Delete();
-
   if(jetCorUnc==0)
     {
       gSystem->ExpandPathName(jesUncFile);  
       jetCorUnc = new JetCorrectionUncertainty(jesUncFile.Data());
     }
+
+  for(std::map<TString,TChain *>::iterator it = systChain.begin(); it != systChain.end(); it++)
+    {
+      cout << "[Syst: " << it->first << "]" << flush; fillMljTemplatesFrom(it->second,false,true,false,false,false,it->first); cout << endl;
+    }
+
   
-  fillMljTemplatesFrom(dataChain,  true,false,false,false,false);  cout << "." << flush;
-  fillMljTemplatesFrom(signalChain,false,true,false,false,false);  cout << "." << flush;
   for(std::map<TString,TChain *>::iterator it = bckgChain.begin(); it != bckgChain.end(); it++)
     {
       bool hasTop(it->first.Contains("SingleT") || it->first.Contains("TTJets"));
       bool isDY(it->first.Contains("DYJets"));
       bool isVV(it->first.Contains("WW") || it->first.Contains("ZZ") || it->first.Contains("WZ"));
-      fillMljTemplatesFrom(it->second,  false,false,hasTop,isDY,isVV);  cout << "." << flush;
+      cout << "[" << it->first << "]" << flush; fillMljTemplatesFrom(it->second,  false,false,hasTop,isDY,isVV); cout << endl;
     }
+  
+  cout << "[Signal]" << flush; fillMljTemplatesFrom(signalChain,false,true,false,false,false);  cout << endl;
+  cout << "[Data]" << flush;   fillMljTemplatesFrom(dataChain,  true,false,false,false,false);  cout << endl;
+
   cout << endl;
 }
 
 //
-void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, bool isDY,bool isVV)
+void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, bool isDY,bool isVV,TString systSample)
 {
   //attach to tree
   if(c==0) return;
@@ -166,22 +264,54 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
   if(iEntries==0) return;
   ZZ2l2nuSummaryHandler evHandler;
   bool result=evHandler.attachToTree((TTree *)c);
-  
   if(!result) return;
-  TString chPrefix("");
+
+  //book control histograms to return
+  std::set<float> cnormFactors;
+  std::vector<TString> systVars;
+  systVars.push_back("");
+  if(!isData && systSample=="") { systVars.push_back("jesup"); systVars.push_back("jesdown"); systVars.push_back("jerup"); systVars.push_back("jerdown"); systVars.push_back("puup"); systVars.push_back("pudown"); }
+
+  std::vector<TString> mljVars;
+  mljVars.push_back("");  mljVars.push_back("rot"); mljVars.push_back("swap");
+  if(!isData) { mljVars.push_back("correct"); mljVars.push_back("misassigned"); mljVars.push_back("wrong"); mljVars.push_back("unmatched"); }
+
+  SmartSelectionMonitor localControlHistos;
+  if(systSample!="") systSample="_"+systSample;
+  TH1F *baseMlj= new TH1F("mlj"+systSample,";Invariant Mass [GeV];Lepton-jet pairs",100,0,1000);
+  baseMlj->Sumw2();
+  localControlHistos.addHistogram(baseMlj);
+  for(size_t imljVar=0; imljVar<mljVars.size(); imljVar++)
+    {
+      for(size_t iSystVar=0; iSystVar<systVars.size(); iSystVar++)
+	{
+	  if(imljVar==0 && iSystVar==0) continue;
+	  TString name(mljVars[imljVar]+"mlj");
+	  if(systVars[iSystVar]!="") name += "_"+systVars[iSystVar];
+	  localControlHistos.addHistogram( (TH1F *) baseMlj->Clone(name+systSample) );
+	}
+    }
+
+  //
+  TString chPrefix("others");
   if(isData)                     chPrefix="data";  
   else if(isSignal)              chPrefix="signal";
   else if(isDY)                  chPrefix="dy"; 
   else if(isVV)                  chPrefix="vv"; 
   else if(hasTop && !isSignal)   chPrefix="stop";
+  int debugStep(iEntries<100?1:iEntries/100);
   for(unsigned int i=0; i<iEntries; i++)
     {
-      c->GetEntry(i,1);
+      if( i%debugStep==0 ) cout << "." << flush;
+      c->GetEntry(i,1); //read all branches
 
       //decode the event
       ZZ2l2nuSummary_t &ev = evHandler.getEvent();
-      float weight(isData ? 1.0 : ev.hptWeights[0]*ev.hptWeights[1]);  //for MC (xsec/NeventsGen)*puWeight
-      
+      float weight(isData ? 1.0 : ev.hptWeights[1]);  //for MC (xsec/NeventsGen)*puWeight
+      float weightUp(isData? 1.0 : ev.hptWeights[2]);
+      float weightDown(isData? 1.0 : ev.hptWeights[3]);
+      if(!isData) cnormFactors.insert(ev.hptWeights[0]);
+
       TString ch("");
       if(ev.cat==MUMU)     ch="mumu"; 
       else if(ev.cat==EE)  ch="ee"; 
@@ -196,7 +326,6 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
       PhysicsObjectLeptonCollection iRotLeptons = randomlyRotate(phys.leptons,phys.ajets,calibRndGen);
 
       //jets
-      int nJPLtags(0);
       std::vector<PhysicsObjectJetCollection> jetsVar;
       LorentzVectorCollection metsVar;      
       METUtils::computeVariation(phys.ajets, phys.leptons, phys.met[0], jetsVar, metsVar, jetCorUnc);
@@ -210,47 +339,47 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 	  else if(iSystVar!=METUtils::JER)                  continue;
 	  
 	  //analyze jets
-	  int nGoodJets(0);
-	  std::map<TString,std::vector<float> >mljs;
+	  std::map<TString,std::vector<float> > mljs;
+	  int nGoodJets(0),nbtags(0);
 	  for(size_t ijet=0; ijet<jetsVar[iSystVar].size(); ijet++)
 	    {
 	      if(jetsVar[iSystVar][ijet].pt()<30 || fabs(jetsVar[iSystVar][ijet].eta())>2.5) continue;
-	      nGoodJets++;
-	      if(iSystVar==0) nJPLtags += (jetsVar[iSystVar][ijet].btag3>0.275);
+	      nGoodJets++; 
+	      nbtags += (jetsVar[iSystVar][ijet].btag2>0.244);
+	      
 	      int partonMatch=jetsVar[iSystVar][ijet].genid;
 	      int flavorMatch=jetsVar[iSystVar][ijet].flavid;	      
-	      
+	      	      
 	      for(size_t ilep=0; ilep<2; ilep++)
 		{
 		  LorentzVector lj=phys.leptons[ilep]+jetsVar[iSystVar][ijet];
 		  float imlj=lj.mass();
-
 		  mljs[""].push_back( imlj );
 		  
-		  //rotated leptons model
-		  if(iSystVar==0)
+		  if(!isData) 
 		    {
-		      LorentzVector rotLJ=iRotLeptons[ilep]+jetsVar[iSystVar][ijet];
-		      mljs["rot"].push_back(rotLJ.mass());
+		      //MC truth check if the assignment is correct
+		      int assignCode=(phys.leptons[ilep].genid*partonMatch);
+		      bool isCorrect(assignCode<0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
+		      bool isFlipMatch(assignCode>0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
+		      if(isCorrect)       mljs["correct"].push_back(imlj);
+		      else                mljs["misassigned"].push_back(imlj);
+		      if(isFlipMatch)     mljs["wrong"].push_back(imlj);
+		      else if(!isCorrect) mljs["unmatched"].push_back(imlj);
 		    }
-		  
-		  //MC only
-		  if(isData) continue;
-		  
-		  //check if the assignment is correct
-		  int assignCode=(phys.leptons[ilep].genid*partonMatch);
-		  bool isCorrect(assignCode<0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
-		  bool isFlipMatch(assignCode>0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
-		  if(isCorrect)       mljs["correct"].push_back(imlj);
-		  else                mljs["misassigned"].push_back(imlj);
-		  if(isFlipMatch)     mljs["wrong"].push_back(imlj);
-		  else if(!isCorrect) mljs["unmatched"].push_back(imlj);
+
+		  if(iSystVar!=0) continue;
+
+		  //rotated leptons model
+		  LorentzVector rotLJ=iRotLeptons[ilep]+jetsVar[iSystVar][ijet];
+		  mljs["rot"].push_back(rotLJ.mass());
 		}
 	    }
+	  
 	  if(nGoodJets<2 || nGoodJets>maxJets) continue;
 	  
 	  //do the mixing for signal and data only
-	  if((isSignal || isData) && passMet && !isZcand)
+	  if((isSignal || isData) && passMet && !isZcand && iSystVar==0)
 	    {
 	      int imixtry(1);
 	      LorentzVectorCollection mixjets;
@@ -265,13 +394,13 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 		ZZ2l2nuSummary_t &mixev = evHandler.getEvent();
 		//if(evcat!= mixev.cat) continue;
 		PhysicsEvent_t mixphys = getPhysicsEventFrom(mixev);
-
+		
 		//check that it is not a Z cand
 		LorentzVector mixdil=mixphys.leptons[0]+mixphys.leptons[1];
 		bool isZcand((mixev.cat==EE||mixev.cat==MUMU)&&fabs(mixdil.mass()-91)<15);   
 		bool passMet(mixev.cat==EMU || ((mixev.cat==EE||mixev.cat==MUMU) && mixphys.met[0].pt()>sfMetCut));
 		if(!passMet || isZcand) continue;
-
+		
 		//analyse the jets
 		std::vector<PhysicsObjectJetCollection> mixjetsVar;
 		LorentzVectorCollection mixmetsVar;
@@ -290,7 +419,7 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 		if(int(mixjets.size())<nGoodJets) continue;	
 		break;
 	      }while(1);
-	
+	      
 	      //compute the mljs for the mixed jets
 	      for(size_t jjet=0; jjet<mixjets.size(); jjet++)
 		{
@@ -308,32 +437,65 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 	  std::vector<TString> ctf;
 	  if(passMet && !isZcand)
 	    {
+	      ctf.push_back(chPrefix+ch);
+	      ctf.push_back(chPrefix+ch+jetCat);
 	      if(!isData)
 		{
-		  ctf.push_back("all");
 		  ctf.push_back(ch);
 		  ctf.push_back(ch+jetCat);
 		}
-	      ctf.push_back(chPrefix);
-	      ctf.push_back(chPrefix+ch);
-	      ctf.push_back(chPrefix+jetCat);
-	      ctf.push_back(chPrefix+ch+jetCat);
 	    }
-	  else if(isZcand && nJPLtags==0)
+	  else if(isZcand && nbtags==0 && iSystVar==0 && ch!="emu")
 	    {	   
 	      ctf.push_back(chPrefix+ch+"z");
 	      ctf.push_back(chPrefix+ch+"z"+jetCat);
 	    }
 	  for(std::map<TString,std::vector<float> >::iterator mIt=mljs.begin(); mIt!=mljs.end(); mIt++)
 	    {
-	      TString hname(mIt->first); hname+="mlj"; hname+=systVar;
+	      TString hname(mIt->first); hname+="mlj"; if(systVar!="") hname+="_"+systVar;
 	      for(size_t imlj=0; imlj<mIt->second.size(); imlj++)
-		controlHistos.fillHisto(hname,ctf,(mIt->second)[imlj],weight);
+		localControlHistos.fillHisto(hname+systSample,ctf,(mIt->second)[imlj],weight);
+
+	      //special procedure for re-weighted events
+	      if(isData || iSystVar>0 || systSample!="") continue;
+	      hname=mIt->first; hname+="mlj"; if(systVar!="") hname+="_";
+	      for(size_t imlj=0; imlj<mIt->second.size(); imlj++)
+		{
+		  localControlHistos.fillHisto(hname+"puup",ctf,(mIt->second)[imlj],weightUp);
+		  localControlHistos.fillHisto(hname+"pudown",ctf,(mIt->second)[imlj],weightDown);
+		}
 	    }
 	}
     }
-}
 
+  //compute the normalization factor 1 / norm =  xsec / (\sum_i cnorm_i)
+  float norm(1.0);
+  if(!isData)
+    {
+      for(std::set<float>::iterator it=cnormFactors.begin(); it!=cnormFactors.end(); it++)
+	{
+	  if(*it==0) continue;
+	  norm += 1./(*it);
+	}
+      norm = 1./norm;
+    }
+
+  //rescale histograms according to xsec and delete afterwards
+  for(SmartSelectionMonitor::Monitor_t::iterator it =localControlHistos.getAllMonitors().begin(); it!= localControlHistos.getAllMonitors().end(); it++){
+    std::map<TString, TH1*>* map = it->second;
+    for(std::map<TString, TH1*>::iterator h =map->begin(); h!= map->end(); h++){
+      if(h->second==0) continue;
+      h->second->Scale(norm);
+      
+      TString name=h->second->GetName();
+      if(controlHistos.find(name)!=controlHistos.end()) { controlHistos[name]->Add(h->second); }
+      else                                              { controlHistos[name]=(TH1 *) h->second->Clone(); controlHistos[name]->SetDirectory(0); }
+
+      delete h->second;
+    }
+  }
+}
+  
 
 //
 int main(int argc, char* argv[])
@@ -343,32 +505,550 @@ int main(int argc, char* argv[])
   AutoLibraryLoader::enable();
 
   //configure
-  TString url(""), json("");
+  TString url(""), reportUrl(""), json(""),systJson("");
   for(int i=1;i<argc;i++)
     {
       string arg(argv[i]);
-      if(arg.find("--help")!=string::npos)              { printHelp();    return 0; }
-      if(arg.find("--in")!=string::npos && i+1<argc)    { url=argv[i+1];   gSystem->ExpandPathName(url); i++;  printf("in      = %s\n", url.Data()); }
-      if(arg.find("--json")!=string::npos && i+1<argc)  { json=argv[i+1];                                i++;  printf("json    = %s\n", json.Data()); }
-      if(arg.find("--iLumi")!=string::npos && i+1<argc) { sscanf(argv[i+1],"%f",&dataLumi);              i++;  printf("lumi    = %f\n", dataLumi); }
+      if(arg.find("--help")!=string::npos)                  { printHelp();    return 0; }
+      if(arg.find("--in")!=string::npos && i+1<argc)        { url=argv[i+1];   gSystem->ExpandPathName(url); i++;      printf("in       = %s\n", url.Data()); }
+      if(arg.find("--json")!=string::npos && i+1<argc)      { json=argv[i+1];                                i++;      printf("json     = %s\n", json.Data()); }
+      if(arg.find("--systJson")!=string::npos && i+1<argc)  { systJson=argv[i+1];                            i++;      printf("systJson = %s\n", systJson.Data()); }
+      if(arg.find("--iLumi")!=string::npos && i+1<argc)     { sscanf(argv[i+1],"%f",&dataLumi);              i++;      printf("lumi     = %f\n", dataLumi); }
+      if(arg.find("--use")!=string::npos && i+1<argc)       { reportUrl=argv[i+1]; gSystem->ExpandPathName(reportUrl); printf("report   = %s\n",reportUrl.Data()); }
+
     }
   if(url=="" || json=="") { printHelp(); return 0;}
 
-  //readout the data
-  JSONWrapper::Object jsonF(json.Data(), true);
-  fillEventsChain(url, jsonF);
+  //general plotting style
+  setStyle();
+  gStyle->SetPadTopMargin   (0.06);
+  gStyle->SetPadBottomMargin(0.12);
+  gStyle->SetPadRightMargin (0.16);
+  gStyle->SetPadLeftMargin  (0.14);
+  gStyle->SetTitleSize(0.04, "XYZ");
+  gStyle->SetTitleXOffset(1.1);
+  gStyle->SetTitleYOffset(1.45);
+  gStyle->SetPalette(1);
+  gStyle->SetNdivisions(505);
 
-  //fill the templated distributions for Mlj
-  buildMljTemplates();
+  if(reportUrl=="")
+    {
+      cout << "No report url was provided, recreating from available samples list: " << json.Data() << endl;
+      
+      //readout the data
+      JSONWrapper::Object jsonF(json.Data(), true);
+      fillEventsChain(url, jsonF);
 
+      if(systJson!="")
+	{
+	  JSONWrapper::Object systJsonF(systJson.Data(), true);
+	  fillEventsChain(url, systJsonF, true);
+	}
+      
+      //fill the templated distributions for Mlj
+      buildMljTemplates(); 
+     
+      //save everything
+      reportUrl="MljAnalysisReport.root";
+      TFile *outF=TFile::Open(reportUrl,"recreate");
+      outF->cd();
+      for(std::map<TString,TH1 *>::iterator it=controlHistos.begin(); it!= controlHistos.end(); it++) it->second->Write();
+      outF->Close();
+    }
+
+  cout << "Parsing " << reportUrl << endl;
+  fitMljData(reportUrl);
 
   cout << report.str() << endl;
+}
 
-  //save everything
-  TFile *outF=TFile::Open("MljAnalysisReport.root","recreate");
-  outF->cd();
-  controlHistos.Write();
-  outF->Close();
+//
+MljFitResults_t runFit(TH1 *data, TH1 *correct, TH1 *model, TH1 *misassigned, bool isData, TString tag)
+{
+  MljFitResults_t r;
+
+  int njets(2);
+  if(tag.Contains("eq3jets")) njets=3;
+  if(tag.Contains("eq4jets")) njets=4;
+  
+  //predictions for the fraction of correct assignments
+  r.ncorrectMC=correct->IntegralAndError(1,correct->GetXaxis()->GetNbins(),r.ncorrectMC_err);
+  r.nwrongMC=misassigned->IntegralAndError(1,misassigned->GetXaxis()->GetNbins(),r.nwrongMC_err);
+  r.fcorrectMC=r.ncorrectMC/(r.ncorrectMC+r.nwrongMC);
+  r.fcorrectMC_err=sqrt(pow(r.ncorrectMC_err*(2*r.ncorrectMC+r.nwrongMC),2)+pow(r.ncorrectMC*r.nwrongMC_err,2))/pow(r.ncorrectMC+r.nwrongMC,2);
+  
+  RooRealVar mlj          (tag+"_mlj",         "mlj",         data->GetXaxis()->GetXmin(), data->GetXaxis()->GetXmax());
+  RooDataHist dataHist    (tag+"_datahist",    "datahist",    mlj, RooFit::Import(*data));
+  RooDataHist correctHist (tag+"_correcthist", "correcthist", mlj, RooFit::Import(*correct));
+  RooHistPdf correctPdf   (tag+"_correctpdf",  "correctpdf",  RooArgSet(mlj), correctHist);
+  RooDataHist modelHist   (tag+"_modelhist",   "modelhist",   mlj, RooFit::Import(*model));
+  RooHistPdf modelPdf     (tag+"_modelpdf",    "modelpdf",    RooArgSet(mlj), modelHist);
+  RooRealVar ntwq         (tag+"_ntwq",        "ntwq",       r.ncorrectMC/(2*njets), r.ncorrectMC/(4*njets), r.ncorrectMC/njets);
+  // RooRealVar ncorrect    (tag+"_ncorrect",    "ncorrect",    r.ncorrectMC,  r.ncorrectMC*0.5, r.ncorrectMC*2);
+  RooFormulaVar ncorrect  (tag+"_ncorrect",    "@0*@1", RooArgSet(ntwq,RooConst(2*njets)));
+  RooRealVar nother       (tag+"_nother",        "nother",       r.nwrongMC/(2*njets), r.nwrongMC/(4*njets), r.nwrongMC/njets);
+  //  RooRealVar nwrong       (tag+"_nwrong",      "nwrong",      r.nwrongMC,    r.nwrongMC*0.5,   r.nwrongMC*2);
+  RooFormulaVar nwrong    (tag+"_nwrong",    "@0*@1", RooArgSet(nother,RooConst(2*njets)));
+  RooFormulaVar fcorrect  (tag+"_fcorrect","@0/(@0+@1)",RooArgSet(ncorrect,nwrong));
+  RooFormulaVar fwrong    (tag+"_fwrong","1-@0",RooArgSet(fcorrect));
+  RooAddPdf     shapeModel("shapemodel",   "shapemodel", RooArgSet(correctPdf,modelPdf), RooArgSet(ncorrect,nwrong));
+  RooFitResult* fitRes = shapeModel.fitTo(dataHist,RooFit::Save(kTRUE), Extended(kTRUE));
+  
+  r.fitRes           = fitRes;
+  float ntwqVal = ntwq.getVal();
+  float ntwqVal_err = ntwq.getError();
+  float notherVal = nother.getVal();
+  float notherVal_err = nother.getError();
+  r.ncorrectData     = 2*njets*ntwq.getVal(); 
+  r.ncorrectData_err = 2*njets*ntwq.getError();
+  r.nwrongData       = 2*njets*nother.getVal();
+  r.nwrongData_err   = 2*njets*nother.getError();
+  r.rho              = fitRes->correlation(ncorrect,nwrong);
+  r.fcorrectData=r.ncorrectData/(r.ncorrectData+r.nwrongData);
+  r.fcorrectData_err = sqrt( pow(r.ncorrectData_err*(2*r.ncorrectData+r.nwrongData),2)
+			     + pow(r.ncorrectData*r.nwrongData_err,2)
+			     +2*r.rho*r.ncorrectData_err*r.nwrongData_err*(2*r.ncorrectData+r.nwrongData)*r.ncorrectData
+			     )/pow(r.ncorrectData+r.nwrongData,2);
+  r.sfcorrect        = r.fcorrectData/r.fcorrectMC;
+  r.sfcorrect_err    = sqrt(pow(r.fcorrectData_err*r.fcorrectMC,2)+pow(r.fcorrectData*r.fcorrectMC_err,2))/pow(r.fcorrectMC,2);
+
+  if(isData)
+    {
+      TCanvas *c=new TCanvas("c","c",600,600);
+      c->cd();
+
+      RooNLLVar *nll = (RooNLLVar *) shapeModel.createNLL(dataHist);
+
+      RooMinuit minuit(*nll); 
+      minuit.setStrategy(2);
+      minuit.setPrintLevel(1);
+      minuit.setErrorLevel(0.5);
+      minuit.hesse();
+      minuit.migrad();
+
+      RooPlot *cplot = minuit.contour(ntwq,nother,1,2,3);
+      cplot->Draw();
+      cplot->GetXaxis()->SetTitle("N(t#rightarrow Wq)");
+      cplot->GetXaxis()->SetTitleOffset(1.1);
+      cplot->GetXaxis()->SetRangeUser(ntwqVal-4*ntwqVal_err,ntwqVal+4*ntwqVal_err);
+      cplot->GetYaxis()->SetTitle("N(background)");
+      cplot->GetYaxis()->SetTitleOffset(1.9);
+      cplot->GetYaxis()->SetRangeUser(notherVal-4*notherVal_err,notherVal+4*notherVal_err);
+
+      TLegend *leg=new TLegend(0.845,0.2,0.99,0.99,"", "brNDC");
+      leg->SetFillColor(0);
+      leg->SetFillStyle(0);
+      leg->SetTextAlign(12);
+      leg->SetLineColor(0);
+      leg->SetBorderSize(0);
+      leg->SetTextFont(42);
+       TIter next(c->GetListOfPrimitives());
+      TObject *obj=0;
+      while((obj = next()))
+	{
+	  TString name=obj->GetName();
+	  TString title("");
+	  int fill=0, color=1;
+	  if(name.Contains("n1")) { title="1-#sigma"; fill=1001; color=kAzure+9; }
+	  if(name.Contains("n2")) { title="2-#sigma"; fill=3001; color=kOrange-2; }
+	  if(name.Contains("n3")) { title="3-#sigma"; fill=3002; color=kGreen+3; }
+	  if(fill==0) continue;
+	  TGraph *gr=(TGraph *)obj;
+	  gr->SetFillStyle(fill);
+	  gr->SetFillColor(color);
+	  gr->SetLineColor(1);
+	  gr->SetDrawOption("f");
+	  leg->AddEntry(gr,title,"f");
+	}
+
+      TString header(tag);
+      header.ReplaceAll("mu","#mu");
+      header.ReplaceAll("eq"," =");
+      header.ReplaceAll("jets"," jets");
+      leg->SetHeader(header);
+      leg->Draw();
+
+      TPaveText *T = new TPaveText(0.1,0.995,0.84,0.95, "NDC");
+      T->SetFillColor(0); T->SetFillStyle(0);  T->SetLineColor(0); T->SetBorderSize(0);   T->SetTextAlign(22);
+      char Buffer[1024];
+      sprintf(Buffer, "CMS preliminary, #sqrt{s}=%d TeV, #scale[0.5]{#int} L=%.1f fb^{-1}, N(t#rightarrow Wq)=", iEcm, dataLumi/1000);
+      TString buf=toLatexRounded(ntwqVal,ntwqVal_err);
+      buf.ReplaceAll("\\pm","#pm");
+      buf.ReplaceAll("$","");
+      T->AddText(Buffer+buf);
+      T->Draw("same");
+
+      c->SaveAs(tag+"_contour.png");
+      delete c;
+    }
+
+  return r;
+}
+
+//
+void fitMljData(TString reportUrl)
+{
+ 
+  report << "\\begin{center}"
+	 << "\\caption{Results of the fit for the fraction of correct $t\\rightarrow Wq$ assignments in the $M_{lj}$ spectrum}" << endl 
+	 << "\\begin{tabular}{lccc} \\hline" << endl
+	 << "Category & $f_{correct}^{MC}$ & $f_{correct}^{data}$ & $SF_{correct}$ \\\\\\hline\\hline" << endl;
+
+  TString ch[]={"ee","emu","mumu"};
+  TString cats[]={"eq2jets","eq3jets","eq4jets"};
+  std::map<TString,std::vector<std::pair<TString,Float_t> > > systMap;
+  for(size_t ich=0; ich<sizeof(ch)/sizeof(TString); ich++)
+    {
+      for(size_t icat=0; icat<sizeof(cats)/sizeof(TString); icat++)
+	{
+	  TString tag(ch[ich]+cats[icat]);
+	  
+	  //get histos from file
+	  TFile *inF=TFile::Open(reportUrl);
+
+	  TH1F *data        = (TH1F *)inF->Get("data"+tag+"_mlj");	  
+	  formatPlot(data,        1,1,1,20,0,true,true,1,0,1);
+	  fixTemplate(data);
+	  if(data) { data->SetTitle("data"); data->Rebin(); }
+	  
+	  TH1F *correct     = (TH1F *)inF->Get(tag+"_correctmlj");        
+	  formatPlot(correct,     614,1,1,1,1001,true,true,1,614,614); 
+	  fixTemplate(correct);
+	  if(correct)     { correct->Scale(dataLumi); correct->SetTitle("correct"); correct->Rebin(); }
+	  
+	  TH1F *unmatched   = (TH1F *)inF->Get(tag+"_unmatchedmlj");      
+	  formatPlot(unmatched,   824,1,1,1,1001,true,true,1,824,824); 
+	  fixTemplate(unmatched);
+	  if(unmatched)   { unmatched->Scale(dataLumi); unmatched->SetTitle("unmatched"); unmatched->Rebin(); }
+	  
+	  TH1F *misassigned = (TH1F *)inF->Get(tag+"_misassignedmlj");    
+	  formatPlot(misassigned, 822,1,1,1,1001,true,true,1,822,822); 
+	  fixTemplate(misassigned);
+	  if(misassigned) { misassigned->Scale(dataLumi); misassigned->SetTitle("misassigned"); misassigned->Rebin();}
+	  
+	  TH1F *dy          = (TH1F *)inF->Get("dy"+tag+"_mlj");          
+	  formatPlot(dy,          1,1,1,20,0,true,true,1,1,1);    
+	  fixTemplate(dy);
+	  if(dy)          { dy->Scale(dataLumi);      dy->SetTitle("#splitline{Z#rightarrow ll}{(MC)}"); dy->Rebin(); }
+
+	  TString ztag(ch[ich]+"z"+cats[icat]);
+	  TH1F *dymodel     = (TH1F *)inF->Get("data"+ztag+"_mlj");          
+	  formatPlot(dymodel,          831,1,1,20,1001,true,true,1,831,831);    
+	  fixTemplate(dymodel);
+	  if(dymodel)      {  dymodel->SetTitle("#splitline{Z#rightarrow ll}{(data)}"); dymodel->Rebin(); }
+
+	  TH1F *dymcmodel     = (TH1F *)inF->Get("dy"+ztag+"_mlj");          
+	  formatPlot(dymcmodel,          831,1,1,1,1001,true,true,1,831,831);    
+	  fixTemplate(dymcmodel);
+	  if(dymcmodel)      {  dy->Scale(dataLumi); dymcmodel->SetTitle("#splitline{Z#rightarrow ll}{(pseudo-data)}"); dymcmodel->Rebin();}
+
+	  TH1F *wrong       = (TH1F *)inF->Get(tag+"_wrongmlj");          
+	  formatPlot(wrong,       592,1,1,1,1001,true,true,1,592,592); 
+	  fixTemplate(wrong);
+	  if(wrong)       { wrong->Scale(dataLumi);   wrong->SetTitle("wrong"); wrong->Rebin(); }
+
+	  TH1F *model       = (TH1F *)inF->Get("data"+tag+"_rotmlj");     
+	  // TH1F *model       = (TH1F *)inF->Get("data"+tag+"_swapmlj");     
+	  formatPlot(model,       1,1,1,20,0,true,true,1,0,1);
+	  fixTemplate(model);
+	  if(model)       { model->SetTitle("#splitline{wrong}{(data)}"); model->Rebin(); }
+
+	  TH1F *mcmodel       = (TH1F *)inF->Get(tag+"_rotmlj");     
+	  formatPlot(mcmodel,       1,1,1,20,0,true,true,1,0,1);
+	  fixTemplate(mcmodel);
+	  if(mcmodel)       { 
+	    mcmodel->SetTitle("#splitline{wrong}{(pseudo-data)}"); 
+	    mcmodel->Rebin();
+	    if(model) mcmodel->Scale(model->Integral()/mcmodel->Integral());
+	  }
+
+	  //fit to data
+	  MljFitResults_t r=runFit(data,correct,model,misassigned,true,tag);
+	  report << ch[ich] << " " << cats[icat] << " & "
+		 << toLatexRounded(r.fcorrectMC,   r.fcorrectMC_err) << " & "
+		 << toLatexRounded(r.fcorrectData, r.fcorrectData_err) << " & "
+		 << toLatexRounded(r.sfcorrect,    r.sfcorrect_err) << " \\\\" << endl;
+
+	  //evaluate the systematics
+	  typedef std::pair<TString,TString> SystKey_t;
+	  std::map<TString, SystKey_t> systList;
+	  systList["JES"]=SystKey_t("jesup","jesdown");
+	  systList["JER"]=SystKey_t("jerup","jerdown");
+	  systList["MEPS"]=SystKey_t("mepsup","mepsdown");
+	  systList["Q^2"]=SystKey_t("q2up","q2down");
+	  systList["Signal"]=SystKey_t("powheg","mcatnlo");
+	  systList["DY"]=SystKey_t("dyup","dydown");
+	  for(std::map<TString, SystKey_t>::iterator sIt = systList.begin(); sIt!=systList.end(); sIt++)
+	    {
+	      
+	      TH1F *correctUp     = correct;
+	      TH1F *correctDown   = correct;
+	      TH1F *dataUp       = data;
+	      TH1F *dataDown       = data;
+	      if(sIt->first!="DY")
+		{
+		  correctUp = (TH1F *)inF->Get(tag+"_correctmlj_"+sIt->second.first);        
+		  if(correctUp==0) continue;
+		  correctUp->SetDirectory(0);
+		  fixTemplate(correctUp);
+		  correctUp->Scale(correct->Integral()/correctUp->Integral());
+		  correctUp->Rebin(); 
+		  
+		  correctDown = (TH1F *)inF->Get(tag+"_correctmlj_"+sIt->second.second);
+		  if(correctDown==0) continue;
+		  correctDown->SetDirectory(0);
+		  fixTemplate(correctUp);
+		  correctDown->Scale(correct->Integral()/correctDown->Integral());
+		  correctDown->Rebin(); 
+		}
+	      else
+		{
+		  dataUp=(TH1F *) data->Clone("dataup");     dataUp->Add(dy,0.10);
+		  dataDown=(TH1F *) data->Clone("datadown"); dataDown->Add(dy,-0.10);
+		}
+
+	      MljFitResults_t rUp   = runFit(dataUp,correctUp,model,misassigned,false,tag);
+	      MljFitResults_t rDown = runFit(dataDown,correctDown,model,misassigned,false,tag);
+	      
+	      float varUp   = 100*(rUp.sfcorrect/r.sfcorrect-1);
+	      float varDown = 100*(rDown.sfcorrect/r.sfcorrect-1);
+	      float var=0.5*(fabs(varUp)+fabs(varDown));
+	      if(sIt->first=="Signal") var=fabs(rUp.sfcorrect/rDown.sfcorrect-1);
+	      systMap[tag].push_back(std::pair<TString,Float_t>(sIt->first,var));
+	    }
+	  inF->Close();
+
+	  //show distributions
+
+	  //before the fit
+	  TObjArray stackList; stackList.Add(misassigned);  stackList.Add(correct); 
+	  TCanvas *c=plot(&stackList,data,0,false);
+	  c->SaveAs(tag+".png");
+	  
+	  //postfit
+	  TH1F *correctFit=(TH1F *)correct->Clone(correct->GetName()+TString("post"));  correctFit->Scale(r.sfcorrect);
+	  TH1F *misassignedFit=(TH1F *)model->Clone(model->GetName()+TString("post"));  misassignedFit->Scale((misassigned->Integral()/model->Integral())*( 1-r.fcorrectData)/(1-r.fcorrectMC));
+	  stackList.Clear(); stackList.Add(misassignedFit); stackList.Add(correctFit);
+	  c=plot(&stackList,data,0,false);
+	  c->SaveAs(tag+"_post.png");
+
+	  //postfit subtracted
+	  TH1F *dataRes=(TH1F *)data->Clone("datares"); 
+	  dataRes->SetTitle("#splitline{data}{(residuals)}");
+	  data->Add(misassignedFit,-1);
+	  stackList.Clear(); stackList.Add(correctFit);
+	  c=plot(&stackList,data,0,false);
+	  c->SaveAs(tag+"_postres.png");
+	  
+	  //misassignment composition in MC
+	  stackList.Clear();    stackList.Add(unmatched);   stackList.Add(wrong);
+	  c=plot(&stackList,mcmodel,0,false,true);
+	  c->SaveAs(tag+"_wrong.png");
+
+	  stackList.Clear();      stackList.Add(wrong);
+	  c=plot(&stackList,model,0,false,true);
+	  c->SaveAs(tag+"_wrongmodel.png");
+
+	  c=plot(&stackList,dy,0,false,true);
+	  c->SaveAs(tag+"_wrongvsdy.png");
+	}
+    }
+
+  report << "\\hline\\end{tabular}\n\\end{center}" << endl;
+
+  //systs table
+  report << endl;
+  for(std::map<TString,std::vector<std::pair<TString,Float_t> > >::iterator cIt=systMap.begin(); cIt!= systMap.end(); cIt++)
+    {
+      if(cIt==systMap.begin())
+	{
+	  report << "Source";
+	  for(std::vector<std::pair<TString,Float_t> >::iterator sIt=cIt->second.begin(); sIt!=cIt->second.end(); sIt++)
+	    report << " & " << sIt->first;
+	  report << " & Total \\\\\\hline" << endl;
+	}
+
+      float total(0);
+      report << cIt->first;
+      for(std::vector<std::pair<TString,Float_t> >::iterator sIt=cIt->second.begin(); sIt!=cIt->second.end(); sIt++)
+	{
+	  report << " & " << sIt->second;
+	  total += pow(sIt->second,2);
+	}
+      report << " & " << sqrt(total) << " \\\\" << endl;
+    }
+}
+
+//
+TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose, bool doLog, bool norm)
+{
+  TCanvas* c = new TCanvas("c","c",800,800);
+  if(data==0) return c;
+
+  //main plot
+  c->cd();
+  TPad* t1 = new TPad("t1","t1", 0.0, 0.20, 1.0, 1.0);
+  t1->Draw();  t1->cd();
+  if(doLog) t1->SetLogy(true);
+
+  TLegend* leg  = new TLegend(0.845,0.2,0.99,0.99,"", "brNDC"); 
+  leg->AddEntry(data,data->GetTitle(), "P");
+
+  //normalization factor
+  float normFactor(1.0);
+  float totalPred(0);
+  for(int i=0; i<mc->GetEntriesFast(); i++) totalPred += ((TH1 *) mc->At(i))->Integral();
+  if(norm && totalPred>0) normFactor=data->Integral()/totalPred;
+  
+  //prediction
+  THStack* stack = new THStack("MC","MC");
+  TH1 *totalMC=0;
+  for(int i=0; i<mc->GetEntriesFast(); i++)
+    {
+      TH1 *hist=(TH1 *)mc->At(i);
+      if(hist==0) continue;
+      hist=(TH1 *) hist->Clone();
+      hist->Scale(normFactor);
+      stack->Add(hist, "HIST");               
+      leg->AddEntry(hist, hist->GetTitle(), "F");
+
+      if(totalMC==0) { totalMC=(TH1 *) hist->Clone("totalpred"); totalMC->SetDirectory(0); }
+      else           { totalMC->Add(hist); }
+    }
+
+  for(int ibin=1; ibin<=totalMC->GetXaxis()->GetNbins(); ibin++)
+    {
+      Double_t error=sqrt(pow(totalMC->GetBinError(ibin),2)+pow(totalMC->GetBinContent(ibin)*baseRelUnc,2));
+      totalMC->SetBinError(ibin,error);
+    }
+  totalMC->SetFillStyle(3427);
+  totalMC->SetFillColor(kGray+1);
+  totalMC->SetMarkerStyle(1);
+
+  stack->Draw("");
+  stack->GetXaxis()->SetTitle(totalMC->GetXaxis()->GetTitle());
+  stack->GetYaxis()->SetTitle(totalMC->GetYaxis()->GetTitle());
+  if(norm) stack->GetYaxis()->SetTitle(totalMC->GetYaxis()->GetTitle()+ TString(" (a.u.)"));
+  stack->SetMinimum(1e-2);
+  stack->SetMaximum(max(totalMC->GetMaximum()*1.10,data->GetMaximum()*1.10));
+
+  //overlay total uncertainty band
+  totalMC->SetLineColor(kGray);
+  totalMC->SetFillStyle(3001);
+  totalMC->SetFillColor(kGray);
+  totalMC->SetMarkerColor(kGray);
+  totalMC->SetMarkerStyle(1);
+  totalMC->Draw("e2same");
+
+  //for comparison
+  if(spimpose)
+    {
+      for(int i=0; i<spimpose->GetEntriesFast(); i++)
+	{
+	  TH1 *hist=(TH1 *)spimpose->At(i);
+	  if(hist==0) continue;
+	  hist = (TH1 *)hist->Clone();
+	  hist->Scale(normFactor);
+	  hist->Draw("histsame");
+	  leg->AddEntry(hist, hist->GetTitle(), "L");
+	}
+    }
+
+  ///data
+  data->Draw("e1 same");
+
+  //caption
+  TString tag=data->GetName();
+  TString header("ee");
+  if(tag.Contains("mumu"))    header="#mu#mu";
+  if(tag.Contains("emu"))     header="e#mu";
+  if(tag.Contains("eq2jets")) header+=",=2 jets";
+  if(tag.Contains("eq3jets")) header+=",=3 jets";
+  if(tag.Contains("eq4jets")) header+=",=4 jets";
+  leg->SetHeader(header);
+  leg->SetFillColor(0); leg->SetFillStyle(0); leg->SetLineColor(0);  leg->SetTextFont(42); leg->Draw("same");
+
+  //chi-2,K-S tests
+  TPaveText *pave = new TPaveText(0.6,0.8,0.8,0.9,"NDC");
+  pave->SetBorderSize(0);
+  pave->SetFillStyle(0);
+  pave->SetTextAlign(32);
+  pave->SetTextFont(42);
+  char buf[100];
+  sprintf(buf,"#chi^{2}/ndof : %3.2f", data->Chi2Test(totalMC,"WWCHI2/NDF") );
+  pave->AddText(buf);
+  sprintf(buf,"K-S prob : %3.2f", data->KolmogorovTest(totalMC,"X") );
+  pave->AddText(buf);
+  pave->Draw();
+
+  //title
+  TPaveText* T = new TPaveText(0.1,0.995,0.84,0.95, "NDC");
+  T->SetFillColor(0); T->SetFillStyle(0);  T->SetLineColor(0);  T->SetTextAlign(22);
+  char Buffer[1024]; 
+  sprintf(Buffer, "CMS preliminary, #sqrt{s}=%d TeV, #scale[0.5]{#int} L=%.1f fb^{-1}", iEcm, dataLumi/1000);
+  T->AddText(Buffer);
+  T->Draw("same");
+  T->SetBorderSize(0);
+  
+  //comparison 
+  c->cd();
+  TPad* t2 = new TPad("t2","t2", 0.0, 0.0, 1.0, 0.2);
+  t2->Draw();
+  t2->cd();
+  t2->SetGridy(true);
+  t2->SetPad(0,0.0,1.0,0.2);
+  t2->SetTopMargin(0);
+  t2->SetBottomMargin(0.5);
+
+  //mc stats
+  TH1 *denRelUncH=(TH1 *) totalMC->Clone("totalpredrelunc");
+  for(int xbin=1; xbin<=denRelUncH->GetXaxis()->GetNbins(); xbin++)
+    {
+      if(denRelUncH->GetBinContent(xbin)==0) continue;
+      Double_t err=denRelUncH->GetBinError(xbin)/denRelUncH->GetBinContent(xbin);
+      denRelUncH->SetBinContent(xbin,1);
+      denRelUncH->SetBinError(xbin,err);
+    }
+  TGraphErrors *denRelUnc=new TGraphErrors(denRelUncH);
+  denRelUnc->SetLineColor(1);
+  denRelUnc->SetFillStyle(3001);
+  denRelUnc->SetFillColor(kGray);
+  denRelUnc->SetMarkerColor(1);
+  denRelUnc->SetMarkerStyle(1);
+  denRelUncH->Reset("ICE");       
+  denRelUncH->Draw();
+  denRelUnc->Draw("3");
+
+  TH1 *ratio=(TH1 *)data->Clone("totalpredrel");
+  ratio->Divide(totalMC);
+  ratio->SetMarkerStyle(20);
+  ratio->Draw("e1 same");
+
+  float yscale = (1.0-0.2)/(0.18-0);       
+  denRelUncH->GetYaxis()->SetTitle("Data/Exp.");
+  denRelUncH->SetMinimum(0.4);
+  denRelUncH->SetMaximum(1.6);
+  denRelUncH->GetXaxis()->SetTitle("");
+  denRelUncH->GetXaxis()->SetTitleOffset(1.3);
+  denRelUncH->GetXaxis()->SetLabelSize(0.033*yscale);
+  denRelUncH->GetXaxis()->SetTitleSize(0.036*yscale);
+  denRelUncH->GetXaxis()->SetTickLength(0.03*yscale);
+  denRelUncH->GetYaxis()->SetTitleOffset(0.3);
+  denRelUncH->GetYaxis()->SetTitleFont(42);
+  denRelUncH->GetYaxis()->SetNdivisions(5);
+  denRelUncH->GetYaxis()->SetLabelSize(0.033*yscale);
+  denRelUncH->GetYaxis()->SetTitleSize(0.036*yscale);
+   
+  //all done here
+  c->Modified();
+  c->Update();
+  return c;
+}
+ 
+
+
+
+
 
   //calibrate method
   /*
@@ -406,7 +1086,6 @@ int main(int argc, char* argv[])
 // 	}
 
 
-}
 
 
 /*
@@ -811,7 +1490,7 @@ void runCalibration(TString url, JSONWrapper::Object &jsonF, Double_t lumi, int 
       TList mcList;     mcList.Add(mcWrongH);       mcList.Add(mcCorrectH);    
       TList modelList;  modelList.Add(mcmodelH);    modelList.Add(datamodelH);
       
-      TPad *p=(TPad *) mljc->cd(icat+1);
+      Tpad *p=(TPad *) mljc->cd(icat+1);
       TLegend *leg = showPlotsAndMCtoDataComparison(p,mcList,nullList,dataList);     
       TPad *sp=(TPad *)p->cd(1);
       if(icat==0)  formatForCmsPublic(sp,leg,titBuf,3);
