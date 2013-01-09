@@ -62,6 +62,9 @@ struct Shape_t
   
   //cross section and uncertainties
   std::map<TString,std::pair<float,float> > crossSections;
+
+  //signal rate uncertainties
+  std::map<TString,std::pair<float,float> > rateUncs;
 };
 
 
@@ -247,24 +250,31 @@ Shape_t getShapeFromFile(TFile* inF, TString ch, JSONWrapper::Object &Root, TFil
 		  TString signalVars[]={"powheg","q2up","q2down","mepsup","mepsdown"};
 		  for(size_t isigvar=0; isigvar<sizeof(signalVars)/sizeof(TString); isigvar++)
 		    {
-		      TH1F *hmcsig=(TH1F *)systF->Get("t#bar{t}syst"+signalVars[i]+"/"+histoName);
+		      TH1F *hmcsig=(TH1F *)systF->Get("t#bar{t}syst"+signalVars[isigvar]+"/"+histoName);
 		      // TH1F *normHisto=hshape; 
 		      //if(signalVars[isigvar].Contains("meps") || signalVars[isigvar].Contains("q2"))
 		      //normHisto=(TH1F *)systF->Get("t#bar{t}systspincorrel/"+histoName);
-		      if(hmcsig==0) continue;
+		      if(hmcsig==0) { cout << "Skipping null variation: " << signalVars[isigvar] << endl;  continue; }
 		      for(int ibin=1; ibin<=hshape->GetXaxis()->GetNbins(); ibin++) { 
 			if(find(binsToProject.begin(),binsToProject.end(),ibin) != binsToProject.end()) continue;
 			hmcsig->SetBinContent(ibin,0);
 			hmcsig->SetBinError(ibin,0);
 		      }
 		      hmcsig->SetDirectory(0); 
+		      Double_t sf=hshape->Integral()/hmcsig->Integral();
 		      hmcsig->Scale(hshape->Integral()/hmcsig->Integral()); 
 		      hmcsig->SetName(hmcsig->GetName()+TString("mcsignalup"));
 		      hmcsig->SetTitle(proc);
 
+		      //check this rates from theortical point of view. in prep the variation is very high...
+		      // if(signalVars[isigvar]=="q2up")           shape.rateUncs["q2_rate"]=std::pair<float,float>(sf,sf);
+		      // else if(signalVars[isigvar]=="q2down")    shape.rateUncs["q2_rate"].second=sf;
+		      // if(signalVars[isigvar]=="mepsup")         shape.rateUncs["meps_rate"]=std::pair<float,float>(sf,sf);
+		      // else if(signalVars[isigvar]=="mepsdown")  shape.rateUncs["meps_rate"].second=sf;
+		      
 		      //if variation corresponds already to a signed variation save it directly
 		      //otherwise create an artificial symmetric variation to build the +/- envelope of the nominal shape
-		      if(signalVars[i].EndsWith("up") || signalVars[i].EndsWith("down"))  
+		      if(signalVars[isigvar].EndsWith("up") || signalVars[isigvar].EndsWith("down"))  
 			{
 			  shape.signalVars[signalVars[isigvar]]=hmcsig;
 			}
@@ -399,6 +409,8 @@ void getYieldsFromShapes(const map<TString, Shape_t> &allShapes)
 	      std::pair<float,float> xsec=shape.crossSections.find(sigProc)->second;
 	      sigRateSysts["xsec"]=xsec.second/xsec.first;
 	  }
+	  for(std::map<TString,std::pair<float,float> >::const_iterator rIt = shape.rateUncs.begin(); rIt!=shape.rateUncs.end(); rIt++)
+	      sigRateSysts[rIt->first]=0.5*(fabs(rIt->second.first-1)+fabs(rIt->second.second-1));
 	  sigRateSysts["lumi"]=lumiUnc;
 	  sigRateSysts["seleff"]=selEffUnc;
 	  float sSyst=getIntegratedSystematics(shape.signal,shape.signalVars,sigRateSysts,*bIt);
@@ -582,7 +594,17 @@ void convertShapesToDataCards(const map<TString, Shape_t> &allShapes)
         else                                                           fprintf(pFile,"%6.3f ",1.017);
       }
       fprintf(pFile,"\n");
-     
+
+      //rate systematics
+      for(std::map<TString,std::pair<float,float> >::const_iterator rIt = shape.rateUncs.begin(); rIt!=shape.rateUncs.end(); rIt++)
+	{
+	  fprintf(pFile,"%35s %10s",rIt->first.Data(),"lnN");
+	  fprintf(pFile,"%6.3f ",1+0.5*(fabs(rIt->second.first-1)+fabs(rIt->second.second-1)));
+	  for(size_t j=0; j<shape.bckg.size(); j++) {
+	    fprintf(pFile,"%6s ","-");
+	  }
+	}
+
       //th.xsec
       // fprintf(pFile,"%35s %10s ", "theoryUncXS_ttbar", "lnN");
       //       std::pair<float,float> ttbarXsec=shape.crossSections.find(shape.signal->GetTitle())->second;

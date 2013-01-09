@@ -106,9 +106,12 @@ void runPileupCheck(TString url);
 //                                                                                                                                                                                          
 void printHelp()
 {
-  printf("--help    --> print this\n");
-  printf("--in      --> input directory with the summary trees\n");
-  printf("--json    --> json file with the description of the samples\n");
+  printf("--help     --> print this\n");
+  printf("--in       --> input directory with the summary trees\n");
+  printf("--json     --> json file with the description of the samples\n");
+  printf("--systJson --> json file with the description of the samples used for systematic uncertainties\n");
+  printf("--iLumi    --> total integrated luminosity\n");
+  printf("--use      --> use previously created report\n");
 }
 
 //
@@ -360,8 +363,8 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 		    {
 		      //MC truth check if the assignment is correct
 		      int assignCode=(phys.leptons[ilep].genid*partonMatch);
-		      bool isCorrect(assignCode<0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
-		      bool isFlipMatch(assignCode>0  && fabs(flavorMatch)==5 && (isSignal || hasTop));
+		      bool isCorrect  (assignCode<0  && fabs(flavorMatch)==5 && fabs(partonMatch)==5 && (isSignal || hasTop));
+		      bool isFlipMatch(assignCode>0  && fabs(flavorMatch)==5 && fabs(partonMatch)==5 && (isSignal || hasTop));
 		      if(isCorrect)       mljs["correct"].push_back(imlj);
 		      else                mljs["misassigned"].push_back(imlj);
 		      if(isFlipMatch)     mljs["wrong"].push_back(imlj);
@@ -678,7 +681,8 @@ MljFitResults_t runFit(TH1 *data, TH1 *correct, TH1 *model, TH1 *misassigned, bo
       T->AddText(Buffer+buf);
       T->Draw("same");
 
-      c->SaveAs(tag+"_contour.png");
+      c->SaveAs(tag+"_contour_mlj.png");
+      c->SaveAs(tag+"_contour_mlj.pdf");
       delete c;
     }
 
@@ -762,9 +766,28 @@ void fitMljData(TString reportUrl)
 	    if(model) mcmodel->Scale(model->Integral()/mcmodel->Integral());
 	  }
 
+	  //correct low mass bins with mc truth prediction
+	  int binNorm = model->FindBin(200);
+	  float sf=model->Integral(binNorm,model->GetXaxis()->GetNbins())/misassigned->Integral(binNorm,misassigned->GetXaxis()->GetNbins());
+	  float mcsf=mcmodel->Integral(binNorm,mcmodel->GetXaxis()->GetNbins())/misassigned->Integral(binNorm,misassigned->GetXaxis()->GetNbins());
+	  for(int ibin=1; ibin<=model->FindBin(50); ibin++)
+	    {
+	      model->SetBinContent(ibin,misassigned->GetBinContent(ibin)*sf);
+	      model->SetBinError(ibin,misassigned->GetBinError(ibin)*sf);
+	      mcmodel->SetBinContent(ibin,misassigned->GetBinContent(ibin)*mcsf);
+	      mcmodel->SetBinError(ibin,misassigned->GetBinError(ibin)*mcsf);
+	    }
+
+	  //closure test
+	  TH1F *totalMC=(TH1F *) correct->Clone("totalmc");
+	  totalMC->Add(misassigned);
+	  MljFitResults_t mcr=runFit(totalMC,correct,mcmodel,misassigned,false,tag);
+	  delete totalMC;
+
 	  //fit to data
 	  MljFitResults_t r=runFit(data,correct,model,misassigned,true,tag);
 	  report << ch[ich] << " " << cats[icat] << " & "
+	    //<< toLatexRounded(mcr.sfcorrect,  mcr.sfcorrect_err) << " & "
 		 << toLatexRounded(r.fcorrectMC,   r.fcorrectMC_err) << " & "
 		 << toLatexRounded(r.fcorrectData, r.fcorrectData_err) << " & "
 		 << toLatexRounded(r.sfcorrect,    r.sfcorrect_err) << " \\\\" << endl;
@@ -772,12 +795,13 @@ void fitMljData(TString reportUrl)
 	  //evaluate the systematics
 	  typedef std::pair<TString,TString> SystKey_t;
 	  std::map<TString, SystKey_t> systList;
-	  systList["JES"]=SystKey_t("jesup","jesdown");
-	  systList["JER"]=SystKey_t("jerup","jerdown");
-	  systList["MEPS"]=SystKey_t("mepsup","mepsdown");
-	  systList["Q^2"]=SystKey_t("q2up","q2down");
-	  systList["Signal"]=SystKey_t("powheg","mcatnlo");
-	  systList["DY"]=SystKey_t("dyup","dydown");
+	  systList["JES"]    = SystKey_t("jesup","jesdown");
+	  systList["JER"]    = SystKey_t("jerup","jerdown");
+	  systList["Pileup"] = SystKey_t("puup","pudown");
+	  systList["ME-PS"]  = SystKey_t("mepsup","mepsdown");
+	  systList["Q^2"]    = SystKey_t("q2up","q2down");
+	  systList["Signal"] = SystKey_t("powheg","mcatnlo");
+	  systList["DY"]     = SystKey_t("dyup","dydown");
 	  for(std::map<TString, SystKey_t>::iterator sIt = systList.begin(); sIt!=systList.end(); sIt++)
 	    {
 	      
@@ -813,7 +837,7 @@ void fitMljData(TString reportUrl)
 	      float varUp   = 100*(rUp.sfcorrect/r.sfcorrect-1);
 	      float varDown = 100*(rDown.sfcorrect/r.sfcorrect-1);
 	      float var=0.5*(fabs(varUp)+fabs(varDown));
-	      if(sIt->first=="Signal") var=fabs(rUp.sfcorrect/rDown.sfcorrect-1);
+	      if(sIt->first=="Signal") var=fabs(rUp.sfcorrect/r.sfcorrect-1); //var=fabs(rUp.sfcorrect/rDown.sfcorrect-1);
 	      systMap[tag].push_back(std::pair<TString,Float_t>(sIt->first,var));
 	    }
 	  inF->Close();
@@ -823,14 +847,16 @@ void fitMljData(TString reportUrl)
 	  //before the fit
 	  TObjArray stackList; stackList.Add(misassigned);  stackList.Add(correct); 
 	  TCanvas *c=plot(&stackList,data,0,false);
-	  c->SaveAs(tag+".png");
+	  c->SaveAs(tag+"_pre_mlj.png");
+	  c->SaveAs(tag+"_pre_mlj.pdf");
 	  
 	  //postfit
 	  TH1F *correctFit=(TH1F *)correct->Clone(correct->GetName()+TString("post"));  correctFit->Scale(r.sfcorrect);
 	  TH1F *misassignedFit=(TH1F *)model->Clone(model->GetName()+TString("post"));  misassignedFit->Scale((misassigned->Integral()/model->Integral())*( 1-r.fcorrectData)/(1-r.fcorrectMC));
 	  stackList.Clear(); stackList.Add(misassignedFit); stackList.Add(correctFit);
 	  c=plot(&stackList,data,0,false);
-	  c->SaveAs(tag+"_post.png");
+	  c->SaveAs(tag+"_post_mlj.png");
+	  c->SaveAs(tag+"_post_mlj.pdf");
 
 	  //postfit subtracted
 	  TH1F *dataRes=(TH1F *)data->Clone("datares"); 
@@ -838,19 +864,23 @@ void fitMljData(TString reportUrl)
 	  data->Add(misassignedFit,-1);
 	  stackList.Clear(); stackList.Add(correctFit);
 	  c=plot(&stackList,data,0,false);
-	  c->SaveAs(tag+"_postres.png");
+	  c->SaveAs(tag+"_postres_mlj.png");
+	  c->SaveAs(tag+"_postres_mlj.pdf");
 	  
 	  //misassignment composition in MC
 	  stackList.Clear();    stackList.Add(unmatched);   stackList.Add(wrong);
 	  c=plot(&stackList,mcmodel,0,false,true);
-	  c->SaveAs(tag+"_wrong.png");
+	  c->SaveAs(tag+"_wrong_mlj.png");
+	  c->SaveAs(tag+"_wrong_mlj.pdf");
 
 	  stackList.Clear();      stackList.Add(wrong);
 	  c=plot(&stackList,model,0,false,true);
-	  c->SaveAs(tag+"_wrongmodel.png");
+	  c->SaveAs(tag+"_wrongmodel_mlj.png");
+	  c->SaveAs(tag+"_wrongmodel_mlj.pdf");
 
 	  c=plot(&stackList,dy,0,false,true);
-	  c->SaveAs(tag+"_wrongvsdy.png");
+	  c->SaveAs(tag+"_wrongvsdy_mlj.png");
+	  c->SaveAs(tag+"_wrongvsdy_mlj.pdf");
 	}
     }
 
@@ -929,7 +959,7 @@ TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose, bool doLog, bool no
   stack->GetXaxis()->SetTitle(totalMC->GetXaxis()->GetTitle());
   stack->GetYaxis()->SetTitle(totalMC->GetYaxis()->GetTitle());
   if(norm) stack->GetYaxis()->SetTitle(totalMC->GetYaxis()->GetTitle()+ TString(" (a.u.)"));
-  stack->SetMinimum(1e-2);
+  stack->SetMinimum(data->GetMinimum()<0? data->GetMinimum()*1.50: 1e-2);
   stack->SetMaximum(max(totalMC->GetMaximum()*1.10,data->GetMaximum()*1.10));
 
   //overlay total uncertainty band

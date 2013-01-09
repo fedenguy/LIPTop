@@ -31,6 +31,13 @@ fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --sys
 fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --syst ~/work/top/plotter_syst.root --bins 3 --out ~/www/top/xsec/3jet > ~/www/top/xsec/3jet/result.txt
 fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --syst ~/work/top/plotter_syst.root --bins 4 --out ~/www/top/xsec/4jet > ~/www/top/xsec/4jet/result.txt
 
+#
+# HFC MEASUREMENT
+#
+HeavyFlavorFitCalibration --in ~/work/top/plotter.root --par bin/HFC/hfcParams_2012_mc_cfg.json --btag bin/HFC/csvL_2012_mc_cfg.json --nPE 100
+HeavyFlavorFitCalibration --in ~/work/top/plotter.root --par bin/HFC/hfcParams_2012_data_cfg.json --btag bin/HFC/csvL_2012_data_cfg.json
+
+StandardHypoTestInvDemo("HeavyFlavorWorkspace.root","w","mc","","data",0,3,false,npoints,rmin,rmax,ntoys)
 
 #
 # Lxy MEASUREMENT

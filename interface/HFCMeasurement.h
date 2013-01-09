@@ -34,61 +34,56 @@
 #include "RooStats/FeldmanCousins.h"
 #include "RooStats/ModelConfig.h"
 
-
-
-//
-#define MAXJETMULT 12
-#define MAXCATEGORIES 12
-enum JetMultBins{BIN_2=0,BIN_3, BIN_4};
-struct CombinedHFCModel_t
-{
-  RooAbsPdf *pdf;
-  RooProdPdf *constrPdf;
-  RooArgSet pdfConstrains;
-  std::map<TString, RooAbsPdf *> pdfForCategory;
-  RooCategory *sample;
-  RooRealVar *r;
-  RooRealVar *bmult, *bmultObs, *eventYields;
-  RooRealVar *acc1,*acc05,*acc0;
-  RooFormulaVar *alpha[MAXCATEGORIES], *alpha2[MAXCATEGORIES], *alpha1[MAXCATEGORIES], *alpha0[MAXCATEGORIES];
-  RooRealVar *abseb,*sfeb,*sfebExp;
-  RooFormulaVar *eb,*ebcorr[MAXCATEGORIES];
-  RooGaussian *sfeb_constrain;
-  RooRealVar *abseq,*sfeq,*sfeqExp;
-  RooFormulaVar *eq,*eqcorr[MAXCATEGORIES];
-  RooGaussian *sfeq_constrain;
-  RooRealVar *jetocc[MAXCATEGORIES];
-  RooRealVar *fcorrect[MAXCATEGORIES],*fcorrectExp[MAXCATEGORIES];
-  RooAbsPdf *fcorrect_constrain[MAXCATEGORIES];
-  RooRealVar *fttbar[MAXCATEGORIES], *fttbarExp[MAXCATEGORIES];
-  RooAbsPdf *fttbar_constrain[MAXCATEGORIES];
-  RooRealVar *fsingletop[MAXCATEGORIES], *fsingletopExp[MAXCATEGORIES];
-  RooAbsPdf *fsingletop_constrain[MAXCATEGORIES];
-  
-  RooWorkspace *ws;
-  RooStats::ModelConfig *modelConfig;
-  
-  Double_t rFitLowerLimit,         rFitUpperLimit;
-  Double_t rFitResult,           rFitResultAsymmErrHi,           rFitResultAsymmErrLo;
-  Double_t rFit[MAXCATEGORIES],  rFitAsymmErrHi[MAXCATEGORIES],  rFitAsymmErrLo[MAXCATEGORIES];
-  Double_t rCombFit[MAXCATEGORIES],  rCombFitAsymmErrHi[MAXCATEGORIES],  rCombFitAsymmErrLo[MAXCATEGORIES];
-  Double_t ebFit[MAXCATEGORIES], ebFitAsymmErrHi[MAXCATEGORIES], ebFitAsymmErrLo[MAXCATEGORIES];
-  Double_t eqFit[MAXCATEGORIES], eqFitAsymmErrHi[MAXCATEGORIES], eqFitAsymmErrLo[MAXCATEGORIES];
-  Double_t minLL;
-};
-
 //
 class HFCMeasurement
 {
  public:
 
-  enum FitTypes        {FIT_R, FIT_EB, FIT_R_AND_EB, FIT_R_AND_XSEC, FIT_EB_AND_XSEC, FIT_EB_AND_EQ};
-  
-  
+  enum FitTypes        { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_VTB };
+    
+  struct FitResult_t
+  {
+    Bool_t status;
+    Double_t poiFit,poiErr,poiFitLoLim,poiFitUpLim;
+    std::map<std::string,Double_t> postFitNuis, uncBreakup;
+    TH1F *postFitNuisGr;
+    TGraph *plrGr;
+  };
+
   /**
      @short CTOR
    */
-  HFCMeasurement(int fitType, TString fitConfig, TString wpConfig="");
+  HFCMeasurement(int fitType, TString fitConfig, TString wpConfig="",int maxJets=4);
+
+  HFCMeasurement(RooWorkspace *ws,int maxJets,int fitType)
+    {
+      fitType_=fitType;
+      switch(fitType_)
+	{
+	case FIT_EB:              fitTypeTitle_="#varepsilon_{b}";                    fitTypeName_="effb";                        break;
+	case FIT_R_AND_EB:        fitTypeTitle_="R vs #varepsilon_{b}";               fitTypeName_="rvseffb";                     break;
+	case FIT_VTB:             fitTypeTitle_="|V_{tb}|";                           fitTypeName_="vtb";                         break;
+	default:                  fitTypeTitle_="R";                                  fitTypeName_="r";           fitType_=FIT_R; break;
+	}
+
+      maxJets_=maxJets;
+      for(int ich=0; ich<=2; ich++)
+	{
+	  TString ch("ee");
+	  if(ich==1) ch="mumu";
+	  if(ich==2) ch="emu";
+	  for(int ijet=2; ijet<=maxJets; ijet++)
+	    {
+	      TString cat(ch); cat+=ijet; cat+="jets";
+	      sampleCats_.insert(cat.Data());
+	    }
+	}
+      
+      ws_=ws;
+      mc_ = (RooStats::ModelConfig*) ws_->obj("mc");
+      mc_->SetWorkspace(*ws_);
+      data_= (RooDataSet *)ws_->data("data");
+    }
 
   /**
      @short parses configuration file and adds/updates values to the model
@@ -99,123 +94,97 @@ class HFCMeasurement
      @short init the PDFs for the fit
   */
   void initHFCModel();
-    
+
+  /**
+     @short dump fitter configuration
+  */
+  void printConfiguration(std::ostream &os);
+
+  /**
+     @short performs a fit with the current configurations (use with care)
+   */
+  HFCMeasurement::FitResult_t plrFit(TH1F *h);
+  
+  /**
+     @short steer the fit 
+   */
+  void fitHFCfrom(TH1 *, bool debug=false);
+  
+  inline std::string getWP()         { return wp_; }
+  inline std::string getSampleType() { return sampleType_; }
+  inline std::map<std::string,FitResult_t> &getResults() { return curResults_; }
+  inline std::string title()         { return fitTypeTitle_.Data(); }
+
+  /**
+     @short generates the b-tag observed distribution from the current model parameters and data counts
+   */
+  TH1F *generateBtagObs();
+
+  /**
+     @short store the model
+   */
+  inline void saveWorkspace(TString url)
+    {
+      if(ws_==0)   return;
+      if( ws_->writeToFile(url,kTRUE) )  std::cout << "[Warn] Failed exporting HFC workspace to " << url << std::endl;
+    }
+
   /**
      @short DTOR
   */
   ~HFCMeasurement() { }
-  
+ 
  private:
 
+  /**
+     @short resets the current model values to the default ones
+  */
+  void resetModelValues();
+
+  /**
+     @short converts an histogram to a RooDataSet with categories
+   */
+  bool createDataset(TH1 *btagObs);
+
+  /**
+     @short fits the current dataset
+   */
+  bool fit(bool debug);
+
+  /**
+     @short wrapper for the PLR analysis
+  */
+  FitResult_t plrFit(RooDataSet *data, RooStats::ModelConfig *mc,bool debug);
+
+  /**
+     @short the pdf has to be obtained category-by-category
+  */
+  TH1F *getProjectedModel(TString tag,Double_t cts,TString name,TString title);
+
+  /**
+     @short gets the probablity model as function of the POI
+  */
+  std::vector<TH1F *> getProbabilityModelFunction(TString tag,TString baseName);
+
+  /**
+     @short just a fancy jargon translator
+   */
+  std::string getNuisanceTitle(std::string &name);
+
+  /**
+     @short dumps canvas to file
+  */
+  void saveGraphicalResult(TCanvas *c,std::string name);
+
+  int fitType_;
+  TString fitTypeTitle_, fitTypeName_;  
   RooWorkspace *ws_;
   RooStats::ModelConfig *mc_;
-  std::set<string> sampleCats_;
-  
- public:
-  
-
-  enum EventCategories {EE_2JETS, EE_3JETS, MUMU_2JETS, MUMU_3JETS, EMU_2JETS, EMU_3JETS};
-  enum NuisanceTypes   {GAUSSIAN, UNIFORM, LOGNORMAL };
-  enum RunMode         {FITINCLUSIVEONLY, FITEXCLUSIVECATEGORIES };
-  SelectionMonitor controlHistos_;    
-  CombinedHFCModel_t model;
-
-    //check me this point fwd        
-    /**
-       @short steer the fit
-    */
-    void fitHFCtoEnsemble(ZZ2l2nuSummaryHandler &evHandler, int runMode, bool debug=false);
-    void fitHFCtoMeasurement(std::vector<TH1D *> &btagHistos,  int runMode, bool debug=false);
-    
-    /**
-       @short setters for parameters
-    */
-    void setStandardModelR(float r=1.0) { smR_=r; }
-
-    /**
-       @short configuration of the b-tag algorithm
-    */
-    void configureBtagAlgo(TString btagAlgo,double cut)
-    {
-      btagAlgo_ = btagAlgo;
-      algoCut_  = cut;
-    }
-    
-    /**
-       @short set MC expected efficiency and data-driven measurement of the scale-factor
-     */
-    void setBtagEfficiency(double eff, double sfactor, double sfactorUnc)
-    {
-      effb_   = eff;
-      sfb_    = sfactor;
-      sfbUnc_ = sfactorUnc;
-    } 
-
-    /**
-       @short set MC expected efficiency and data-driven measurement of the scale-factor
-    */
-    void setMistagEfficiency(double eff, double sfactor, double sfactorUnc)
-    {
-      effq_   = eff;
-      sfq_    = sfactor;
-      sfqUnc_ = sfactorUnc;
-    } 
-
-    /**
-       @short event modeling per category: used also to instantiate the categories in the fit
-     */
-    void setParametersForCategory(double fcorrect,   double fcorrectunc, 
-				  double fttbar,     double fttbarunc,
-				  double fsingletop, double fsingletopunc,
-				  double ebcorr,     double eqcorr,
-				  int jetBin=0,      TString dilChannel="emu")
-    {
-      TString tag(dilChannel); tag+=jetBin;      
-      fcorrect_[tag]      = fcorrect;
-      fcorrectUnc_[tag]   = fcorrectunc;
-      fttbar_[tag]        = fttbar;
-      fttbarUnc_[tag]     = fttbarunc;
-      fsingletop_[tag]    = fsingletop;
-      fsingletopUnc_[tag] = fsingletopunc;
-      btagEffCorr_[tag]   = ebcorr;
-      ltagEffCorr_[tag]   = eqcorr;
-      categoryKeys_.insert(tag);
-    }
-
-    /**
-       @short dump fitter configuration
-     */
-    void printConfiguration(std::ostream &os);
-
-
-    /**
-       @short resets the current model values to the default ones
-     */
-    void resetModelValues();
-
-    /**
-       @short steers the fit 
-     */
-    void runHFCFit(int runMode,bool debug);
-
-
-    //internal parameters
-    int fitType_, nuisanceType_;
-    TString fitTypeTitle_, fitTypeName_;
-    int maxJets_;
-    double smR_;
-    TString btagAlgo_;    
-    double algoCut_;
-    Float_t  effb_, sfb_, sfbUnc_, effq_, sfq_, sfqUnc_;
-    std::set<TString> categoryKeys_;
-    std::map<TString, Float_t> fcorrect_,  fcorrectUnc_, fttbar_, fttbarUnc_,  fsingletop_, fsingletopUnc_, btagEffCorr_, ltagEffCorr_;
-    int nMeasurements_;
-
-    RooStats::FeldmanCousins *fc_;
-
- private :
-
-
+  RooDataSet *data_;
+  std::set<std::string> sampleCats_;
+  std::string wp_,sampleType_;
+  int maxJets_;
+  std::map<std::string,FitResult_t> curResults_;
 };
 
 

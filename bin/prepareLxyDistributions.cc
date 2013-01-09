@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
   TString ch[]={"ee","emu","mumu"};
   TString dists[]={"jetlxy","jetmass"};
   TString flavs[]={"","udsg","c","b"};
+  TString instrSysts[]={"jesup","jesdown","jerup","jerdown","puup","pudown"};
   TFile *outF=TFile::Open("lxydil.root","RECREATE");
   for(size_t ich=0; ich<sizeof(ch)/sizeof(TString); ich++)
     {
@@ -74,7 +75,7 @@ int main(int argc, char* argv[])
 	      proc.ToLower();
 	      if(proc.Contains("ztotautausystdata")) continue;
 	      TString mtop("0");
-	      if(proc=="ttbar") continue;
+	      if(proc=="ttbar172.5") { cout << "Skipping " << proc << endl; continue; }
 	      if(proc.Contains("ttbar")) 
 		{
 		  mtop="1725";
@@ -98,6 +99,19 @@ int main(int argc, char* argv[])
 		      templ->SetDirectory(outDir);
 		      outDir->cd();
 		      templ->Write();
+
+		      //get variations
+		      for(size_t iSyst=0; iSyst<sizeof(instrSysts)/sizeof(TString); iSyst++)
+			{
+			  templ=(TH1 *)inF->Get( TString(obj->GetName()) + "/" + ch[ich]+"_"+flavs[iflav]+dists[idist]+instrSysts[iSyst] );
+			  if(templ==0) continue;
+			  TString outName( ch[ich]+"_"+flavs[iflav]+dists[idist]+"_"+proc+"syst"+instrSysts[iSyst]+"_"+mtop );
+			  templ->SetName(outName);
+			  templ->SetDirectory(outDir);
+			  outDir->cd();
+			  templ->Write();
+			}
+
 		    }
 		}
 	    }
