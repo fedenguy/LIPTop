@@ -8,7 +8,7 @@
 "emu2jets" :{"val":0.3490,"fcor_emu2jets_stat":0.0243, "dy":0.0001,"pu":0.0010,"jer":0.0030,"jes":0.0066,"meps":0.0229,"q2":0.0245,"signal":0.0010},
 "emu3jets" :{"val":0.2560,"fcor_emu3jets_stat":0.0361, "dy":0.0003,"pu":0.0010,"jer":0.0039,"jes":0.0065,"meps":0.0197,"q2":0.0198,"signal":0.0010},
 "emu4jets" :{"val":0.2100,"fcor_emu4jets_stat":0.0588, "dy":0.0001,"pu":0.0010,"jer":0.0097,"jes":0.0127,"meps":0.0309,"q2":0.0175,"signal":0.0010},
-"mumu2jets":{"val":0.3740,"fcor_mumu2jets_stat":0.0333,"dy":0.0048,"pu":0.0010,"jer":0.0033,"jes":0.0058,"meps":0.0220,"q2":0.0259,"signal":0.0010},
+"mumu2jets":{"val":0.2740,"fcor_mumu2jets_stat":0.0333,"dy":0.0048,"pu":0.0010,"jer":0.0033,"jes":0.0058,"meps":0.0220,"q2":0.0259,"signal":0.0010},
 "mumu3jets":{"val":0.2220,"fcor_mumu3jets_stat":0.0454,"dy":0.0028,"pu":0.0010,"jer":0.0066,"jes":0.0111,"meps":0.0240,"q2":0.0301,"signal":0.0010},
 "mumu4jets":{"val":0.1800,"fcor_mumu4jets_stat":0.1111,"dy":0.0014,"pu":0.0010,"jer":0.0346,"jes":0.0361,"meps":0.0405,"q2":0.0507,"signal":0.0010}
 },
