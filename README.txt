@@ -5,8 +5,8 @@
 #
 # CREATE BASE DISTRIBUTIONS AND ESTIMATE BACKGROUNDS
 #
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012_raw/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/syst-samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012_raw/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyTTstrength=False @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/syst-samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyTTstrength=False @applyDYweight=False @runSystematics=False @saveSummaryTree=True" -s 8nh
 runPlotter --iLumi 16689 --inDir ~/work/top/2012_raw/ --outDir ~/work/top/2012_raw/plots --json data/samples_2012.json --outFile ~/work/top/plotter_raw.root --noLog  --plotExt .pdf --showUnc
 runPlotter --iLumi 16689 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/syst-samples_2012.json --outFile ~/work/top/plotter_syst.root --noPlot
 
@@ -16,7 +16,7 @@ runPlotter --iLumi 16689 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots
 fitDYcontribution --in ~/work/top/plotter_raw.root --ttrep ~/work/top/plotter_syst.root  --out Img/ --smooth
 
 
-runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyTTstrength=False @applyDYweight=True @runSystematics=True @saveSummaryTree=True" -s 8nh
 runPlotter --iLumi 16689 --inDir ~/work/top/2012/ --outDir ~/work/top/2012/plots --json data/samples_2012.json --outFile ~/work/top/plotter.root --noLog --plotExt .pdf --showUnc
 
 #compute DY fit systematics
@@ -30,6 +30,16 @@ fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --sys
 fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --syst ~/work/top/plotter_syst.root --bins 2 --out ~/www/top/xsec/2jet > ~/www/top/xsec/2jet/result.txt
 fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --syst ~/work/top/plotter_syst.root --bins 3 --out ~/www/top/xsec/3jet > ~/www/top/xsec/3jet/result.txt
 fitCrossSection --in ~/work/top/plotter.root --json data/samples_2012.json --syst ~/work/top/plotter_syst.root --bins 4 --out ~/www/top/xsec/4jet > ~/www/top/xsec/4jet/result.txt
+
+#run once more with final corrections
+runLocalAnalysisOverSamples.py -e showControlDistributions -j $CMSSW_BASE/src/LIP/Top/data/samples_2012.json -d /store/cmst3/user/psilva/Moriond2013_ntuples/ -o ~/work/top/2012_corr/ -c test/runAnalysis_cfg.py.templ -p "@sfMetCut=40 @ofMetCut=0 @jetPtCut=30 @applyTTstrength=True @applyDYweight=True @runSystematics=False @saveSummaryTree=False" -s 8nh
+runPlotter --iLumi 16689 --inDir ~/work/top/2012_corr/ --outDir ~/work/top/2012_corr/plots --json data/samples_2012.json --outFile ~/work/top_corr/plotter.root --noLog --plotExt .pdf --showUnc
+
+#
+# Mlj analysis
+#
+MljAnalysisCalibration --in ~/work/top/2012/ --json data/samples_2012.json --systJson data/syst-samples_2012.json --iLumi 16700 
+MljAnalysisCalibration --use MljAnalysisReport.root --in ~/work/top/2012/ --json data/samples_2012.json --systJson data/syst-samples_2012.json --iLumi 16700
 
 #
 # HFC MEASUREMENT

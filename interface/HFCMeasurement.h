@@ -39,12 +39,12 @@ class HFCMeasurement
 {
  public:
 
-  enum FitTypes        { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_VTB };
+  enum FitTypes        { FIT_R, FIT_EB, FIT_R_AND_EB, FIT_VTB, FIT_GAMMAT };
     
   struct FitResult_t
   {
     Bool_t status;
-    Double_t poiFit,poiErr,poiFitLoLim,poiFitUpLim;
+    Double_t poiFit,poiErr,poiFitLoLim,poiFitUpLim,poiFitStatLoLim,poiFitStatUpLim,poiStatErr;
     std::map<std::string,Double_t> postFitNuis, uncBreakup;
     TH1F *postFitNuisGr;
     TGraph *plrGr;
@@ -106,6 +106,12 @@ class HFCMeasurement
   HFCMeasurement::FitResult_t plrFit(TH1F *h);
   
   /**
+     @short wrapper for the PLR analysis
+  */
+  FitResult_t plrFit(RooDataSet *data, RooStats::ModelConfig *mc,bool debug);
+
+  
+  /**
      @short steer the fit 
    */
   void fitHFCfrom(TH1 *, bool debug=false);
@@ -126,6 +132,8 @@ class HFCMeasurement
   inline void saveWorkspace(TString url)
     {
       if(ws_==0)   return;
+      if(mc_)   ws_->import(*mc_);
+      if(data_) ws_->import(*data_);
       if( ws_->writeToFile(url,kTRUE) )  std::cout << "[Warn] Failed exporting HFC workspace to " << url << std::endl;
     }
 
@@ -152,11 +160,6 @@ class HFCMeasurement
   bool fit(bool debug);
 
   /**
-     @short wrapper for the PLR analysis
-  */
-  FitResult_t plrFit(RooDataSet *data, RooStats::ModelConfig *mc,bool debug);
-
-  /**
      @short the pdf has to be obtained category-by-category
   */
   TH1F *getProjectedModel(TString tag,Double_t cts,TString name,TString title);
@@ -175,6 +178,17 @@ class HFCMeasurement
      @short dumps canvas to file
   */
   void saveGraphicalResult(TCanvas *c,std::string name);
+
+  /**
+     @short adds single top information
+   */
+  void instantiateSingleTopContribution(RooWorkspace *);
+
+  /**
+     @short freeze/release nuisance parameters in the fit
+   */
+  enum FreezingMode_t { ALLNUISANCES, CORRELATEDNUISANCES, UNCORRELATEDNUISANCES };
+  void freezeNuisances(RooStats::ModelConfig *mc,int mode,bool setConstant);
 
   int fitType_;
   TString fitTypeTitle_, fitTypeName_;  

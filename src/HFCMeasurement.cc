@@ -32,10 +32,11 @@ HFCMeasurement::HFCMeasurement(int fitType,TString fitConfig, TString wpConfig, 
 
   fitType_=fitType;
   switch(fitType_)
-    {
+   {
     case FIT_EB:              fitTypeTitle_="#varepsilon_{b}";                    fitTypeName_="effb";                        break;
     case FIT_R_AND_EB:        fitTypeTitle_="R vs #varepsilon_{b}";               fitTypeName_="rvseffb";                     break;
     case FIT_VTB:             fitTypeTitle_="|V_{tb}|";                           fitTypeName_="vtb";                         break;
+    case FIT_GAMMAT:          fitTypeTitle_="#Gamma_{t} [Gev]";                   fitTypeName_="gammat";                      break;
     default:                  fitTypeTitle_="R";                                  fitTypeName_="r";           fitType_=FIT_R; break;
     }
 
@@ -57,7 +58,7 @@ void HFCMeasurement::parseFitConfig(TString url)
   if(gSystem->AccessPathName(url)) return;
 
   char expBuf[500];  //free buffer	  
-  RooArgSet nuis,constr;
+  RooArgSet nuis,constr,globalObs;
 
   //read parameters from file
   JSONWrapper::Object jsonF(url.Data(), true);
@@ -95,10 +96,12 @@ void HFCMeasurement::parseFitConfig(TString url)
 	      RooArgList varsInFormula;
 
 	      //central value
-	      sprintf(expBuf,"%s_cen[%f]",param.c_str(),descript["val"].toDouble());
+	      float val=descript["val"].toDouble();
+	      sprintf(expBuf,"%s_cen[%f,%f,%f]",param.c_str(),val,val,val);
 	      cenVal=(RooRealVar *)ws_->factory(expBuf);
+	      cenVal->setConstant(true);
 	      varsInFormula.add(*cenVal);
-
+	      
 	      //modifiers
 	      int uncCntr(0);
 	      for(size_t iunc=0; iunc<uncs.size(); iunc++)
@@ -111,20 +114,55 @@ void HFCMeasurement::parseFitConfig(TString url)
 		  
 		  if(nuisVar==0)
 		    {
-		      sprintf(expBuf,"Gaussian::%s_constr(%s[0,-5,5],0.0,1.0)",uncs[iunc].c_str(), uncs[iunc].c_str());
+		      sprintf(expBuf,"Gaussian::%s_constr(%s0[0,-5,5],%s[0,-5,5].0,1.0)",uncs[iunc].c_str(), uncs[iunc].c_str(), uncs[iunc].c_str());
 		      RooGaussian *nuisConstr=(RooGaussian *)ws_->factory(expBuf);
 		      constr.add( *nuisConstr );
+		      
+		      //this is a global observable will be used for toys
+		      //cf. https://indico.desy.de/getFile.py/access?contribId=1&resId=0&materialId=slides&confId=6083
+		      //cf. https://twiki.cern.ch/twiki/bin/view/RooStats/RooStatsTutorialsAugust2012#Create_Poisson_Counting_model
+		      RooRealVar *globalObsVar = ws_->var( (uncs[iunc]+"0").c_str() );         
+		      globalObsVar->setConstant(true);
+		      globalObsVar->SetTitle( (getNuisanceTitle(uncs[iunc])+"(0)").c_str() );
+		      globalObs.add( *globalObsVar );
 
 		      nuisVar = ws_->var( uncs[iunc].c_str() );
 		      nuisVar->SetTitle( getNuisanceTitle(uncs[iunc]).c_str() ); //this is just for fancy labelling
 		      nuis.add( *nuisVar );
-
-		      sprintf(expBuf,"%s_sigma[%f]",uncs[iunc].c_str(),descript[uncs[iunc].c_str()].toDouble());
+		    }
+		    
+		  if(modVar==0)
+		    {
+		      float sigmaVal=descript[uncs[iunc].c_str()].toDouble();
+		      sprintf(expBuf,"%s_sigma[%f,%f,%f]",uncs[iunc].c_str(),sigmaVal,sigmaVal,sigmaVal);
 		      modVar=(RooRealVar *)ws_->factory(expBuf);
+		      modVar->setConstant(true);
 		    }
 
+
+		  /*
+		    if(nuisVar==0)
+		    {
+		    sprintf(expBuf,"Gaussian::%s_constr(%s[0,-5,5],0.0,1.0)",uncs[iunc].c_str(), uncs[iunc].c_str());
+		    RooGaussian *nuisConstr=(RooGaussian *)ws_->factory(expBuf);
+		    constr.add( *nuisConstr );
+		    
+		    nuisVar = ws_->var( uncs[iunc].c_str() );
+		    nuisVar->SetTitle( getNuisanceTitle(uncs[iunc]).c_str() ); //this is just for fancy labelling
+		    nuis.add( *nuisVar );
+		    }
+		    
+		    if(modVar==0)
+		    {
+		    float sigmaVal=descript[uncs[iunc].c_str()].toDouble();
+		    sprintf(expBuf,"%s_sigma[%f,%f,%f]",uncs[iunc].c_str(),sigmaVal,sigmaVal,sigmaVal);
+		    modVar=(RooRealVar *)ws_->factory(expBuf);
+		    modVar->setConstant(true);
+		    }
+		  */
+
 		  //add to formula
-		  sprintf(expBuf,"*(1+@%d*@%d)",uncCntr+1,uncCntr+2);
+		  sprintf(expBuf,"*max((1+@%d*@%d),0.)",uncCntr+1,uncCntr+2);
 		  formula+=expBuf;
 		  uncCntr+=2;
 		  varsInFormula.add( *modVar );
@@ -143,11 +181,11 @@ void HFCMeasurement::parseFitConfig(TString url)
 	      for(size_t iunc=0; iunc<uncs.size(); iunc++)
 		{
 		  if(uncs[iunc]=="val") continue;
-
+		  
 		  //add new constraint if required
 		  RooRealVar *nuisVar=ws_->var((uncs[iunc]+"_sigma").c_str());
 		  if(nuisVar==0) cout << "[Warning] failed to update uncertainty for: " << uncs[iunc] << " ...neglecting this source" << endl; 
-		  else nuisVar->setVal(descript[ uncs[iunc].c_str() ].toDouble());
+		  else    nuisVar->setVal(descript[ uncs[iunc].c_str() ].toDouble());
 		}
 	    }
 	}
@@ -158,6 +196,9 @@ void HFCMeasurement::parseFitConfig(TString url)
 
   if(ws_->set("constr")!=0) constr.add( *(ws_->set("constr")) );
   ws_->defineSet("constr",constr);
+  
+  if(ws_->set("globalobservables")!=0) globalObs.add( *ws_->set("globalobservables"));
+  ws_->defineSet("globalobservables",globalObs);
 }
 
 //
@@ -180,17 +221,35 @@ void HFCMeasurement::initHFCModel()
   //
   RooArgSet poi;
 
-  float minR(0.0), maxR(2.0);
+  float cenR(1.0), minR(0.0), maxR(2.0);
   RooFormulaVar *r=0;
-  if(fitType_==FIT_R_AND_EB) { minR=0.95;  maxR=1.05; }
-  if(fitType_==FIT_EB)       { minR=1.0;   maxR=1.0;  }
-  if(fitType_==FIT_VTB)      { minR=0.0;   maxR=1.08; }
-  sprintf(expBuf,"rb[1.0,%f,%f]",minR,maxR);
+  if(fitType_==FIT_R_AND_EB) { minR=0.95;  maxR=1.05;            }
+  if(fitType_==FIT_EB)       { minR=1.0;   maxR=1.0;             }
+  if(fitType_==FIT_VTB)      { minR=0.0;   maxR=1.08;            }
+  if(fitType_==FIT_GAMMAT)   { cenR=1.34;  minR=0.0;   maxR=5.0; }
+  sprintf(expBuf,"rb[%f,%f,%f]",cenR,minR,maxR);
   ws_->factory(expBuf);
   if(minR!=maxR) poi.add( *ws_->var("rb") );
-  if(fitType_==FIT_VTB)  r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0*@0',{rb})");
-  else                   r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0',{rb})");
+  if(fitType_==FIT_VTB)  
+    {
+      r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0*@0',{rb})");
+    }
+  else if(fitType_==FIT_GAMMAT)
+    {
+      instantiateSingleTopContribution(ws_);
+      //r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@2*@3>0 ? @0*@1/(@2*@3) : 10.',{st_exp,Gamma_b,st_th,rb})");
+      r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0*@1/(@2*@3)',{st_exp,Gamma_b,st_th,rb})");
 
+      RooArgSet constr;
+      constr.add( *(ws_->pdf("pdf_st_th")) );
+      constr.add( *(ws_->pdf("pdf_st_exp")) );
+      if(ws_->set("constr")!=0) constr.add( *(ws_->set("constr")) );
+      ws_->defineSet("constr",constr);
+    }
+  else
+    {
+      r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0',{rb})");
+    }
   float minSFb(1.0),maxSFb(1.0);
   if(fitType_==FIT_R_AND_EB)  { minSFb=0.9; maxSFb=1.1; }
   if(fitType_== FIT_EB)       { minSFb=0.7; maxSFb=1.3; }
@@ -225,7 +284,7 @@ void HFCMeasurement::initHFCModel()
 	}
 
       //probability to select/reconstruct N(t->Wq)
-      sprintf(expBuf,"FormulaVar::alpha_%s('min((2*%d*@0)/(@1*(2.+@2)),1.0)',{%s,%s,%s})",tag.c_str(),njets,fcor->GetName(),ftt->GetName(),kst->GetName());
+      sprintf(expBuf,"FormulaVar::alpha_%s('@1*(2.+@2)>0 ? min((2*%d*@0)/(@1*(2.+@2)),1.0) : 1.0',{%s,%s,%s})",tag.c_str(),njets,fcor->GetName(),ftt->GetName(),kst->GetName());
       RooAbsReal *alpha = (RooAbsReal *) ws_->factory(expBuf);
 
       //sample composition in terms of N(t->Wq)
@@ -276,6 +335,118 @@ void HFCMeasurement::initHFCModel()
 
 
       //KERNEL PDFs
+      //new version
+     
+      //alpha_0         @0 
+      RooArgList a0args(*(eqstar[0]));
+      RooFormulaVar pdf0a2j0t(("pdf0a2j0t_"+tag).c_str(), "pow(1-@0,2)", a0args);
+      RooFormulaVar pdf0a2j1t(("pdf0a2j1t_"+tag).c_str(), "2*(1-@0)*@0", a0args);	
+      RooFormulaVar pdf0a2j2t(("pdf0a2j2t_"+tag).c_str(), "pow(@0,2)",   a0args);
+
+      //alpha_1:        @0 @1       @2       @3           @4    @5     @6             
+      RooArgList a1args(*r,*(eb[1]),*(eq[1]),*(eqstar[1]),*acc1,*acc05,*acc0);
+      RooFormulaVar pdf1a2j0t(("pdf1a2j0t_"+tag).c_str(), "pow(@0,2)*(1-@1)*(1-@3)*@4         + @0*(1-@0)*((1-@1)+(1-@2))*(1-@3)*@5        + pow(1-@0,2)*(1-@2)*(1-@3)*@6",         a1args); 
+      RooFormulaVar pdf1a2j1t(("pdf1a2j1t_"+tag).c_str(), "pow(@0,2)*(@1*(1-@3)+(1-@1)*@3)*@4 + @0*(1-@0)*((@1+@2)*(1-@3)+(2-@1-@2)*@3)*@5 + pow(1-@0,2)*(@2*(1-@3)+(1-@2)*@3)*@6", a1args);
+      RooFormulaVar pdf1a2j2t(("pdf1a2j2t_"+tag).c_str(), "pow(@0,2)*@1*@3*@4                 + @0*(1-@0)*(@1+@2)*@3*@5                    + pow(1-@0,2)*@2*@3*@6",                 a1args);
+
+      //alpha_2 :       @0 @1       @2       @3    @4     @5
+      RooArgList a2args(*r,*(eb[2]),*(eq[2]),*acc1,*acc05,*acc0);
+      RooFormulaVar pdf2a2j0t(("pdf2a2j0t_"+tag).c_str(), "pow(@0*(1-@1),2)*@3      + 2*@0*(1-@0)*(1-@1)*(1-@2)*@4         + pow((1-@0)*(1-@2),2)*@5",      a2args);
+      RooFormulaVar pdf2a2j1t(("pdf2a2j1t_"+tag).c_str(), "2*pow(@0,2)*(1-@1)*@1*@3 + 2*@0*(1-@0)*((1-@1)*@2+@1*(1-@2))*@4 + 2*pow((1-@0),2)*(1-@2)*@2*@5", a2args);
+      RooFormulaVar pdf2a2j2t(("pdf2a2j2t_"+tag).c_str(), "pow(@0*@1,2)*@3          + 2*@0*(1-@0)*@1*@2*@4                 + pow((1-@0)*@2,2)*@5",          a2args);
+
+      //define the specialized PDFs per jet multiplicity
+      if(njets==2)
+	{
+	  //add according to alpha coefficients
+	  RooGenericPdf pdf2j0t(("pdf2j0t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a2j0t,pdf1a2j0t,pdf0a2j0t,*alpha2,*alpha1,*alpha0));
+	  RooGenericPdf pdf2j1t(("pdf2j1t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a2j1t,pdf1a2j1t,pdf0a2j1t,*alpha2,*alpha1,*alpha0));
+	  RooGenericPdf pdf2j2t(("pdf2j2t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a2j2t,pdf1a2j2t,pdf0a2j2t,*alpha2,*alpha1,*alpha0));
+
+	  //import to workspace
+	  ws_->import( pdf2j0t );
+	  ws_->import( pdf2j1t );
+	  ws_->import( pdf2j2t );
+	}
+      else
+	{
+	  //extra terms for "non-matched" tags 
+	  RooFormulaVar pdf0a0t(("pdf0a0t_"+tag).c_str(), "(1-@0)", RooArgList(*(eqstar[0])) );
+	  RooFormulaVar pdf0a1t(("pdf0a1t_"+tag).c_str(), "@0",     RooArgList(*(eqstar[0])) );
+	  RooFormulaVar pdf1a0t(("pdf1a0t_"+tag).c_str(), "(1-@0)", RooArgList(*(eqstar[1])) );
+	  RooFormulaVar pdf1a1t(("pdf1a1t_"+tag).c_str(), "@0",     RooArgList(*(eqstar[1])) );
+	  RooFormulaVar pdf2a0t(("pdf2a0t_"+tag).c_str(), "(1-@0)", RooArgList(*(eqstar[2])) );
+	  RooFormulaVar pdf2a1t(("pdf2a1t_"+tag).c_str(), "@0",     RooArgList(*(eqstar[2])) );
+
+	  if(njets==3)
+	    {
+	      RooFormulaVar pdf0a3j0t(("pdf0a3j0t_"+tag).c_str(),"@0*@1",       RooArgList(pdf0a2j0t,pdf0a0t));
+	      RooFormulaVar pdf0a3j1t(("pdf0a3j1t_"+tag).c_str(),"@0*@1+@2*@3", RooArgList(pdf0a2j0t,pdf0a1t,pdf0a2j1t,pdf0a0t));
+	      RooFormulaVar pdf0a3j2t(("pdf0a3j2t_"+tag).c_str(),"@0*@1+@2*@3", RooArgList(pdf0a2j1t,pdf0a1t,pdf0a2j2t,pdf0a0t));
+	      RooFormulaVar pdf0a3j3t(("pdf0a3j3t_"+tag).c_str(),"@0*@1",       RooArgList(pdf0a2j2t,pdf0a1t));
+
+	      RooFormulaVar pdf1a3j0t(("pdf1a3j0t_"+tag).c_str(),"@0*@1",       RooArgList(pdf1a2j0t,pdf1a0t));
+	      RooFormulaVar pdf1a3j1t(("pdf1a3j1t_"+tag).c_str(),"@0*@1+@2*@3", RooArgList(pdf1a2j0t,pdf1a1t,pdf1a2j1t,pdf1a0t));
+	      RooFormulaVar pdf1a3j2t(("pdf1a3j2t_"+tag).c_str(),"@0*@1+@2*@3", RooArgList(pdf1a2j1t,pdf1a1t,pdf1a2j2t,pdf1a0t));
+	      RooFormulaVar pdf1a3j3t(("pdf1a3j3t_"+tag).c_str(),"@0*@1",       RooArgList(pdf1a2j2t,pdf1a1t));
+
+	      RooFormulaVar pdf2a3j0t(("pdf2a3j0t_"+tag).c_str(),"@0*@1",       RooArgList(pdf2a2j0t,pdf2a0t));
+	      RooFormulaVar pdf2a3j1t(("pdf2a3j1t_"+tag).c_str(),"@0*@1+@2*@3", RooArgList(pdf2a2j0t,pdf2a1t,pdf2a2j1t,pdf2a0t));
+	      RooFormulaVar pdf2a3j2t(("pdf2a3j2t_"+tag).c_str(),"@0*@1+@2*@3", RooArgList(pdf2a2j1t,pdf2a1t,pdf2a2j2t,pdf2a0t));
+	      RooFormulaVar pdf2a3j3t(("pdf2a3j3t_"+tag).c_str(),"@0*@1",       RooArgList(pdf2a2j2t,pdf2a1t));
+
+	      //add according to alpha coefficients
+	      RooGenericPdf pdf3j0t(("pdf3j0t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a3j0t,pdf1a3j0t,pdf0a3j0t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf3j1t(("pdf3j1t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a3j1t,pdf1a3j1t,pdf0a3j1t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf3j2t(("pdf3j2t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a3j2t,pdf1a3j2t,pdf0a3j2t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf3j3t(("pdf3j3t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a3j3t,pdf1a3j3t,pdf0a3j3t,*alpha2,*alpha1,*alpha0));
+
+	      //import to workspace
+	      ws_->import( pdf3j0t );
+	      ws_->import( pdf3j1t,RecycleConflictNodes() );
+	      ws_->import( pdf3j2t,RecycleConflictNodes() );
+	      ws_->import( pdf3j3t,RecycleConflictNodes() );
+	    }
+	  if(njets==4)
+	    {
+	      RooFormulaVar pdf0a4j0t(("pdf0a4j0t_"+tag).c_str(),"@0*@1*@1",                       RooArgList(pdf0a2j0t,pdf0a0t));
+	      RooFormulaVar pdf0a4j1t(("pdf0a4j1t_"+tag).c_str(),"2*@0*@2*@3+@1*@3*@3",            RooArgList(pdf0a2j0t,pdf0a2j1t,pdf0a1t,pdf0a0t));
+	      RooFormulaVar pdf0a4j2t(("pdf0a4j2t_"+tag).c_str(),"@0*@3*@3+2*@1*@3*@4+@2*@4*@4",   RooArgList(pdf0a2j0t,pdf0a2j1t,pdf0a2j2t,pdf0a1t,pdf0a0t));
+	      RooFormulaVar pdf0a4j3t(("pdf0a4j3t_"+tag).c_str(),"@0*@2*@2+2*@1*@2*@3",            RooArgList(pdf0a2j1t,pdf0a2j2t,pdf0a1t,pdf0a0t));
+	      RooFormulaVar pdf0a4j4t(("pdf0a4j4t_"+tag).c_str(),"@0*@1*@1",                       RooArgList(pdf0a2j2t,pdf0a1t));
+
+	      RooFormulaVar pdf1a4j0t(("pdf1a4j0t_"+tag).c_str(),"@0*@1*@1",                       RooArgList(pdf1a2j0t,pdf1a0t));
+	      RooFormulaVar pdf1a4j1t(("pdf1a4j1t_"+tag).c_str(),"2*@0*@2*@3+@1*@3*@3",            RooArgList(pdf1a2j0t,pdf1a2j1t,pdf1a1t,pdf1a0t));
+	      RooFormulaVar pdf1a4j2t(("pdf1a4j2t_"+tag).c_str(),"@0*@3*@3+2*@1*@3*@4+@2*@4*@4",   RooArgList(pdf1a2j0t,pdf1a2j1t,pdf1a2j2t,pdf1a1t,pdf1a0t));
+	      RooFormulaVar pdf1a4j3t(("pdf1a4j3t_"+tag).c_str(),"@0*@2*@2+2*@1*@2*@3",            RooArgList(pdf1a2j1t,pdf1a2j2t,pdf1a1t,pdf1a0t));
+	      RooFormulaVar pdf1a4j4t(("pdf1a4j4t_"+tag).c_str(),"@0*@1*@1",                       RooArgList(pdf1a2j2t,pdf1a1t));
+
+	      RooFormulaVar pdf2a4j0t(("pdf2a4j0t_"+tag).c_str(),"@0*@1*@1",                       RooArgList(pdf2a2j0t,pdf2a0t));
+	      RooFormulaVar pdf2a4j1t(("pdf2a4j1t_"+tag).c_str(),"2*@0*@2*@3+@1*@3*@3",            RooArgList(pdf2a2j0t,pdf2a2j1t,pdf2a1t,pdf2a0t));
+	      RooFormulaVar pdf2a4j2t(("pdf2a4j2t_"+tag).c_str(),"@0*@3*@3+2*@1*@3*@4+@2*@4*@4",   RooArgList(pdf2a2j0t,pdf2a2j1t,pdf2a2j2t,pdf2a1t,pdf2a0t));
+	      RooFormulaVar pdf2a4j3t(("pdf2a4j3t_"+tag).c_str(),"@0*@2*@2+2*@1*@2*@3",            RooArgList(pdf2a2j1t,pdf2a2j2t,pdf2a1t,pdf2a0t));
+	      RooFormulaVar pdf2a4j4t(("pdf2a4j4t_"+tag).c_str(),"@0*@1*@1",                       RooArgList(pdf2a2j2t,pdf2a1t));
+
+	      //add according to alpha coefficients
+	      RooGenericPdf pdf4j0t(("pdf4j0t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a4j0t,pdf1a4j0t,pdf0a4j0t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf4j1t(("pdf4j1t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a4j1t,pdf1a4j1t,pdf0a4j1t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf4j2t(("pdf4j2t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a4j2t,pdf1a4j2t,pdf0a4j2t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf4j3t(("pdf4j3t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a4j3t,pdf1a4j3t,pdf0a4j3t,*alpha2,*alpha1,*alpha0));
+	      RooGenericPdf pdf4j4t(("pdf4j4t_"+tag).c_str(),"@0*@3+@1*@4+@2*@5",RooArgList(pdf2a4j4t,pdf1a4j4t,pdf0a4j4t,*alpha2,*alpha1,*alpha0));
+
+	      //import to workspace
+	      ws_->import( pdf4j0t );
+	      ws_->import( pdf4j1t, RecycleConflictNodes() );
+	      ws_->import( pdf4j2t, RecycleConflictNodes() );
+	      ws_->import( pdf4j3t, RecycleConflictNodes() );
+	      ws_->import( pdf4j4t, RecycleConflictNodes() );
+	    }
+	}
+
+      
+
+
+      /* pre-approval version
 
       //alpha_0         @0 
       RooArgList a0args(*(eqstar[0]));
@@ -384,6 +555,8 @@ void HFCMeasurement::initHFCModel()
 	    }
 	}
 
+      */
+
       //each n-jets n-b-tags is a category
       for(int itag=0; itag<=njets; itag++)
 	{
@@ -393,8 +566,6 @@ void HFCMeasurement::initHFCModel()
 
 	  char pdfname[100];	  
 	  sprintf(pdfname,"pdf%dj%dt_%s",njets,itag,tag.c_str());
-	  sample.defineType(pdfname);
-
 	  basePdfsPerCat[catname]=pdfname;
 	}
     }
@@ -433,7 +604,10 @@ void HFCMeasurement::initHFCModel()
   ws_->import(*model);
 
   //finalize workspace
-  ws_->defineSet("observables","bmultobs,bmult,sample");
+  ws_->defineSet("observables","bmult,bmultobs,sample");
+  RooArgSet baseGlobalObs( *(ws_->var("bmult")), *(ws_->var("bmultobs")) ); 
+  baseGlobalObs.add( *(ws_->set("globalobservables") ) );
+  ws_->defineSet("globalobservables", baseGlobalObs );
   ws_->defineSet("poi",poi);  
   RooArgSet *nullParams = (RooArgSet *)ws_->allVars().snapshot();
   ws_->saveSnapshot("default",*nullParams,kTRUE);
@@ -445,8 +619,8 @@ void HFCMeasurement::initHFCModel()
   mc_->SetPdf(*model);
   mc_->SetParametersOfInterest(*(ws_->set("poi")));
   mc_->SetObservables(*(ws_->set("observables")));
+  mc_->SetGlobalObservables(*(ws_->set("globalobservables")));
   mc_->SetNuisanceParameters(*(ws_->set("nuisances")));
-  ws_->import(*mc_);
 }
 
 
@@ -461,7 +635,16 @@ void HFCMeasurement::resetModelValues()
 void HFCMeasurement::fitHFCfrom(TH1 *btagObs, bool debug)
 {
   if( !createDataset(btagObs) ) return;;
-  if(debug) { cout << "Saving workspace to HeavyFlavorWorkspace.root" << endl; saveWorkspace("HeavyFlavorWorkspace.root"); }
+  if(debug) { 
+    cout << "Saving workspace to HeavyFlavorWorkspace.root" << endl; 
+    //     TIterator *nuis_params_itr = mc_->GetNuisanceParameters()->createIterator();
+    //     TObject *nuis_params_obj;
+    //     while((nuis_params_obj=nuis_params_itr->Next())){
+    //       RooRealVar *nuiVar=(RooRealVar *)nuis_params_obj;
+    //       nuiVar->setRange(-1,1); //limit to +/-1-sigma for FC
+    //     }
+    saveWorkspace("HeavyFlavorWorkspace.root");
+  }
   fit(debug);
 }
 
@@ -500,6 +683,7 @@ TH1F *HFCMeasurement::generateBtagObs()
 	  TString cut("sample==sample::n0btags_"+tag+" || sample==sample::n1btags_"+tag+" || sample==sample::n2btags_"+tag);
 	  if(njets>2) cut+=" || sample==sample::n3btags_"+tag;
 	  if(njets>3) cut+=" || sample==sample::n4btags_"+tag;
+	  
 	  RooDataSet *data = (RooDataSet *) data_->reduce(cut);
 	  Double_t cts=data->sumEntries();
 	  
@@ -552,8 +736,7 @@ bool HFCMeasurement::createDataset(TH1 *btagObs)
       sample->setLabel(catName);
       data_->add( RooArgSet(*bmult,*bmultObs,*sample), counts );
     }
-  
-  ws_->import(*data_,kTRUE);
+
 
   return true;
 }
@@ -575,6 +758,7 @@ bool HFCMeasurement::fit(bool debug)
   std::map<string, TH1F *> preFitModel, postExclusiveFitModel, postInclusiveFitModel;
   std::map<string, std::vector<TH1F *> > preFitModelFunc;
   std::map<string, TString> combChannelCuts;
+  std::map<int, TString> combMultCuts; 
   for(std::set<string>::iterator cIt = sampleCats_.begin(); cIt != sampleCats_.end(); cIt++)
     {
       TString tag=*cIt;
@@ -597,6 +781,10 @@ bool HFCMeasurement::fit(bool debug)
       if(combChannelCuts.find(key)==combChannelCuts.end()) combChannelCuts[key]=cut;
       else                                                 combChannelCuts[key]=combChannelCuts[key] + " || " + cut; 
 
+      //add to the combined multiplicity cuts
+      if(combMultCuts.find(njets)==combMultCuts.end()) combMultCuts[njets]=cut;
+      else                                             combMultCuts[njets]=combMultCuts[njets]+ " || " + cut; 
+
       //reset to default values
       resetModelValues();
 
@@ -618,6 +806,16 @@ bool HFCMeasurement::fit(bool debug)
       RooDataSet *data = (RooDataSet *) data_->reduce(cIt->second);
       dataSlice[cIt->first]   = data;
       curResults_[cIt->first] = plrFit(data,mc_,debug);
+    } 
+
+  //exclusive multiplicity results
+  for(std::map<int,TString>::iterator cIt=combMultCuts.begin(); cIt!=combMultCuts.end(); cIt++)
+    {
+      char tag[200]; sprintf(tag,"=%d jets",cIt->first);
+      resetModelValues();
+      RooDataSet *data = (RooDataSet *) data_->reduce(cIt->second);
+      dataSlice[tag]   = data;
+      curResults_[tag] = plrFit(data,mc_,debug);
     } 
 
 
@@ -886,6 +1084,7 @@ bool HFCMeasurement::fit(bool debug)
   float poiFit    = curResults_["inclusive"].poiFit;
   float poiFitElo = poiFit-curResults_["inclusive"].poiFitLoLim;
   float poiFitEHi = curResults_["inclusive"].poiFitUpLim-poiFit;
+
   TCanvas *incllc = new TCanvas("incllc","incllc",800,800);
   TLegend *leg=new TLegend(0.2,0.7,0.5,0.94);
   leg->SetBorderSize(0);
@@ -1021,7 +1220,8 @@ bool HFCMeasurement::fit(bool debug)
 
   //finaly a LEP style plot with all the different measurements and the overall combination
   TCanvas *sc=new TCanvas("sc","sc",600,600);
-  TGraphAsymmErrors *exclusiveFitsGr=new TGraphAsymmErrors; exclusiveFitsGr->SetFillStyle(0);  exclusiveFitsGr->SetLineColor(kRed);  exclusiveFitsGr->SetMarkerStyle(1); exclusiveFitsGr->SetMarkerColor(0);
+  TGraphAsymmErrors *exclusiveFitsGr=new TGraphAsymmErrors;     exclusiveFitsGr->SetFillStyle(0);      exclusiveFitsGr->SetLineColor(kRed);   exclusiveFitsGr->SetMarkerStyle(1);      exclusiveFitsGr->SetMarkerColor(0);
+  TGraphAsymmErrors *exclusiveFitsStatGr=new TGraphAsymmErrors; exclusiveFitsStatGr->SetFillStyle(0);  exclusiveFitsStatGr->SetLineColor(1);  exclusiveFitsStatGr->SetMarkerStyle(20); exclusiveFitsStatGr->SetMarkerColor(1);
   std::vector<TPaveText *>  exclusiveFitNames;
   for(std::map<std::string,FitResult_t>::iterator rIt=curResults_.begin(); rIt!=curResults_.end(); rIt++)
     {
@@ -1030,25 +1230,33 @@ bool HFCMeasurement::fit(bool debug)
       float val=rIt->second.poiFit;
       float eLo=val-rIt->second.poiFitLoLim;
       float eHi=rIt->second.poiFitUpLim-val;
-   
+      float eStatLo=rIt->second.poiStatErr; //val-rIt->second.poiFitStatLoLim;
+      float eStatHi=rIt->second.poiStatErr; //rIt->second.poiFitStatUpLim-val;
+
       Int_t np=exclusiveFitsGr->GetN();
       exclusiveFitsGr->SetPoint(np,val,np*2);
       exclusiveFitsGr->SetPointError(np,eLo,eHi,0.1,0.1);
       
+      exclusiveFitsStatGr->SetPoint(np,val,np*2);
+      exclusiveFitsStatGr->SetPointError(np,eStatLo,eStatHi,0,0);
+
       TPaveText *pt = new TPaveText(1.08,np*2+0.2,1.1,np*2+0.6,"br");
       pt->SetBorderSize(0);
       pt->SetFillColor(0);
       pt->SetFillStyle(0);
       pt->SetTextFont(42);
       pt->SetTextSize(0.03);
-      pt->SetTextAlign(42);
-      string caption("ee");
+      //pt->SetTextAlign(42);
+      string caption(""), captionSuf("");
+      if(rIt->first.find("ee") != string::npos) caption="#ee";
       if(rIt->first.find("mumu") != string::npos) caption="#mu#mu";
       if(rIt->first.find("emu") != string::npos)  caption="e#mu";
-      if(rIt->first.find("2")!=string::npos)      caption+=", =2 jets";
-      else if(rIt->first.find("3")!=string::npos) caption+=", =3 jets";
-      else if(rIt->first.find("4")!=string::npos) caption+=", =4 jets";
+      if(rIt->first.find("2")!=string::npos)      captionSuf+="=2 jets";
+      else if(rIt->first.find("3")!=string::npos) captionSuf+="=3 jets";
+      else if(rIt->first.find("4")!=string::npos) captionSuf+="=4 jets";
       else                                        pt->SetTextFont(62); 
+      if(caption=="")         caption=captionSuf;
+      else if(captionSuf!="") caption = ", "+captionSuf; 
       pt->AddText(caption.c_str());
       exclusiveFitNames.push_back(pt);
     }
@@ -1056,6 +1264,7 @@ bool HFCMeasurement::fit(bool debug)
   exclusiveFitsGr->Draw("ae2p");
   exclusiveFitsGr->GetXaxis()->SetTitle( fitTypeTitle_ );
   exclusiveFitsGr->GetYaxis()->SetNdivisions(0);
+  exclusiveFitsStatGr->Draw("p");
 
   TGraph *inclusiveFitGr =new TGraph; inclusiveFitGr->SetLineColor(kGray);
   inclusiveFitGr->SetPoint(0,poiFit-poiFitElo,exclusiveFitsGr->GetYaxis()->GetXmin());
@@ -1160,15 +1369,12 @@ HFCMeasurement::FitResult_t HFCMeasurement::plrFit(RooDataSet *data, ModelConfig
   //check inputs
   if(data==0||mc==0) return res;
 
+  //for debugging purposes
+  //freezeNuisances(mc,CORRELATEDNUISANCES,true);
+  //freezeNuisances(mc,UNCORRELATEDNUISANCES,true);
+
   RooRealVar* firstPOI = (RooRealVar*) mc_->GetParametersOfInterest()->first();
   
-  //   RooNLLVar *nll = (RooNLLVar*) mc_->GetPdf()->createNLL(*data_,RooFit::CloneData(kFALSE)/*,Extended(kTRUE)*/); //,Constrain( *(mc_->GetConstraintParameters())) );
-  //   RooMinuit minuit(*nll);
-  //   minuit.setVerbose(false);
-  //   minuit.migrad();
-  //   minuit.hesse();
-  //   cout << firstPOI->getVal() << " " << firstPOI->getError() << endl;
-
   //the following is based on http://root.cern.ch/root/html/tutorials/roostats/StandardProfileLikelihoodDemo.C.html
   ProfileLikelihoodCalculator pl(*data,*mc_);
   pl.SetConfidenceLevel(0.68); 	
@@ -1179,7 +1385,8 @@ HFCMeasurement::FitResult_t HFCMeasurement::plrFit(RooDataSet *data, ModelConfig
   res.poiFit      = firstPOI->getVal(); 
   res.poiFitLoLim = interval->LowerLimit(*firstPOI); 
   res.poiFitUpLim = interval->UpperLimit(*firstPOI);
-  res.poiErr      = firstPOI->getError();
+  res.poiErr      = 0.5*(res.poiFitUpLim-res.poiFitLoLim);
+
 
   //get post fit nuisance pulls
   TIterator *nuis_params_itr = mc->GetNuisanceParameters()->createIterator();
@@ -1203,9 +1410,25 @@ HFCMeasurement::FitResult_t HFCMeasurement::plrFit(RooDataSet *data, ModelConfig
       res.postFitNuisGr->SetBinContent(ibin,nIt->second);
     }	
 
+  //statistical only uncertainty
+  freezeNuisances(mc,ALLNUISANCES,true);
+  ProfileLikelihoodCalculator statpl(*data,*mc);
+  statpl.SetConfidenceLevel(0.68); 	
+  LikelihoodInterval* statinterval = statpl.GetInterval();
+  if(interval!=0){
+    res.poiFitStatLoLim = statinterval->LowerLimit(*firstPOI); 
+    res.poiFitStatUpLim = statinterval->UpperLimit(*firstPOI);
+  }
+  else{
+    res.poiFitStatLoLim = 0;
+    res.poiFitStatUpLim = 0;
+  }
+  res.poiStatErr = 0.5*(res.poiFitStatUpLim-res.poiFitStatLoLim);
+  freezeNuisances(mc,ALLNUISANCES,false);
+  
   //get the likelihood graph if required
   if(debug)
-    {
+    {     
       res.plrGr=new TGraph;
       res.plrGr->SetName("plr");
       res.plrGr->SetFillStyle(0);
@@ -1223,6 +1446,7 @@ HFCMeasurement::FitResult_t HFCMeasurement::plrFit(RooDataSet *data, ModelConfig
       //       float rmax=min(firstPOI->getVal()+10*firstPOI->getError(),2.0);
       //       plot.SetRange(rmin,rmax);
       plot.SetRange(0.9,1.1);
+      if(fitType_==FIT_GAMMAT) plot.SetRange(0.1,3.0);
       plot.SetNPoints(100);
       plot.Draw(""); 
       TIter nextpobj(c->GetListOfPrimitives());
@@ -1246,6 +1470,22 @@ HFCMeasurement::FitResult_t HFCMeasurement::plrFit(RooDataSet *data, ModelConfig
 
   return res;
 }
+
+//
+void HFCMeasurement::freezeNuisances(ModelConfig *mc,int mode,bool setConstant)
+{
+  
+  TIterator *nuis_params_itr = mc->GetNuisanceParameters()->createIterator();
+  TObject *nuis_params_obj;
+  while((nuis_params_obj=nuis_params_itr->Next())){
+    RooRealVar *nuiVar=(RooRealVar *)nuis_params_obj;
+    TString parName(nuiVar->GetName());
+    if(mode==CORRELATEDNUISANCES)    if(parName.Contains("_stat") && !parName.Contains("kst_")) continue;
+    if(mode==UNCORRELATEDNUISANCES)  if(!parName.Contains("_stat") || parName.Contains("kst_")) continue;
+    nuiVar->setConstant(setConstant);
+  }
+}
+   
 
 
 //
@@ -1275,9 +1515,9 @@ std::string HFCMeasurement::getNuisanceTitle(std::string &name)
   if(name.find("ee")!=string::npos)    compTitle+="ee"; 
   if(name.find("emu")!=string::npos)   compTitle+="e#mu"; 
   if(name.find("mumu")!=string::npos)  compTitle+="#mu#mu"; 
-  if(name.find("2")!=string::npos)    compTitle+=",=2 jets)"; 
-  if(name.find("3")!=string::npos)   compTitle+=",=3 jets)"; 
-  if(name.find("4")!=string::npos)  compTitle+=",=4 jets)";
+  if(name.find("2")!=string::npos)     compTitle+=",=2 jets)"; 
+  if(name.find("3")!=string::npos)     compTitle+=",=3 jets)"; 
+  if(name.find("4")!=string::npos)     compTitle+=",=4 jets)";
   return compTitle;
 }
 
@@ -1294,4 +1534,61 @@ void HFCMeasurement::printConfiguration(std::ostream &os)
   cout << "Tagger: " << wp_ << endl;
   cout << "Sample: " << sampleType_ << endl;
   cout << "*****************************************************************" << endl;
+}
+
+//
+void HFCMeasurement::instantiateSingleTopContribution(RooWorkspace *wspace)
+{
+  
+  //
+  // THEORY TOP QUARK WIDTH
+  // is a simple constant
+  //
+
+  TString Gamma_NLO("(GF*pow(mt,3)/(8*TMath::Pi()*sqrt(2)))*pow(1-pow(mW/mt,2),2)*(1+2*pow(mW/mt,2))*(1-(2*as)/(3*TMath::Pi())*(2.*pow(TMath::Pi(),2)/3.-5./2.))");
+  Gamma_NLO.ReplaceAll("mt","x");
+  Gamma_NLO.ReplaceAll("GF","[0]");
+  Gamma_NLO.ReplaceAll("mW","[1]");
+  Gamma_NLO.ReplaceAll("as","[2]");
+  TF1 *f_Gamma_NLO=new TF1("Gamma_NLO",Gamma_NLO,166.5,178.5);
+  f_Gamma_NLO->SetParameter(0,1.16637E-5);
+  f_Gamma_NLO->SetParameter(1,80.399);
+  f_Gamma_NLO->SetParameter(2,0.118);
+  
+  char pdf_gt_th[100];
+  sprintf(pdf_gt_th,"Gamma_b[%f]",f_Gamma_NLO->Eval(172.5));
+  wspace->factory(pdf_gt_th);
+  
+  //
+  // THEORY CROSS SECTION
+  // parameterized as gaussian(PDF) x Rect(xsec | mu_r,mu_f)  
+  //
+
+  //Phys. Rev. D 83 (2011) 091503(R).
+  //\sigma(t-ch) = 64.6 +/- 1.3 (scale) +1.4 -0.7 (PDF) pb
+  float sigma_st   = 64.6;
+  float sigma_st_h = sigma_st+1.3;
+  float sigma_st_l = sigma_st-1.3;
+  float delta_pdf  = 1.4;  // 0.5*(1.4+0.7);
+
+  char pdf_st_th[1000];
+  sprintf(pdf_st_th,"GenericPdf::pdf_st_th('(1/(2*(%f-%f)))*(TMath::Erf((%f-@0)/(sqrt(2)*%f))-TMath::Erf((%f-@0)/(sqrt(2)*%f)))',st_th[%f,50,80])",
+	  sigma_st_h,sigma_st_l,sigma_st_h,delta_pdf,sigma_st_l,delta_pdf,sigma_st);
+  wspace->factory(pdf_st_th);
+  
+
+  //
+  // EXPERIMENTAL CROSS SECTION
+  // parametrized as a gaussian...
+  //
+
+  //JHEP 1212 (2012) 035
+  //\sigma(t-ch) = 67.2 +/- 6.1 pb = 67.2 +/- 3.7 (stat.) +/- 3.0 (syst.) +/- 3.5 (theor.) +/- 1.5 (lum.) pb
+  float sigma_st_exp = 67.2;
+  float delta_sigma_st_exp = 6.1;
+  
+  //gaussian(total unc)
+  char pdf_st_exp[1000];
+  sprintf(pdf_st_exp,"Gaussian::pdf_st_exp(st_exp[%f,0,140],%f,%f)",sigma_st_exp,sigma_st_exp,delta_sigma_st_exp);
+  wspace->factory(pdf_st_exp);
 }

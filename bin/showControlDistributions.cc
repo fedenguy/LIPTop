@@ -11,6 +11,7 @@
 #include "CMGTools/HtoZZ2l2nu/interface/SmartSelectionMonitor.h"
 
 #include "LIP/Top/interface/LeptonEfficiency.h"
+#include "LIP/Top/interface/BtagSFUtil.h"
 
 #include "CondFormats/JetMETObjects/interface/JetResolution.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
@@ -47,6 +48,50 @@ using namespace std;
 bool sortJetsByCSV(PhysicsObject_Jet a,PhysicsObject_Jet b) { return (a.btag2>b.btag2); }
 bool sortJetsByPt(PhysicsObject_Jet a,PhysicsObject_Jet b)  { return (a.pt()>b.pt());   }
 bool sortJetsByLxy(PhysicsObject_Jet a,PhysicsObject_Jet b) { return (a.lxy>b.lxy); }
+
+//
+struct LxyInfo_t
+{
+  int njets,npu,chcat, partonflav;
+  Float_t lxy,lxyerr,secvtxmass,pt,eta,gamma,recopt,recoeta,dR,btag;
+};
+
+TTree *bookLxyTree(LxyInfo_t &lxyInfo)
+{
+  TTree *t = new TTree("toptree","toptree");
+  t->Branch("njets",      &lxyInfo.njets,       "njets/I");
+  t->Branch("chcat",      &lxyInfo.chcat,       "chcat/I");
+  t->Branch("npu",        &lxyInfo.npu,         "npu/I");
+  t->Branch("lxy",        &lxyInfo.lxy,         "lxy/F");
+  t->Branch("lxyerr",     &lxyInfo.lxyerr,      "lxyerr/F");
+  t->Branch("secvtxmass", &lxyInfo.secvtxmass,  "secvtxmass/F");
+  t->Branch("bqpt",       &lxyInfo.pt,          "pt/F");
+  t->Branch("bqeta",      &lxyInfo.eta,         "eta/F");
+  t->Branch("bqgamma",    &lxyInfo.gamma,       "gamma/F");
+  t->Branch("bqdR",       &lxyInfo.dR,          "dR/F");
+  t->Branch("btag",       &lxyInfo.btag,        "btag/F");
+  t->Branch("recopt",     &lxyInfo.recopt,      "recopt/F");
+  t->Branch("recoeta",    &lxyInfo.recoeta,     "recoeta/F");
+  t->Branch("partonflav", &lxyInfo.partonflav,  "partonflav/I");
+  return t;
+}
+
+LorentzVector getClosestMatching(LorentzVector &obj, ZZ2l2nuSummary_t &ev, int id=5)
+{
+  //match in deltaR
+  float minDR(99999.);
+  LorentzVector matchP4(0,0,0,0);
+  for(Int_t i=0; i<ev.nmcparticles; i++)
+    {
+      if(abs(ev.mc_id[i])!=id) continue;
+      LorentzVector p4(ev.mc_px[i],ev.mc_py[i],ev.mc_pz[i],ev.mc_en[i]);
+      float dR=deltaR(p4,obj);
+      if(dR>minDR) continue;
+      minDR=dR;
+      matchP4=p4;
+    }
+  return matchP4;
+}
 
 
 //MC truth for B hadrons
@@ -119,6 +164,7 @@ int main(int argc, char* argv[])
   int eIdToUse   = EID_MEDIUM;  float eIsoToUse=0.1;
   int mIdToUse   = MID_TIGHT;   float mIsoToUse=0.12;//0.2;
   bool applyDYweight =  runProcess.getParameter<bool>("applyDYweight");
+  bool applyTTstrength =  runProcess.getParameter<bool>("applyTTstrength");
   TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
 
   //
@@ -183,6 +229,7 @@ int main(int argc, char* argv[])
   controlHistos.addHistogram( new TH1F ("nvertices_unwgt", "; Vertex multiplicity; Events", 50, 0.,50.) );
   
   ///lepton control
+  controlHistos.addHistogram( new TH1D("truepairs",";Dileptons;Events",2,0,2) );
   controlHistos.addHistogram( new TH1D("dilmass",";M(l,l') [GeV];Events",50,0,250) );
   controlHistos.addHistogram( new TH1D("dilmassNM1",";M(l,l') [GeV];Events",50,0,250) );
   controlHistos.addHistogram( new TH1D("dilpt",";p_{T}(l,l') [GeV];Events",50,0,250) );
@@ -246,14 +293,16 @@ int main(int argc, char* argv[])
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetsvptfrac", "; SecVtx p_{T}/Jet p_{T}; Jets", 50, 0.,1) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetsvdr", "; #Delta R(SecVtx,Jet); Jets", 50, 0.,0.5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetmass", "; SecVtx Mass [GeV]; Events / (0.2 GeV)", 50, 0.,10.) );
+      controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxyjp", "; JP; Events", 50, btaggerMin[1],btaggerMax[1]) );
       controlHistos.addHistogram( new TH2F (jetFlavors[ijf]+"jetmassvslxy", "; SecVtx Mass [GeV]; SecVtx L_{xy} [cm] Events / (0.2 GeV x 0.1 cm)", 50, 0.,10.,50,0.,5) );
       H_optim_lxy=(TH2F *)controlHistos.addHistogram( new TH2F (jetFlavors[ijf]+"jetptvslxy", "; Jet p_{T} [GeV]; SecVtx L_{xy} [cm] Events / (0.2 GeV x 0.1 cm)", 50, 0.,100.,50,0.,5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetpt", "; Jet p_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jeteta", "; Jet #eta; Events", 30, 0.,3.) );
       controlHistos.addHistogram( new TH2F (jetFlavors[ijf]+"jetptvseta", "; Jet p_{T} [GeV]; Jet #eta; Events / (10 GeV)", 50, 0.,500., 5, 0., 2.5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"tagjetpt", "; Taggable jet p_{T} [GeV]; Events / (10 GeV)", 50, 0.,500.) );
-      controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"tagjeteta", "; Taggable jet #eta; Events", 30, 0.,3.) );
-    }
+      controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"tagjeteta", "; Taggable jet #eta; Events", 30, 0.,3.) );    
+    } 
+  controlHistos.addHistogram( new TH2F ("csv1vscsv2", "; Jet #1 CSV; Jet #2 CSV; Jets", 50, -0.2,1.2, 50, -0.2, 1.2) );
 
   //flavor of the extra jets (besides t->Wq)
   TH2F *h2=(TH2F *)controlHistos.addHistogram( new TH2F("extrajetflavor",";Flavor;Event type", 4,0,4,9,0,9) );
@@ -279,6 +328,12 @@ int main(int argc, char* argv[])
 	  hm->GetXaxis()->SetBinLabel(ibin,label);
 	  ht->GetXaxis()->SetBinLabel(ibin,label);
 	}
+      controlHistos.addHistogram( (TH1F *)hl->Clone(btagger[i]+"Lbtagsextended_lowmet") );
+      controlHistos.addHistogram( (TH1F *)hl->Clone(btagger[i]+"Lbtagsextended_z") );
+      controlHistos.addHistogram( (TH1F *)hm->Clone(btagger[i]+"Mbtagsextended_lowmet") );
+      controlHistos.addHistogram( (TH1F *)hm->Clone(btagger[i]+"Mbtagsextended_z") );
+      controlHistos.addHistogram( (TH1F *)ht->Clone(btagger[i]+"Tbtagsextended_lowmet") );
+      controlHistos.addHistogram( (TH1F *)ht->Clone(btagger[i]+"Tbtagsextended_z") );
       
       for(size_t j=0; j<nSystVars; j++)
 	{  
@@ -384,6 +439,8 @@ int main(int argc, char* argv[])
   if( !evSummaryHandler.attachToTree( (TTree *)evfile->Get(dirname) ) )  { evfile->Close();  return -1; }  
   TTree *evTree=evSummaryHandler.getTree();
 
+  BTagSFUtil btsfutil(1.0);
+
   int fType(0);
   if(evurl.Contains("DoubleEle")) fType=EE;
   if(evurl.Contains("DoubleMu"))  fType=MUMU;
@@ -416,8 +473,10 @@ int main(int argc, char* argv[])
   
   //prepare to save summaries
   ZZ2l2nuSummaryHandler *spyEvents=0;
+  TTree *lxyTree=0;
+  LxyInfo_t lxyInfo;
   TFile *spyFile=0;
-  TDirectory *spyDir=0;
+  TDirectory *spyDir=0,*lxyDir=0;
   float summaryWeight(1);
   if(saveSummaryTree)
     {
@@ -439,6 +498,11 @@ int main(int argc, char* argv[])
       outT->SetAutoSave(1000000);
       spyEvents->initTree(outT,false);
       cout << "Creating event summary file:" << summaryName << endl;
+
+      lxyDir=spyFile->mkdir("ana");
+      lxyTree=bookLxyTree(lxyInfo);
+      lxyTree->SetDirectory(lxyDir);
+      lxyTree->SetAutoSave(1000000);
     }
   
   //
@@ -571,7 +635,7 @@ int main(int argc, char* argv[])
 
 
       //do the selection (taking into account the different varied collections)
-      bool passBaseSelection(false);
+      bool passBaseSelection(false), passFullSelection(false);
       for(size_t ivar=0;ivar<(isMC ? nSystVars : 1); ivar++) 
 	{
 	  std::vector<TString> catsToFill;
@@ -683,6 +747,24 @@ int main(int argc, char* argv[])
 	      if(ngoodJets>1  && ev.cat==MUMU) weight *= 1.58075;
 	      if(ngoodJets>1  && ev.cat==EMU)  weight *= 1.06835 ;
 	    }
+	  if(isMC && isTop && applyTTstrength)
+	    {
+	      if(ngoodJets==2){
+		if(ev.cat==EE)    weight *= 0.9835;
+		if(ev.cat==EMU)   weight *= 1.0207;
+		if(ev.cat==MUMU)  weight *= 1.0161;
+	      }
+	      if(ngoodJets==3){
+		if(ev.cat==EE)    weight *= 0.9569;
+		if(ev.cat==EMU)   weight *= 0.9852;
+		if(ev.cat==MUMU)  weight *= 0.9427;
+	      }
+	      if(ngoodJets==4){
+		if(ev.cat==EE)    weight *= 0.9323;
+		if(ev.cat==EMU)   weight *= 0.9388;
+		if(ev.cat==MUMU)  weight *= 0.8389;
+	      }
+	    }
 	  TString metCat("none");
 	  if(passMet)              metCat="";
 	  else if(theMET.pt()<=30) metCat="lowmet";
@@ -693,6 +775,10 @@ int main(int argc, char* argv[])
 	      controlHistos.fillHisto("nvertices",catsToFill,ev.nvtx,weight,true);
 	      controlHistos.fillHisto("nvertices_unwgt",catsToFill,ev.nvtx,1,true);
 	      passBaseSelection=(!isInQuarkoniaRegion && passJet && passMet && isOS);  
+
+	      bool isDilCorrect( isMC && isTop && l1.genid*l2.genid<0);
+	      controlHistos.fillHisto("truepairs",catsToFill,0,weight);
+	      if(isDilCorrect) 	      controlHistos.fillHisto("truepairs",catsToFill,1,weight);
 	    }
 	  if(isInQuarkoniaRegion) continue;
 	  if(ivar==0 && isOS)
@@ -745,6 +831,7 @@ int main(int argc, char* argv[])
  	  if(!isOS) continue;
 	  if(ivar==0) controlHistos.fillHisto("dilmassNM1",catsToFill,dileptonSystem.mass(),weight);
 	  if(isZcand) continue;
+	  passFullSelection=true;
 
 	  //this is the final selected dilepton sample
 	  if(ngoodJets<=4)  controlHistos.fillHisto("finalevtflow"+systVars[ivar],catsToFill,ngoodJets-1,weight);
@@ -778,7 +865,7 @@ int main(int argc, char* argv[])
 	  PhysicsObject_Jet *leadingLxyJet=0;
 	  int ncorrectAssignments(0);
 	  std::vector<int> extraJetFlavors;
-	  std::vector<float> extraJetPt,matchedJetPt;
+	  std::vector<float> extraJetPt,matchedJetPt,matchedJetCSV;
 	  for(size_t ijet=0; ijet<prunedJetColl.size(); ijet++) 
 	    {
 	      TString jetctr(""); jetctr+=ijet;
@@ -847,7 +934,9 @@ int main(int argc, char* argv[])
 	      float tchp = prunedJetColl[ijet].btag4;
 	      bool hasTCHPT(tchp>3.41); btagsCount["tchpT"] += hasTCHPT; hasTagger["tchpT"]=hasTCHPT;
 	      float csv  = prunedJetColl[ijet].btag2;
-	      bool hasCSVL(csv>0.244);  btagsCount["csvL"] += hasCSVL;   hasTagger["csvL"]=hasCSVL;
+	      bool hasCSVL(csv>0.244);  
+	      if(isMC && applyTTstrength) btsfutil.modifyBTagsWithSF(hasCSVL, prunedJetColl[ijet].flavid, 0.98, 0.841, 1.11, 0.137);
+	      btagsCount["csvL"] += hasCSVL;   hasTagger["csvL"]=hasCSVL;
 	      bool hasCSVM(csv>0.679);  btagsCount["csvM"] += hasCSVM;   hasTagger["csvM"]=hasCSVM;
 	      bool hasCSVT(csv>0.898);  btagsCount["csvT"] += hasCSVT;   hasTagger["csvT"]=hasCSVT;
 	      float jp   = prunedJetColl[ijet].btag3;
@@ -907,6 +996,7 @@ int main(int argc, char* argv[])
 	      else
 		{
 		  matchedJetPt.push_back( prunedJetColl[ijet].pt() );
+		  matchedJetCSV.push_back( csv );
 		}
 
 	      if(ivar==0)
@@ -923,21 +1013,42 @@ int main(int argc, char* argv[])
 		}
 	    }
 	  
+	  //check tag uncorrelation
+	  if(isMC && ivar==0 && matchedJetCSV.size()>=2)
+	    {
+	      bool firstJet( (gRandom->Uniform()>0.5) );
+	      controlHistos.fillHisto("csv1vscsv2",catsToFill,matchedJetCSV[firstJet],matchedJetCSV[!firstJet],weight);
+	    }                         
+
 	  //Lxy analysis
 	  if(leadingLxyJet!=0 && leadingLxyJet->lxy>0)
 	    {
+	      LorentzVector matchP4=getClosestMatching(*leadingLxyJet,ev,5);
+	      if(matchP4.pt()>0)
+		{
+		  lxyInfo.chcat       = ev.cat;
+		  lxyInfo.npu         = ev.ngenITpu;
+		  lxyInfo.njets       = ngoodJets;
+		  lxyInfo.partonflav  = 5;
+		  lxyInfo.pt          = matchP4.pt();
+		  lxyInfo.eta         = matchP4.eta();
+		  lxyInfo.gamma       = matchP4.Gamma();
+		  lxyInfo.recopt      = leadingLxyJet->pt();
+		  lxyInfo.recoeta     = leadingLxyJet->eta();
+		  lxyInfo.lxy         = leadingLxyJet->lxy;
+		  lxyInfo.lxyerr      = leadingLxyJet->lxyerr;
+		  lxyInfo.secvtxmass  = leadingLxyJet->svmass;
+		  lxyInfo.btag        = leadingLxyJet->btag3;
+		}
 	      if(ivar==0)
 		{
 		  controlHistos.fillHisto("jetlxy",catsToFill,leadingLxyJet->lxy,weight);
-		  controlHistos.fillHisto("jetlxyopt",catsToFill,leadingLxyJet->lxy/leadingLxyJet->pt(),weight);
-		  controlHistos.fillHisto("jetlxyxmass",catsToFill,leadingLxyJet->lxy*leadingLxyJet->svmass,weight);
-		  controlHistos.fillHisto("jetlxyxmassopt",catsToFill,leadingLxyJet->lxy*leadingLxyJet->svmass/leadingLxyJet->svpt,weight);
+		  controlHistos.fillHisto("jetlxyjp",catsToFill,leadingLxyJet->btag3,weight);
 		  controlHistos.fillHisto("jetlxysig",catsToFill,leadingLxyJet->lxyerr/leadingLxyJet->lxy,weight);
 		  controlHistos.fillHisto("jetsvdr",catsToFill,leadingLxyJet->svdr,weight);
 		  controlHistos.fillHisto("jetsvpt",catsToFill,leadingLxyJet->svpt,weight);
 		  controlHistos.fillHisto("jetsvptfrac",catsToFill,leadingLxyJet->svpt/leadingLxyJet->pt(),weight);
 		  controlHistos.fillHisto("jetmass",catsToFill,leadingLxyJet->svmass,weight);
-		  controlHistos.fillHisto("jetmassvslxy",catsToFill,leadingLxyJet->svmass,leadingLxyJet->lxy,weight);
 		  for(int xbin=1; xbin<=H_optim_lxy->GetXaxis()->GetNbins(); xbin++)
 		    {
 		      float ptthr=H_optim_lxy->GetBinLowEdge(xbin);
@@ -965,6 +1076,7 @@ int main(int argc, char* argv[])
 			}
 		      controlHistos.fillHisto(jetFlav+"jetmassvslxy",catsToFill,leadingLxyJet->svmass,leadingLxyJet->lxy,weight);
 		      controlHistos.fillHisto(jetFlav+"jetmass",catsToFill,leadingLxyJet->svmass,weight);
+		      controlHistos.fillHisto(jetFlav+"jetlxyjp",catsToFill,leadingLxyJet->btag3,weight);
 		    }
 		}
 	    }
@@ -1019,6 +1131,7 @@ int main(int argc, char* argv[])
 	  std::vector<float> measurements;
 	  //FIXME: add measurements
 	  spyEvents->fillTree();// ev, measurements );
+	  if(passFullSelection) lxyTree->Fill();
 	}
     }
   cout << endl << "Selected " << selEvents << " events and found " << NumberOfDuplicated << " duplicates" << endl;
@@ -1032,6 +1145,8 @@ int main(int argc, char* argv[])
       cout << "Finishing summary tree with " << spyEvents->getTree()->GetEntriesFast() << " events" << endl; 
       spyDir->cd();
       spyEvents->getTree()->Write();
+      lxyDir->cd();
+      lxyTree->Write();
       spyFile->Write();
       spyFile->Close();
     }

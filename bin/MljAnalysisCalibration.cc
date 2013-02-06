@@ -281,7 +281,20 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 
   SmartSelectionMonitor localControlHistos;
   if(systSample!="") systSample="_"+systSample;
-  TH1F *baseMlj= new TH1F("mlj"+systSample,";Invariant Mass [GeV];Lepton-jet pairs",100,0,1000);
+  //TH1F *baseMlj= new TH1F("mlj"+systSample,";Invariant Mass [GeV];Lepton-jet pairs",100,0,1000);
+  Float_t mljAxis[]={0,   10, 20, 30, 40, 50, 60, 70, 80, 90,
+		     100,110,120,130,140,150,160,170,180,190,
+		     200,210,220,230,240,250,260,270,280,290,
+		     300,310,320,330,340,350,360,370,380,390,
+		     400,450,
+		     500,550, 
+		     600, 
+		     700, 
+		     800, 
+		     1000};
+  const size_t nMlj=sizeof(mljAxis)/sizeof(Float_t)-1;
+  TH1F *baseMlj= new TH1F("mlj"+systSample,";Invariant Mass [GeV];Lepton-jet pairs",nMlj,mljAxis);
+    
   baseMlj->Sumw2();
   localControlHistos.addHistogram(baseMlj);
   for(size_t imljVar=0; imljVar<mljVars.size(); imljVar++)
@@ -457,15 +470,15 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 	    {
 	      TString hname(mIt->first); hname+="mlj"; if(systVar!="") hname+="_"+systVar;
 	      for(size_t imlj=0; imlj<mIt->second.size(); imlj++)
-		localControlHistos.fillHisto(hname+systSample,ctf,(mIt->second)[imlj],weight);
+		localControlHistos.fillHisto(hname+systSample,ctf,(mIt->second)[imlj],weight,true);
 
 	      //special procedure for re-weighted events
 	      if(isData || iSystVar>0 || systSample!="") continue;
 	      hname=mIt->first; hname+="mlj"; if(systVar!="") hname+="_";
 	      for(size_t imlj=0; imlj<mIt->second.size(); imlj++)
 		{
-		  localControlHistos.fillHisto(hname+"puup",ctf,(mIt->second)[imlj],weightUp);
-		  localControlHistos.fillHisto(hname+"pudown",ctf,(mIt->second)[imlj],weightDown);
+		  localControlHistos.fillHisto(hname+"puup",ctf,(mIt->second)[imlj],weightUp,true);
+		  localControlHistos.fillHisto(hname+"pudown",ctf,(mIt->second)[imlj],weightDown,true);
 		}
 	    }
 	}
@@ -683,6 +696,7 @@ MljFitResults_t runFit(TH1 *data, TH1 *correct, TH1 *model, TH1 *misassigned, bo
 
       c->SaveAs(tag+"_contour_mlj.png");
       c->SaveAs(tag+"_contour_mlj.pdf");
+      c->SaveAs(tag+"_contour_mlj.C");
       delete c;
     }
 
@@ -701,6 +715,7 @@ void fitMljData(TString reportUrl)
   TString ch[]={"ee","emu","mumu"};
   TString cats[]={"eq2jets","eq3jets","eq4jets"};
   std::map<TString,std::vector<std::pair<TString,Float_t> > > systMap;
+  std::map<TString, TH1F *> correctH,misassignedH, dataH, dataResH,unmatchedH,wrongH,mcmodelH;
   for(size_t ich=0; ich<sizeof(ch)/sizeof(TString); ich++)
     {
       for(size_t icat=0; icat<sizeof(cats)/sizeof(TString); icat++)
@@ -849,6 +864,7 @@ void fitMljData(TString reportUrl)
 	  TCanvas *c=plot(&stackList,data,0,false);
 	  c->SaveAs(tag+"_pre_mlj.png");
 	  c->SaveAs(tag+"_pre_mlj.pdf");
+	  c->SaveAs(tag+"_pre_mlj.C");
 	  
 	  //postfit
 	  TH1F *correctFit=(TH1F *)correct->Clone(correct->GetName()+TString("post"));  correctFit->Scale(r.sfcorrect);
@@ -857,34 +873,94 @@ void fitMljData(TString reportUrl)
 	  c=plot(&stackList,data,0,false);
 	  c->SaveAs(tag+"_post_mlj.png");
 	  c->SaveAs(tag+"_post_mlj.pdf");
+	  c->SaveAs(tag+"_post_mlj.C");
 
 	  //postfit subtracted
 	  TH1F *dataRes=(TH1F *)data->Clone("datares"); 
 	  dataRes->SetTitle("#splitline{data}{(residuals)}");
-	  data->Add(misassignedFit,-1);
+	  dataRes->Add(misassignedFit,-1);
 	  stackList.Clear(); stackList.Add(correctFit);
-	  c=plot(&stackList,data,0,false);
+	  c=plot(&stackList,dataRes,0,false);
 	  c->SaveAs(tag+"_postres_mlj.png");
 	  c->SaveAs(tag+"_postres_mlj.pdf");
+	  c->SaveAs(tag+"_postres_mlj.C");
 	  
 	  //misassignment composition in MC
 	  stackList.Clear();    stackList.Add(unmatched);   stackList.Add(wrong);
 	  c=plot(&stackList,mcmodel,0,false,true);
 	  c->SaveAs(tag+"_wrong_mlj.png");
 	  c->SaveAs(tag+"_wrong_mlj.pdf");
+	  c->SaveAs(tag+"_wrong_mlj.C");
 
 	  stackList.Clear();      stackList.Add(wrong);
 	  c=plot(&stackList,model,0,false,true);
 	  c->SaveAs(tag+"_wrongmodel_mlj.png");
 	  c->SaveAs(tag+"_wrongmodel_mlj.pdf");
+	  c->SaveAs(tag+"_wrongmodel_mlj.C");
 
 	  c=plot(&stackList,dy,0,false,true);
 	  c->SaveAs(tag+"_wrongvsdy_mlj.png");
 	  c->SaveAs(tag+"_wrongvsdy_mlj.pdf");
+	  c->SaveAs(tag+"_wrongvsdy_mlj.C");
+
+	  //save inclusive histos
+	  TString key("");
+	  if(tag.Contains("emu")) key="of";
+	  else                    key="sf";
+	  if(correctH.find(key)==correctH.end())
+	    {
+	      correctH[key]=correctFit;
+	      misassignedH[key]=misassignedFit;
+	      dataH[key]=data;
+	      dataResH[key]=dataRes;
+	      unmatchedH[key]=unmatched;
+	      wrongH[key]=wrong;
+	      mcmodelH[key]=mcmodel;
+	    }
+	  else
+	    {
+	      correctH[key]->Add(correctFit);
+	      misassignedH[key]->Add(misassignedFit);
+	      dataH[key]->Add(data);
+	      dataResH[key]->Add(dataRes);
+	      unmatchedH[key]->Add(unmatched);
+	      wrongH[key]->Add(wrong);
+	      mcmodelH[key]->Add(mcmodel);
+	    }
+	  
 	}
     }
 
   report << "\\hline\\end{tabular}\n\\end{center}" << endl;
+
+
+  //show the inclusive plots
+  for(std::map<TString,TH1F *>::iterator it = correctH.begin(); it != correctH.end(); it++)
+    {
+      TString key=it->first;
+      TObjArray stackList;
+      
+      //postfit
+      stackList.Add(misassignedH[key]); stackList.Add(correctH[key]);
+      TCanvas *c=plot(&stackList,dataH[key],0,false);
+      c->SaveAs(key+"_post_mlj.png");
+      c->SaveAs(key+"_post_mlj.pdf");
+      c->SaveAs(key+"_post_mlj.C");
+      
+      //postfit subtracted
+      stackList.Clear(); stackList.Add(correctH[key]);
+      c=plot(&stackList,dataResH[key],0,false);
+      c->SaveAs(key+"_postres_mlj.png");
+      c->SaveAs(key+"_postres_mlj.pdf");
+      c->SaveAs(key+"_postres_mlj.C");
+	  
+      //misassignment composition in MC
+      stackList.Clear();    stackList.Add(unmatchedH[key]);   stackList.Add(wrongH[key]);
+      c=plot(&stackList,mcmodelH[key],0,false,true);
+      c->SaveAs(key+"_wrong_mlj.png");
+      c->SaveAs(key+"_wrong_mlj.pdf");
+      c->SaveAs(key+"_wrong_mlj.C");
+    }
 
   //systs table
   report << endl;

@@ -14,6 +14,7 @@
 #include "CMGTools/HtoZZ2l2nu/interface/setStyle.h"
 #include "CMGTools/HtoZZ2l2nu/interface/plotter.h"
 #include "CMGTools/HtoZZ2l2nu/interface/ObjectFilters.h"
+#include "CMGTools/HtoZZ2l2nu/interface/MacroUtils.h"
 
 #include "LIP/Top/interface/HFCMeasurement.h"
 
@@ -47,6 +48,7 @@ void printHelp()
   printf("--btag    --> tag efficiencies configuration file\n");
   printf("--fit     --> fit type code                         (default: R=0,eb=1,ebvsR=2,vtb=3)\n");
   printf("--npe     --> number of pseudo-experiments to throw (default:1)\n");
+  printf("--study   --> study to perform: lin, syst (default:lin)\n");
   printf("command line examples: HeavyFlavorFitCalibration --in plotter.root --par hfcParams_cfg.json --btag wpParams_cfg.json\n");
   printf("                       HeavyFlavorFitCalibration --ws WS.root --npe 100\n");
 }
@@ -84,6 +86,7 @@ int main(int argc, char* argv[])
   Int_t fitType(HFCMeasurement::FIT_R);
   TString syst("");
   int maxPE(1);
+  TString study("lin");
   for(int i=1;i<argc;i++)
     {
       string arg(argv[i]);
@@ -94,6 +97,7 @@ int main(int argc, char* argv[])
       if(arg.find("--btag")!=string::npos && i+1<argc)  { btagParFile=argv[i+1]; gSystem->ExpandPathName(btagParFile); i++;  printf("btagFile  = %s\n", btagParFile.Data());   }
       if(arg.find("--npe")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&maxPE);                               i++;  printf("N_{PE}  = %d\n", maxPE);                  }
       if(arg.find("--fit")!=string::npos && i+1<argc)   { sscanf(argv[i+1],"%d",&fitType);                             i++;  printf("fitType  = %d\n", fitType);               }
+      if(arg.find("--study")!=string::npos && i+1<argc) { study=argv[i+1];                                             i++;  printf("study    = %s\n",study.Data());           }
     } 
   if(url=="" && wsurl=="")      { printHelp(); return 0; }
   if(url!="" && fitParFile=="") { printHelp(); return 0; }
@@ -111,7 +115,7 @@ int main(int argc, char* argv[])
   RooMsgService::instance().getStream(1).removeTopic(Integration);
   RooMsgService::instance().getStream(1).removeTopic(NumIntegration);
   RooMsgService::instance().getStream(1).removeTopic(ObjectHandling);
-
+  
 
   //
   // STANDARD FIT OR MC CLOSURE
@@ -130,6 +134,9 @@ int main(int argc, char* argv[])
 	return 0;
       }
       
+      //generate a random seed
+      gRandom->SetSeed(0);
+
       if(sampleType!="data")
 	{
 	  //fitter.fitHFCfrom(btagObs,true);
@@ -150,6 +157,8 @@ int main(int argc, char* argv[])
 	      btagObsSample->Reset("ICE");
 	      btagObsSample->FillRandom(btagObs,btagObs->Integral());
 	      
+	      cout << btagObsSample->Integral() << endl;
+
 	      //fit it
 	      fitter->fitHFCfrom(btagObsSample,false);
 	      
@@ -240,7 +249,13 @@ int main(int argc, char* argv[])
 	  
 	  //result
 	  cout << "$\\mathcal{" << fitter->title() << "}$" << flush; 
-	  for(int isample=0; isample<4; isample++) cout << " & " << res[ sample[isample] ].poiFit << "$\\pm$" << res[ sample[isample] ].poiErr;
+	  for(int isample=0; isample<4; isample++) 
+	    {
+	      float val=res[ sample[isample] ].poiFit;
+	      float errHi=res[ sample[isample] ].poiFitUpLim-val;
+	      float errLo=val-res[ sample[isample] ].poiFitLoLim;
+	      cout << " & " << toLatexRounded(val,0.5*(errHi+errLo));
+	    }
 	  cout << "\\\\\\hline" << endl;
 	  
 	  //uncertainties
@@ -271,14 +286,14 @@ int main(int argc, char* argv[])
   //
   // UNCERTAINTY BREAKUP
   //
-  else
+  else if (study=="lin")
     {
       //linearity check
-      TCanvas *c=new TCanvas("c","c",1200,400);
-      c->Divide(5,1);
-      for(int ip=0; ip<5; ip++)
+      TProfile *linFit=new TProfile("linfit",";Generated R;<Fitter R>;",100,0,1.1,0,1.1);
+      Int_t np=10;
+      for(int ip=0; ip<=np; ip++)
 	{
-	  float rgen=ip*1./5;
+	  float rgen=ip*1./np;
 
 	  TH1F *templateH=0, *ensembleH=0;
 	  for(int ipe=0; ipe<=maxPE; ipe++)
@@ -289,18 +304,8 @@ int main(int argc, char* argv[])
 	      HFCMeasurement *fitter=new HFCMeasurement(ws,4,HFCMeasurement::FIT_R);
 	      RooRealVar* firstPOI = (RooRealVar*) ws->set("poi")->first();
 	      ws->loadSnapshot("default");
-
-	      TIterator *nuis_params_itr = ws->set("nuisances")->createIterator();
-	      TObject *nuis_params_obj;
-	      while((nuis_params_obj=nuis_params_itr->Next())){
-		RooRealVar *nuiVar=(RooRealVar *)nuis_params_obj;
-		//TString name(nuiVar->GetName());
-		//if(name.Contains("fcor_") || name.Contains("tt_")) 
-		// {
-		nuiVar->setConstant(kTRUE);
-		// }
-	      }
 	      firstPOI->setVal(rgen);
+
 	      if(templateH==0) { 
 		templateH=fitter->generateBtagObs();
 		ensembleH=(TH1F *)templateH->Clone("ensemble");
@@ -311,16 +316,8 @@ int main(int argc, char* argv[])
 	      
 	      ensembleH->Reset("ICE");
 	      ensembleH->FillRandom(templateH,templateH->Integral());
-	      fitter->plrFit(ensembleH);
-	      if(ipe==1)
-		{
-		  c->cd(ip+1);
-		  templateH->DrawClone("hist");
-		  TH1F *fitH=fitter->generateBtagObs();
-		  fitH->SetLineColor(kBlue);
-		  fitH->DrawClone("histsame");
-		}
-	      delete fitter;
+	      HFCMeasurement::FitResult_t res=fitter->plrFit(ensembleH);
+	      linFit->Fill(rgen,res.poiFit,1);
 	      
 	      inF->Close();
 	    }
@@ -329,7 +326,84 @@ int main(int argc, char* argv[])
 	  delete ensembleH;
 	}
 
-      c->SaveAs("tmp.png");
+      TCanvas *c=new TCanvas("c","c",600,600);
+      linFit->SetMarkerStyle(20);
+      linFit->Draw("e1");
+      TLine *lin=new TLine(0,0,1,1);
+      lin->SetLineColor(kGray);
+      lin->Draw();
+      TPaveText *pt = new TPaveText(0.1,0.96,0.9,1.0,"brNDC");
+      pt->SetBorderSize(0);
+      pt->SetFillColor(0);
+      pt->SetFillStyle(0);
+      pt->AddText("CMS simulation");
+      pt->Draw();
+      c->SaveAs("LinearityTest.png");
+      c->SaveAs("LinearityTest.pdf");
+      c->SaveAs("LinearityTest.C");
+    }
+  else
+    {
+
+      std::map<string,HFCMeasurement::FitResult_t> res;
+
+      //get workspace and model from file
+      TFile *inF = TFile::Open(wsurl);
+      RooWorkspace *ws     = (RooWorkspace *) inF->Get("w");
+      RooStats::ModelConfig *mc      = (RooStats::ModelConfig *) ws->obj("mc");
+      RooDataSet *data     = (RooDataSet *) ws->data("data");
+
+      //central fit
+      HFCMeasurement *fitter=new HFCMeasurement(ws,4,HFCMeasurement::FIT_R);
+      res["central"] = fitter->plrFit(data,mc,false);      
+      RooArgSet *nullParams = (RooArgSet *)ws->allVars().snapshot();
+      ws->saveSnapshot("bestfit",*nullParams,kTRUE);
+
+      //stat only
+      //ws->loadSnapshot("bestfit");
+      ws->loadSnapshot("default");
+      TIterator *nuisItr_k = ws->set("nuisances")->createIterator();
+      RooRealVar *nuis_k=0;
+      while((nuis_k=(RooRealVar *)nuisItr_k->Next())) nuis_k->setConstant(kTRUE);
+      res["stat"] = fitter->plrFit(data,mc,false);      
+      
+      //individual syst fit
+      nuisItr_k = ws->set("nuisances")->createIterator();
+      nuis_k=0;
+      while((nuis_k=(RooRealVar *)nuisItr_k->Next())){
+	
+	//reset the nuisances
+	//	ws->loadSnapshot("bestfit");
+	ws->loadSnapshot("default");
+
+	//fix all except the one being tested
+	TIterator *nuisItr_j = ws->set("nuisances")->createIterator();
+	RooRealVar *nuis_j=0;
+	while((nuis_j=(RooRealVar *)nuisItr_j->Next())){
+	  if(nuis_j==0) continue;
+	  if(nuis_j->GetName()!=nuis_k->GetName()) nuis_j->setConstant(kTRUE);
+	  else                                     nuis_j->setVal(0);
+	}
+
+	res[nuis_k->GetTitle()] = fitter->plrFit(data,mc,false);      
+      }
+      
+      inF->Close();
+      
+      //printout table
+      float sumDiff(0),sumUnc(0);
+      for(std::map<string,HFCMeasurement::FitResult_t>::iterator resIt=res.begin();  resIt!=res.end(); resIt++)
+	{
+	  if(resIt->first=="central") continue;
+	  cout << resIt->first << " " << resIt->second.poiFit-res["central"].poiFit << " " << resIt->second.poiFitLoLim << " - " << resIt->second.poiFitUpLim << endl; 
+	  if(resIt->first=="stat") continue;
+	  sumDiff += pow(resIt->second.poiFit-res["central"].poiFit,2);
+	  sumUnc += pow(0.5*(resIt->second.poiFitLoLim-resIt->second.poiFitUpLim),2);
+	}
+      cout << "--------------------------" << endl;
+      cout << "total syst" << sqrt(sumDiff) << " " << sqrt(sumUnc) << endl;
+      cout << "--------------------------" << endl;
+      cout << "central" << res["central"].poiFit << " +" << res["central"].poiFitUpLim-res["central"].poiFit << " -" << res["central"].poiFit-res["central"].poiFitLoLim << endl;  
     }
 }
 
