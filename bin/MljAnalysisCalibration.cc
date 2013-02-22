@@ -90,7 +90,7 @@ void fillMljTemplatesFrom(TChain *c,bool isData, bool isSignal, bool hasTop, boo
 void fitMljData(TString reportUrl);
 MljFitResults_t runFit(TH1 *data, TH1 *correct, TH1 *model, TH1 *misassigned, bool isData, TString tag);
 void fixTemplate(TH1 *h);
-TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose=0, bool doLog=false, bool norm=false);
+TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose=0, bool doLog=false, bool norm=false, bool doDiff=false);
 
 ////CHECK ME
 std::map<TString,Int_t> procYields;
@@ -880,7 +880,7 @@ void fitMljData(TString reportUrl)
 	  dataRes->SetTitle("#splitline{data}{(residuals)}");
 	  dataRes->Add(misassignedFit,-1);
 	  stackList.Clear(); stackList.Add(correctFit);
-	  c=plot(&stackList,dataRes,0,false);
+	  c=plot(&stackList,dataRes,0,false,false,true);
 	  c->SaveAs(tag+"_postres_mlj.png");
 	  c->SaveAs(tag+"_postres_mlj.pdf");
 	  c->SaveAs(tag+"_postres_mlj.C");
@@ -949,7 +949,7 @@ void fitMljData(TString reportUrl)
       
       //postfit subtracted
       stackList.Clear(); stackList.Add(correctH[key]);
-      c=plot(&stackList,dataResH[key],0,false);
+      c=plot(&stackList,dataResH[key],0,false,false,true);
       c->SaveAs(key+"_postres_mlj.png");
       c->SaveAs(key+"_postres_mlj.pdf");
       c->SaveAs(key+"_postres_mlj.C");
@@ -986,7 +986,7 @@ void fitMljData(TString reportUrl)
 }
 
 //
-TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose, bool doLog, bool norm)
+TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose, bool doLog, bool norm, bool doDiff)
 {
   TCanvas* c = new TCanvas("c","c",800,800);
   if(data==0) return c;
@@ -1111,8 +1111,14 @@ TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose, bool doLog, bool no
   for(int xbin=1; xbin<=denRelUncH->GetXaxis()->GetNbins(); xbin++)
     {
       if(denRelUncH->GetBinContent(xbin)==0) continue;
+      Double_t val=1.0;
       Double_t err=denRelUncH->GetBinError(xbin)/denRelUncH->GetBinContent(xbin);
-      denRelUncH->SetBinContent(xbin,1);
+      if(doDiff) 
+	{
+	  val=0.0;
+	  err=denRelUncH->GetBinError(xbin)*1.044;
+	}
+      denRelUncH->SetBinContent(xbin,val);
       denRelUncH->SetBinError(xbin,err);
     }
   TGraphErrors *denRelUnc=new TGraphErrors(denRelUncH);
@@ -1126,14 +1132,24 @@ TCanvas *plot(TObjArray *mc, TH1 *data, TObjArray *spimpose, bool doLog, bool no
   denRelUnc->Draw("3");
 
   TH1 *ratio=(TH1 *)data->Clone("totalpredrel");
-  ratio->Divide(totalMC);
+  if(doDiff)  ratio->Add(totalMC,-1);
+  else        ratio->Divide(totalMC);
   ratio->SetMarkerStyle(20);
   ratio->Draw("e1 same");
 
   float yscale = (1.0-0.2)/(0.18-0);       
-  denRelUncH->GetYaxis()->SetTitle("Data/Exp.");
-  denRelUncH->SetMinimum(0.4);
-  denRelUncH->SetMaximum(1.6);
+  if(doDiff)
+    {
+      denRelUncH->GetYaxis()->SetTitle("Data-Exp.");
+      denRelUncH->SetMinimum(-100);
+      denRelUncH->SetMaximum(100);
+    }
+  else
+    {
+      denRelUncH->GetYaxis()->SetTitle("Data/Exp.");
+      denRelUncH->SetMinimum(0.4);
+      denRelUncH->SetMaximum(1.6);
+    }
   denRelUncH->GetXaxis()->SetTitle("");
   denRelUncH->GetXaxis()->SetTitleOffset(1.3);
   denRelUncH->GetXaxis()->SetLabelSize(0.033*yscale);

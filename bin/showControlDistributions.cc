@@ -157,15 +157,15 @@ int main(int argc, char* argv[])
   double xsec = runProcess.getParameter<double>("xsec");
   bool saveSummaryTree = runProcess.getParameter<bool>("saveSummaryTree");
   bool runSystematics = runProcess.getParameter<bool>("runSystematics");
-  double sfMetCut = runProcess.getParameter<double>("sfMetCut");
-  double ofMetCut = runProcess.getParameter<double>("ofMetCut");
-  double jetPtCut = runProcess.getParameter<double>("jetPtCut");
-  int jetIdToUse = JETID_LOOSE;
-  int eIdToUse   = EID_MEDIUM;  float eIsoToUse=0.1;
-  int mIdToUse   = MID_TIGHT;   float mIsoToUse=0.12;//0.2;
-  bool applyDYweight =  runProcess.getParameter<bool>("applyDYweight");
+  double sfMetCut      = runProcess.getParameter<double>("sfMetCut");
+  double ofMetCut      = runProcess.getParameter<double>("ofMetCut");
+  double jetPtCut      = runProcess.getParameter<double>("jetPtCut");
+  int jetIdToUse       = JETID_LOOSE;
+  int eIdToUse         = EID_MEDIUM;  float eIsoToUse=0.1;
+  int mIdToUse         = MID_TIGHT;   float mIsoToUse=0.12;//0.2;
+  bool applyDYweight   =  runProcess.getParameter<bool>("applyDYweight");
   bool applyTTstrength =  runProcess.getParameter<bool>("applyTTstrength");
-  TString uncFile =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
+  TString uncFile      =  runProcess.getParameter<std::string>("jesUncFileName");      gSystem->ExpandPathName(uncFile);
 
   //
   // check input file
@@ -284,7 +284,15 @@ int main(int argc, char* argv[])
 
       for(size_t j=0; j<nSystVars; j++)
 	controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxy"+systVars[j], "; SecVtx L_{xy} [cm]; Jets / (0.1 cm)", 50, 0.,5) );
-	
+
+      for(size_t j=0; j<2; j++)
+	{
+	  TString suf(j==0? "":"1j");
+	  controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxy_z"+suf,       "; SecVtx L_{xy} [cm]; Jets / (0.1 cm)", 50, 0.,5) );
+	  controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxy_lowmet"+suf,  "; SecVtx L_{xy} [cm]; Jets / (0.1 cm)", 50, 0.,5) );
+	  controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxy_zlowmet"+suf, "; SecVtx L_{xy} [cm]; Jets / (0.1 cm)", 50, 0.,5) );
+	}
+
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxyopt", "; SecVtx L_{xy}/p_{T} [cm/GeV]; Jets / (0.1 cm/GeV)", 50, 0.,0.5) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxyxmass", "; SecVtx L_{xy}xMass [GeV.cm]; Jets / (0.2 GeV.cm)", 50, 0.,10) );
       controlHistos.addHistogram( new TH1F (jetFlavors[ijf]+"jetlxyxmassopt", "; SecVtx L_{xy}xMass/p_{T} [cm]; Jets / (0.2 cm)", 50, 0.,1.0) );
@@ -330,10 +338,13 @@ int main(int argc, char* argv[])
 	}
       controlHistos.addHistogram( (TH1F *)hl->Clone(btagger[i]+"Lbtagsextended_lowmet") );
       controlHistos.addHistogram( (TH1F *)hl->Clone(btagger[i]+"Lbtagsextended_z") );
+      controlHistos.addHistogram( (TH1F *)hl->Clone(btagger[i]+"Lbtagsextended_zlowmet") );
       controlHistos.addHistogram( (TH1F *)hm->Clone(btagger[i]+"Mbtagsextended_lowmet") );
       controlHistos.addHistogram( (TH1F *)hm->Clone(btagger[i]+"Mbtagsextended_z") );
+      controlHistos.addHistogram( (TH1F *)hm->Clone(btagger[i]+"Mbtagsextended_zlowmeg") );
       controlHistos.addHistogram( (TH1F *)ht->Clone(btagger[i]+"Tbtagsextended_lowmet") );
       controlHistos.addHistogram( (TH1F *)ht->Clone(btagger[i]+"Tbtagsextended_z") );
+      controlHistos.addHistogram( (TH1F *)ht->Clone(btagger[i]+"Tbtagsextended_zlowmet") );
       
       for(size_t j=0; j<nSystVars; j++)
 	{  
@@ -635,7 +646,7 @@ int main(int argc, char* argv[])
 
 
       //do the selection (taking into account the different varied collections)
-      bool passBaseSelection(false), passFullSelection(false);
+      bool passBaseSelection(false), passFullSelection(false), passLxySelection(false);
       for(size_t ivar=0;ivar<(isMC ? nSystVars : 1); ivar++) 
 	{
 	  std::vector<TString> catsToFill;
@@ -813,45 +824,47 @@ int main(int argc, char* argv[])
 		  controlHistos.fillHisto("e1jetsptsum"+systVars[ivar],catsToFill,ptsum,weight);
 		  controlHistos.fillHisto("finalevtflow"+systVars[ivar],catsToFill,0,weight);
 		}
-	      continue;
 	    }
-	  if(!isZcand)
+	  if(!isZcand && passJet)
 	    {
 	      controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELJETS,weight);
 	      controlHistos.fillHisto("met"+systVars[ivar],catsToFill,theMET.pt(),weight);
 	      controlHistos.fillHisto("mvamet"+systVars[ivar],catsToFill,phys.met[7].pt(),weight);
 	      controlHistos.fillHisto("rho"+systVars[ivar],catsToFill,ev.rho,weight);
 	    }
-	  if(!passMet) continue;
-	  if(!isZcand)
+	  //if(!passMet) continue;
+	  if(passMet && !isZcand && passJet)
 	    {
 	      controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELMET,weight);
 	      if(ivar==0) controlHistos.fillHisto("dilcharge",catsToFill,dilcharge,weight);
 	    }
  	  if(!isOS) continue;
-	  if(ivar==0) controlHistos.fillHisto("dilmassNM1",catsToFill,dileptonSystem.mass(),weight);
-	  if(isZcand) continue;
-	  passFullSelection=true;
-
+	  if(ivar==0 && passMet && passJet) controlHistos.fillHisto("dilmassNM1",catsToFill,dileptonSystem.mass(),weight);
+	  //if(isZcand) continue;
+	  passFullSelection=(isOS && passMet && !isZcand && passJet);
+	  passLxySelection =(isOS            && !isZcand && passJet);
 	  //this is the final selected dilepton sample
-	  if(ngoodJets<=4)  controlHistos.fillHisto("finalevtflow"+systVars[ivar],catsToFill,ngoodJets-1,weight);
-
-	  controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELOS,weight);
-	  controlHistos.fillHisto("mtsum"+systVars[ivar],catsToFill,mtsum,weight);
-	  controlHistos.fillHisto("mll"+systVars[ivar],catsToFill,dileptonSystem.mass(),weight);
-	  controlHistos.fillHisto("ptsum"+systVars[ivar],catsToFill,ptsum,weight);
-	  if(ivar==0)
+	  if(ngoodJets<=4 && passFullSelection)  controlHistos.fillHisto("finalevtflow"+systVars[ivar],catsToFill,ngoodJets-1,weight);
+	  if(passFullSelection)
 	    {
-	      selEvents+=weight;
-	      controlHistos.fillHisto("leadlepton",catsToFill,l1.pt(),weight);
-	      controlHistos.fillHisto("subleadlepton",catsToFill,l2.pt(),weight);
-	      controlHistos.fillHisto("leadleptoneta",catsToFill,fabs(l1.eta()),weight);
-	      controlHistos.fillHisto("subleadleptoneta",catsToFill,fabs(l2.eta()),weight);
-	      controlHistos.fillHisto("drll",catsToFill,drll,weight);
-	      controlHistos.fillHisto("dphill",catsToFill,dphill,weight);
-	      controlHistos.fillHisto("pttbar",catsToFill,ttbar_t.pt(),weight);
-	      controlHistos.fillHisto("mt", catsToFill,mt,weight);
-	      controlHistos.fillHisto("nleptons",catsToFill,extraLeptons.size(),weight);
+     
+	      controlHistos.fillHisto("evtflow"+systVars[ivar],catsToFill,SELOS,weight);
+	      controlHistos.fillHisto("mtsum"+systVars[ivar],catsToFill,mtsum,weight);
+	      controlHistos.fillHisto("mll"+systVars[ivar],catsToFill,dileptonSystem.mass(),weight);
+	      controlHistos.fillHisto("ptsum"+systVars[ivar],catsToFill,ptsum,weight);
+	      if(ivar==0)
+		{
+		  selEvents+=weight;
+		  controlHistos.fillHisto("leadlepton",catsToFill,l1.pt(),weight);
+		  controlHistos.fillHisto("subleadlepton",catsToFill,l2.pt(),weight);
+		  controlHistos.fillHisto("leadleptoneta",catsToFill,fabs(l1.eta()),weight);
+		  controlHistos.fillHisto("subleadleptoneta",catsToFill,fabs(l2.eta()),weight);
+		  controlHistos.fillHisto("drll",catsToFill,drll,weight);
+		  controlHistos.fillHisto("dphill",catsToFill,dphill,weight);
+		  controlHistos.fillHisto("pttbar",catsToFill,ttbar_t.pt(),weight);
+		  controlHistos.fillHisto("mt", catsToFill,mt,weight);
+		  controlHistos.fillHisto("nleptons",catsToFill,extraLeptons.size(),weight);
+		}
 	    }
 	     
 	  //jet kinematics, flavor templates, etc.
@@ -899,33 +912,7 @@ int main(int argc, char* argv[])
 	      //analyse the leading lxy jet
 	      if(leadingLxyJet==0) leadingLxyJet=&prunedJetColl[ijet];
 	      else if(prunedJetColl[ijet].lxy>leadingLxyJet->lxy) leadingLxyJet=&prunedJetColl[ijet];
-
-	      //control distributions
-	      if(ivar==0)
-		{
-		  controlHistos.fillHisto("jet"+jetctr,catsToFill,pt,weight);
-		  controlHistos.fillHisto("jet"+jetctr+"eta",catsToFill,fabs(eta),weight);
-		  controlHistos.fillHisto( "jetpt", catsToFill,pt,weight);
-		  controlHistos.fillHisto( "jeteta",catsToFill,fabs(eta),weight);
-	       
-		  if(isMC)
-		    {
-		      controlHistos.fillHisto( jetFlav+"jetpt", catsToFill,pt,weight);
-		      controlHistos.fillHisto( jetFlav+"jetptvseta", catsToFill,pt,fabs(eta),weight);
-		      controlHistos.fillHisto( jetFlav+"jeteta",catsToFill,fabs(eta),weight);
-		    }
-		  if(prunedJetColl[ijet].btag3>0)
-		    {
-		      controlHistos.fillHisto( "tagjetpt", catsToFill,pt,weight);
-		      controlHistos.fillHisto( "tagjeteta", catsToFill,fabs(eta),weight);
-		      if(isMC)
-			{
-			  controlHistos.fillHisto( jetFlav+"tagjetpt", catsToFill,pt,weight);
-			  controlHistos.fillHisto( jetFlav+"tagjeteta", catsToFill,fabs(eta),weight);
-			}
-		    }
-		}
-	      
+      
 	      //b-tagging
 	      std::map<TString, bool> hasTagger;
 	      float tche = prunedJetColl[ijet].btag1;
@@ -935,7 +922,7 @@ int main(int argc, char* argv[])
 	      bool hasTCHPT(tchp>3.41); btagsCount["tchpT"] += hasTCHPT; hasTagger["tchpT"]=hasTCHPT;
 	      float csv  = prunedJetColl[ijet].btag2;
 	      bool hasCSVL(csv>0.244);  
-	      if(isMC && applyTTstrength) btsfutil.modifyBTagsWithSF(hasCSVL, prunedJetColl[ijet].flavid, 0.98, 0.841, 1.11, 0.137);
+	      if(isMC && applyTTstrength) btsfutil.modifyBTagsWithSF(hasCSVL, prunedJetColl[ijet].flavid, 0.98, 0.841, 1.21, 0.137);
 	      btagsCount["csvL"] += hasCSVL;   hasTagger["csvL"]=hasCSVL;
 	      bool hasCSVM(csv>0.679);  btagsCount["csvM"] += hasCSVM;   hasTagger["csvM"]=hasCSVM;
 	      bool hasCSVT(csv>0.898);  btagsCount["csvT"] += hasCSVT;   hasTagger["csvT"]=hasCSVT;
@@ -952,6 +939,65 @@ int main(int argc, char* argv[])
 	      bool hasSSVHEL(ssvhe>0);                btagsCount["ssvheL"] += hasSSVHEL;   hasTagger["ssvheL"]=hasSSVHEL;
 	      bool hasSSVHEM(ssvhe>1.74);             btagsCount["ssvheM"] += hasSSVHEM;   hasTagger["ssvheM"]=hasSSVHEM;
 	      bool hasSSVHPT(ssvhp>2.00);             btagsCount["ssvhpT"] += hasSSVHPT;   hasTagger["ssvhpT"]=hasSSVHPT;
+
+	      //lepton-jet kinematics
+	      LorentzVector l1j=l1+prunedJetColl[ijet];
+	      LorentzVector l2j=l2+prunedJetColl[ijet];
+	      int genid=prunedJetColl[ijet].genid;
+
+	      bool isL1JCorrect( isMC && (isTop || isSTop) && l1.genid*genid<0 && abs(genid)==5 && jetFlav=="b" && ncorrectAssignments<2);
+	      bool isL2JCorrect( isMC && (isTop || isSTop) && l2.genid*genid<0 && abs(genid)==5 && jetFlav=="b" && ncorrectAssignments<2);
+	      ncorrectAssignments += (isL1JCorrect || isL2JCorrect);
+	      if(!isL1JCorrect && !isL2JCorrect)
+		{
+		  int jetFlavBin(0);
+		  if(jetFlav=="c") jetFlavBin=1;
+		  if(jetFlav=="b") jetFlavBin=2;
+		  extraJetFlavors.push_back(jetFlavBin);
+		  extraJetPt.push_back( prunedJetColl[ijet].pt() );
+		}
+	      else
+		{
+		  matchedJetPt.push_back( prunedJetColl[ijet].pt() );
+		  matchedJetCSV.push_back( csv );
+		}
+
+
+	      //control distributions
+	      if(!passFullSelection) continue;
+	      if(ivar==0)
+		{
+		  controlHistos.fillHisto("jet"+jetctr,catsToFill,pt,weight);
+		  controlHistos.fillHisto("jet"+jetctr+"eta",catsToFill,fabs(eta),weight);
+		  controlHistos.fillHisto( "jetpt", catsToFill,pt,weight);
+		  controlHistos.fillHisto( "jeteta",catsToFill,fabs(eta),weight);
+
+		  if(prunedJetColl[ijet].btag3>0)
+		    {
+		      controlHistos.fillHisto( "tagjetpt", catsToFill,pt,weight);
+		      controlHistos.fillHisto( "tagjeteta", catsToFill,fabs(eta),weight);
+		    }
+
+		  controlHistos.fillHisto("mlj",catsToFill,l1j.mass(),weight);
+		  controlHistos.fillHisto("mlj",catsToFill,l2j.mass(),weight);
+		  if(isMC) 
+		    {
+		      controlHistos.fillHisto( jetFlav+"jetpt", catsToFill,pt,weight);
+		      controlHistos.fillHisto( jetFlav+"jetptvseta", catsToFill,pt,fabs(eta),weight);
+		      controlHistos.fillHisto( jetFlav+"jeteta",catsToFill,fabs(eta),weight);
+		      
+		      controlHistos.fillHisto(isL1JCorrect ? "correctmlj" : "wrongmlj" ,catsToFill,l1j.mass(),weight);
+		      controlHistos.fillHisto(isL2JCorrect ? "correctmlj" : "wrongmlj" ,catsToFill,l2j.mass(),weight);
+		      controlHistos.fillHisto("jet"+jetFlav,catsToFill,pt,weight);
+		      controlHistos.fillHisto("jet"+jetFlav+"eta",catsToFill,eta,weight);
+		   
+		      if(prunedJetColl[ijet].btag3>0)
+			{
+			  controlHistos.fillHisto( jetFlav+"tagjetpt", catsToFill,pt,weight);
+			  controlHistos.fillHisto( jetFlav+"tagjeteta", catsToFill,fabs(eta),weight);
+			}
+		    }
+		}
 	      
 	      controlHistos.fillHisto("incssvhe"+systVars[ivar], catsToFill, ssvhe,  weight);
 	      controlHistos.fillHisto("incssvhp"+systVars[ivar], catsToFill, ssvhp,  weight);
@@ -976,45 +1022,10 @@ int main(int argc, char* argv[])
 		      if(isMC) controlHistos.fillHisto( btaggerToTemplate+jetFlav+systVars[ivar]+it->first+pfix,     catsToFill, btaggerToTemplateVal, jetCategs[ijcat], weight);
 		    }
 		}
-
-	      //lepton-jet kinematics
-	      LorentzVector l1j=l1+prunedJetColl[ijet];
-	      LorentzVector l2j=l2+prunedJetColl[ijet];
-	      int genid=prunedJetColl[ijet].genid;
-
-	      bool isL1JCorrect( isMC && (isTop || isSTop) && l1.genid*genid<0 && abs(genid)==5 && jetFlav=="b" && ncorrectAssignments<2);
-	      bool isL2JCorrect( isMC && (isTop || isSTop) && l2.genid*genid<0 && abs(genid)==5 && jetFlav=="b" && ncorrectAssignments<2);
-	      ncorrectAssignments += (isL1JCorrect || isL2JCorrect);
-	      if(!isL1JCorrect && !isL2JCorrect)
-		{
-		  int jetFlavBin(0);
-		  if(jetFlav=="c") jetFlavBin=1;
-		  if(jetFlav=="b") jetFlavBin=2;
-		  extraJetFlavors.push_back(jetFlavBin);
-		  extraJetPt.push_back( prunedJetColl[ijet].pt() );
-		}
-	      else
-		{
-		  matchedJetPt.push_back( prunedJetColl[ijet].pt() );
-		  matchedJetCSV.push_back( csv );
-		}
-
-	      if(ivar==0)
-		{
-		  controlHistos.fillHisto("mlj",catsToFill,l1j.mass(),weight);
-		  controlHistos.fillHisto("mlj",catsToFill,l2j.mass(),weight);
-		  if(isMC) 
-		    {
-		      controlHistos.fillHisto(isL1JCorrect ? "correctmlj" : "wrongmlj" ,catsToFill,l1j.mass(),weight);
-		      controlHistos.fillHisto(isL2JCorrect ? "correctmlj" : "wrongmlj" ,catsToFill,l2j.mass(),weight);
-		      controlHistos.fillHisto("jet"+jetFlav,catsToFill,pt,weight);
-		      controlHistos.fillHisto("jet"+jetFlav+"eta",catsToFill,eta,weight);
-		    }
-		}
 	    }
 	  
 	  //check tag uncorrelation
-	  if(isMC && ivar==0 && matchedJetCSV.size()>=2)
+	  if(passFullSelection && isMC && ivar==0 && matchedJetCSV.size()>=2)
 	    {
 	      bool firstJet( (gRandom->Uniform()>0.5) );
 	      controlHistos.fillHisto("csv1vscsv2",catsToFill,matchedJetCSV[firstJet],matchedJetCSV[!firstJet],weight);
@@ -1040,25 +1051,34 @@ int main(int argc, char* argv[])
 		  lxyInfo.secvtxmass  = leadingLxyJet->svmass;
 		  lxyInfo.btag        = leadingLxyJet->btag3;
 		}
+	      
 	      if(ivar==0)
 		{
-		  controlHistos.fillHisto("jetlxy",catsToFill,leadingLxyJet->lxy,weight);
-		  controlHistos.fillHisto("jetlxyjp",catsToFill,leadingLxyJet->btag3,weight);
-		  controlHistos.fillHisto("jetlxysig",catsToFill,leadingLxyJet->lxyerr/leadingLxyJet->lxy,weight);
-		  controlHistos.fillHisto("jetsvdr",catsToFill,leadingLxyJet->svdr,weight);
-		  controlHistos.fillHisto("jetsvpt",catsToFill,leadingLxyJet->svpt,weight);
-		  controlHistos.fillHisto("jetsvptfrac",catsToFill,leadingLxyJet->svpt/leadingLxyJet->pt(),weight);
-		  controlHistos.fillHisto("jetmass",catsToFill,leadingLxyJet->svmass,weight);
-		  for(int xbin=1; xbin<=H_optim_lxy->GetXaxis()->GetNbins(); xbin++)
+		  TString suf(passJet ? "":"1j");
+		  if(!isZcand && !passMet) controlHistos.fillHisto("jetlxy_lowmet"+suf,catsToFill,leadingLxyJet->lxy,weight);
+		  if(isZcand)              controlHistos.fillHisto("jetlxy_z"+suf,catsToFill,leadingLxyJet->lxy,weight);
+		  if(isZcand && !passMet)  controlHistos.fillHisto("jetlxy_zlowmet"+suf,catsToFill,leadingLxyJet->lxy,weight);
+
+		  if(passLxySelection)
 		    {
-		      float ptthr=H_optim_lxy->GetBinLowEdge(xbin);
-		      if(leadingLxyJet->pt()<ptthr) break;
-		      float pt=H_optim_lxy->GetBinCenter(xbin);
-		      controlHistos.fillHisto("jetptvslxy",catsToFill,pt,leadingLxyJet->lxy,weight);
+		      controlHistos.fillHisto("jetlxy",catsToFill,leadingLxyJet->lxy,weight);
+		      controlHistos.fillHisto("jetlxyjp",catsToFill,leadingLxyJet->btag3,weight);
+		      controlHistos.fillHisto("jetlxysig",catsToFill,leadingLxyJet->lxyerr/leadingLxyJet->lxy,weight);
+		      controlHistos.fillHisto("jetsvdr",catsToFill,leadingLxyJet->svdr,weight);
+		      controlHistos.fillHisto("jetsvpt",catsToFill,leadingLxyJet->svpt,weight);
+		      controlHistos.fillHisto("jetsvptfrac",catsToFill,leadingLxyJet->svpt/leadingLxyJet->pt(),weight);
+		      controlHistos.fillHisto("jetmass",catsToFill,leadingLxyJet->svmass,weight);
+		      for(int xbin=1; xbin<=H_optim_lxy->GetXaxis()->GetNbins(); xbin++)
+			{
+			  float ptthr=H_optim_lxy->GetBinLowEdge(xbin);
+			  if(leadingLxyJet->pt()<ptthr) break;
+			  float pt=H_optim_lxy->GetBinCenter(xbin);
+			  controlHistos.fillHisto("jetptvslxy",catsToFill,pt,leadingLxyJet->lxy,weight);
+			}
 		    }
 		}
 
-	      if(isMC)
+	      if(passLxySelection && isMC)
 		{
 		  TString jetFlav("udsg");
 		  if(fabs(leadingLxyJet->flavid)==5)      { jetFlav="b"; }
@@ -1082,8 +1102,17 @@ int main(int argc, char* argv[])
 	    }
 
 	  //R/b-eff measurement
-	  if(ngoodJets<=4)
+	  if(passJet && ngoodJets<=4)
 	    {
+	      if(ngoodJets==2 && ev.cat==EMU && theMET.pt()>40 && ev.nvtx<5 && btagsCount["csvM"]==2) 
+		{
+		  cout << ev.run << ":" << ev.lumi << ":" << ev.event << endl;  
+		  if(leadingLxyJet)
+		    {
+		      cout << leadingLxyJet->lxy << " +/- " << leadingLxyJet->lxyerr << " " << leadingLxyJet->svmass << endl;
+		    }
+		}
+
 	      int addBin(0);
 	      if(ngoodJets==3) addBin += 5;
 	      if(ngoodJets==4) addBin += 10;
@@ -1091,10 +1120,13 @@ int main(int argc, char* argv[])
 	      if(ev.cat==EMU)  addBin += 2*15;
 	      for(std::map<TString,int>::iterator it=btagsCount.begin(); it!= btagsCount.end(); it++)
 		{ 
-		  controlHistos.fillHisto(it->first+"btagsextended"+systVars[ivar],catsToFill,it->second+addBin,weight);
+		  if(passFullSelection)     controlHistos.fillHisto(it->first+"btagsextended"+systVars[ivar],catsToFill,it->second+addBin,weight);
+		  if(isZcand             )  controlHistos.fillHisto(it->first+"btagsextended_z"+systVars[ivar],catsToFill,it->second+addBin,weight);
+		  if(!isZcand && !passMet)  controlHistos.fillHisto(it->first+"btagsextended_lowmet"+systVars[ivar],catsToFill,it->second+addBin,weight);
+		  if(isZcand  && !passMet)  controlHistos.fillHisto(it->first+"btagsextended_zlowmet"+systVars[ivar],catsToFill,it->second+addBin,weight);
 		}
 
-	      if(isMC && ivar==0)
+	      if(passFullSelection && isMC && ivar==0)
 		{
 		  addBin=0;
 		  if(ngoodJets==3) addBin=3;
@@ -1131,7 +1163,7 @@ int main(int argc, char* argv[])
 	  std::vector<float> measurements;
 	  //FIXME: add measurements
 	  spyEvents->fillTree();// ev, measurements );
-	  if(passFullSelection) lxyTree->Fill();
+	  if(passLxySelection) lxyTree->Fill();
 	}
     }
   cout << endl << "Selected " << selEvents << " events and found " << NumberOfDuplicated << " duplicates" << endl;

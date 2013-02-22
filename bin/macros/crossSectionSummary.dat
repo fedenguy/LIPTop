@@ -1,0 +1,17 @@
+plotTitle:CMS preliminary, 5.0 fb^{-1} at #sqrt{s}=8 TeV
+valLabel:#mu=#sigma/#sigma_{th}
+Channel inclusive ee    emu     mumu
+Category eq2jets
+val	1.03	0.90	1.04	0.95
+stat	0.01	0.05	0.02	0.03
+total	0.06	0.13	0.06	0.11
+Category eq3jets
+val	1.04	0.87	1.02	1.02
+stat	0.02	0.05	0.02	0.04
+total	0.08	0.12	0.06	0.10
+Category eq4jets
+val      1.04	1.00	1.02	0.95
+stat	0.02	0.08	0.02	0.06
+total	0.06	0.15	0.06	0.11
+
+

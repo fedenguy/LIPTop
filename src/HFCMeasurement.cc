@@ -45,6 +45,51 @@ HFCMeasurement::HFCMeasurement(int fitType,TString fitConfig, TString wpConfig, 
   ws_ = new RooWorkspace("w");
   mc_ = 0;
   data_=0;
+
+  //
+  //parameters of interest
+  //
+  RooArgSet poi;
+  char expBuf[500];
+  float cenR(1.0), minR(0.0), maxR(2.0);
+  if(fitType_==FIT_R_AND_EB) { minR=0.95;  maxR=1.05;            }
+  if(fitType_==FIT_EB)       { minR=1.0;   maxR=1.0;             }
+  if(fitType_==FIT_VTB)      { minR=0.0;   maxR=1.08;            }
+  if(fitType_==FIT_GAMMAT)   { cenR=1.34;  minR=0.0;   maxR=5.0; }
+
+  sprintf(expBuf,"rb[%f,%f,%f]",cenR,minR,maxR);
+  ws_->factory(expBuf);
+  if(minR!=maxR) poi.add( *ws_->var("rb") );
+
+  if(fitType_==FIT_VTB)  
+    {
+      ws_->factory("FormulaVar::r('@0*@0',{rb})");
+    }
+  else if(fitType_==FIT_GAMMAT)
+    {
+      instantiateSingleTopContribution(ws_);
+      ws_->factory("FormulaVar::r('@0*@1/(@2*@3)',{st_exp,Gamma_b,st_th,rb})");
+
+      RooArgSet constr;
+      constr.add( *(ws_->pdf("pdf_st_th")) );
+      constr.add( *(ws_->pdf("pdf_st_exp")) );
+      if(ws_->set("constr")!=0) constr.add( *(ws_->set("constr")) );
+      ws_->defineSet("constr",constr);
+    }
+  else
+    {
+      ws_->factory("FormulaVar::r('@0',{rb})");
+    }
+  ws_->defineSet("poi",poi);  
+
+  float minSFb(1.0),maxSFb(1.0);
+  if(fitType_==FIT_R_AND_EB)  { minSFb=0.9; maxSFb=1.1; }
+  if(fitType_== FIT_EB)       { minSFb=0.7; maxSFb=1.3; }
+  sprintf(expBuf,"sfeb[1,%f,%f]",minSFb,maxSFb);
+  ws_->factory(expBuf);
+  if(minSFb!=maxSFb) poi.add( *ws_->var("sfeb") );
+  
+
   parseFitConfig(fitConfig);
   parseFitConfig(wpConfig);
   initHFCModel();
@@ -59,6 +104,25 @@ void HFCMeasurement::parseFitConfig(TString url)
 
   char expBuf[500];  //free buffer	  
   RooArgSet nuis,constr,globalObs;
+
+  //check if tW production correction has already been instantiated
+  if(ws_->var("vtdvts")==0)
+    {
+      RooGaussian *nuisConstr=(RooGaussian *)ws_->factory("Gaussian::vtdvts_constr(vtdvts0[0,-5,5],vtdvts[0,-5,5],1.0)");
+      constr.add( *nuisConstr );
+      
+      RooRealVar *globalObsVar=ws_->var("vtdvts0");
+      globalObsVar->setConstant(true);
+      globalObsVar->SetTitle("|V_{td}|/|V_{ts}|(0)");
+      globalObs.add( *globalObsVar );
+      
+      RooRealVar *nuisVar = ws_->var("vtdvts");
+      nuisVar->SetTitle("|V_{td}|/|V_{ts}|");
+      nuis.add( *nuisVar );
+      
+      ws_->factory("FormulaVar::vtdvts2('pow(0.211*(1+0.0061*@0),2)',{vtdvts})");
+      ws_->factory("FormulaVar::tWprod('(1.0-max(min(@0,1.0),0.0))/(1+@1)*(@1*13.37+2.23)+max(min(@0,1.0),0.0)',{r,vtdvts2})");
+    }
 
   //read parameters from file
   JSONWrapper::Object jsonF(url.Data(), true);
@@ -101,9 +165,19 @@ void HFCMeasurement::parseFitConfig(TString url)
 	      cenVal=(RooRealVar *)ws_->factory(expBuf);
 	      cenVal->setConstant(true);
 	      varsInFormula.add(*cenVal);
-	      
+
+	      int varCntr(0);
+	
+	      //tW correction
+	      if(jsonF.key[iparam]=="kst")
+		{
+		  cout << "Attaching tW correction factor" << endl;
+		  varCntr++; 
+		  formula += "*@1";
+		  varsInFormula.add( *(ws_->function("tWprod")) );
+		}
+      
 	      //modifiers
-	      int uncCntr(0);
 	      for(size_t iunc=0; iunc<uncs.size(); iunc++)
 		{
 		  if(uncs[iunc]=="val") continue;
@@ -139,32 +213,10 @@ void HFCMeasurement::parseFitConfig(TString url)
 		      modVar->setConstant(true);
 		    }
 
-
-		  /*
-		    if(nuisVar==0)
-		    {
-		    sprintf(expBuf,"Gaussian::%s_constr(%s[0,-5,5],0.0,1.0)",uncs[iunc].c_str(), uncs[iunc].c_str());
-		    RooGaussian *nuisConstr=(RooGaussian *)ws_->factory(expBuf);
-		    constr.add( *nuisConstr );
-		    
-		    nuisVar = ws_->var( uncs[iunc].c_str() );
-		    nuisVar->SetTitle( getNuisanceTitle(uncs[iunc]).c_str() ); //this is just for fancy labelling
-		    nuis.add( *nuisVar );
-		    }
-		    
-		    if(modVar==0)
-		    {
-		    float sigmaVal=descript[uncs[iunc].c_str()].toDouble();
-		    sprintf(expBuf,"%s_sigma[%f,%f,%f]",uncs[iunc].c_str(),sigmaVal,sigmaVal,sigmaVal);
-		    modVar=(RooRealVar *)ws_->factory(expBuf);
-		    modVar->setConstant(true);
-		    }
-		  */
-
 		  //add to formula
-		  sprintf(expBuf,"*max((1+@%d*@%d),0.)",uncCntr+1,uncCntr+2);
+		  sprintf(expBuf,"*max((1+@%d*@%d),0.)",varCntr+1,varCntr+2);
 		  formula+=expBuf;
-		  uncCntr+=2;
+		  varCntr+=2;
 		  varsInFormula.add( *modVar );
 		  varsInFormula.add( *nuisVar );
 		}
@@ -205,7 +257,7 @@ void HFCMeasurement::parseFitConfig(TString url)
 void HFCMeasurement::initHFCModel()
 {
   if(ws_==0) return;
-  if(ws_->function("r")!=0) return;
+  if(ws_->var("bmultobs")!=0) return;
 
   char expBuf[200];
 
@@ -216,46 +268,9 @@ void HFCMeasurement::initHFCModel()
   ws_->var("bmult")->setBins(maxJets_+1);
   RooCategory sample("sample","sample");
 
-  //
-  //parameters of interest
-  //
-  RooArgSet poi;
+  RooFormulaVar *r = (RooFormulaVar *)ws_->function("r");
+  RooRealVar *sfeb  = ws_->var("sfeb");
 
-  float cenR(1.0), minR(0.0), maxR(2.0);
-  RooFormulaVar *r=0;
-  if(fitType_==FIT_R_AND_EB) { minR=0.95;  maxR=1.05;            }
-  if(fitType_==FIT_EB)       { minR=1.0;   maxR=1.0;             }
-  if(fitType_==FIT_VTB)      { minR=0.0;   maxR=1.08;            }
-  if(fitType_==FIT_GAMMAT)   { cenR=1.34;  minR=0.0;   maxR=5.0; }
-  sprintf(expBuf,"rb[%f,%f,%f]",cenR,minR,maxR);
-  ws_->factory(expBuf);
-  if(minR!=maxR) poi.add( *ws_->var("rb") );
-  if(fitType_==FIT_VTB)  
-    {
-      r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0*@0',{rb})");
-    }
-  else if(fitType_==FIT_GAMMAT)
-    {
-      instantiateSingleTopContribution(ws_);
-      //r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@2*@3>0 ? @0*@1/(@2*@3) : 10.',{st_exp,Gamma_b,st_th,rb})");
-      r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0*@1/(@2*@3)',{st_exp,Gamma_b,st_th,rb})");
-
-      RooArgSet constr;
-      constr.add( *(ws_->pdf("pdf_st_th")) );
-      constr.add( *(ws_->pdf("pdf_st_exp")) );
-      if(ws_->set("constr")!=0) constr.add( *(ws_->set("constr")) );
-      ws_->defineSet("constr",constr);
-    }
-  else
-    {
-      r=(RooFormulaVar *)ws_->factory("FormulaVar::r('@0',{rb})");
-    }
-  float minSFb(1.0),maxSFb(1.0);
-  if(fitType_==FIT_R_AND_EB)  { minSFb=0.9; maxSFb=1.1; }
-  if(fitType_== FIT_EB)       { minSFb=0.7; maxSFb=1.3; }
-  sprintf(expBuf,"sfeb[1,%f,%f]",minSFb,maxSFb);
-  RooRealVar *sfeb=(RooRealVar *)ws_->factory(expBuf);
-  if(minSFb!=maxSFb) poi.add( *ws_->var("sfeb") );
 
   //
   // model
@@ -559,7 +574,7 @@ void HFCMeasurement::initHFCModel()
 
       //each n-jets n-b-tags is a category
       for(int itag=0; itag<=njets; itag++)
-	{
+      	{
 	  char catname[100];
 	  sprintf(catname,"n%dbtags_%s",itag,tag.c_str());
 	  sample.defineType(catname);
@@ -608,7 +623,6 @@ void HFCMeasurement::initHFCModel()
   RooArgSet baseGlobalObs( *(ws_->var("bmult")), *(ws_->var("bmultobs")) ); 
   baseGlobalObs.add( *(ws_->set("globalobservables") ) );
   ws_->defineSet("globalobservables", baseGlobalObs );
-  ws_->defineSet("poi",poi);  
   RooArgSet *nullParams = (RooArgSet *)ws_->allVars().snapshot();
   ws_->saveSnapshot("default",*nullParams,kTRUE);
 
@@ -680,6 +694,7 @@ TH1F *HFCMeasurement::generateBtagObs()
 	  TString tag(ch); tag+=njets; tag+="jets";
 
 	  //get the number of observed events after projecting the data
+	  //TString cut("sample==sample::n1btags_"+tag+" || sample==sample::n2btags_"+tag);
 	  TString cut("sample==sample::n0btags_"+tag+" || sample==sample::n1btags_"+tag+" || sample==sample::n2btags_"+tag);
 	  if(njets>2) cut+=" || sample==sample::n3btags_"+tag;
 	  if(njets>3) cut+=" || sample==sample::n4btags_"+tag;
@@ -759,6 +774,7 @@ bool HFCMeasurement::fit(bool debug)
   std::map<string, std::vector<TH1F *> > preFitModelFunc;
   std::map<string, TString> combChannelCuts;
   std::map<int, TString> combMultCuts; 
+  TString allCuts("");
   for(std::set<string>::iterator cIt = sampleCats_.begin(); cIt != sampleCats_.end(); cIt++)
     {
       TString tag=*cIt;
@@ -766,7 +782,10 @@ bool HFCMeasurement::fit(bool debug)
       if(tag.Contains("3")) njets=3;
       if(tag.Contains("4")) njets=4;
       
-      //project data
+      //      if(tag.Contains("ee") && njets==4) continue;
+
+      ////project data
+      //TString cut("sample==sample::n1btags_"+tag+" || sample==sample::n2btags_"+tag);
       TString cut("sample==sample::n0btags_"+tag+" || sample==sample::n1btags_"+tag+" || sample==sample::n2btags_"+tag);
       if(njets>2) cut+=" || sample==sample::n3btags_"+tag;
       if(njets>3) cut+=" || sample==sample::n4btags_"+tag;
@@ -780,6 +799,8 @@ bool HFCMeasurement::fit(bool debug)
       if(tag.Contains("emu")) key="emu";
       if(combChannelCuts.find(key)==combChannelCuts.end()) combChannelCuts[key]=cut;
       else                                                 combChannelCuts[key]=combChannelCuts[key] + " || " + cut; 
+      if(allCuts=="") allCuts=cut;
+      else            allCuts=allCuts + " || " + cut;
 
       //add to the combined multiplicity cuts
       if(combMultCuts.find(njets)==combMultCuts.end()) combMultCuts[njets]=cut;
@@ -821,7 +842,9 @@ bool HFCMeasurement::fit(bool debug)
 
   //the inclusive result <- this is the final result to be used
   resetModelValues();
-  curResults_["inclusive"]=plrFit(data_,mc_,debug);
+  //curResults_["inclusive"]=plrFit(data_,mc_,debug);
+  RooDataSet *data = (RooDataSet *) data_->reduce(allCuts);
+  curResults_["inclusive"]=plrFit(data,mc_,debug);
   for(std::set<string>::iterator cIt = sampleCats_.begin(); cIt != sampleCats_.end(); cIt++)
     {
       string tag=*cIt;
@@ -839,6 +862,9 @@ bool HFCMeasurement::fit(bool debug)
   TCanvas *pfnc = new TCanvas("pfnc","pfnc",1200,1200);
   pfnc->Divide(maxJets_-1,3);
   int icat=0;
+  TH1F *dataExtended=new TH1F("dataextended",";b-tag multiplicity;Events", 3*3*5, 0.,3*3*5); dataExtended->SetDirectory(0);
+  TH1F *modelExtended=(TH1F *)dataExtended->Clone("modelextended");                          modelExtended->SetDirectory(0);        modelExtended->SetLineColor(30);
+  TH1F *postFitModelExtended=(TH1F *) dataExtended->Clone("pfmodelextended");                postFitModelExtended->SetDirectory(0); postFitModelExtended->SetLineColor(kBlue);
   for(std::set<string>::iterator cIt = sampleCats_.begin(); cIt != sampleCats_.end(); cIt++, icat++)
     {
       string tag=*cIt;
@@ -854,6 +880,23 @@ bool HFCMeasurement::fit(bool debug)
       preFitModel[tag]->Draw("histsame");           preFitModel[tag]->SetLineStyle(7); preFitModel[tag]->SetLineColor(30);
       postExclusiveFitModel[tag]->Draw("histsame"); postExclusiveFitModel[tag]->SetLineColor(30);
       postInclusiveFitModel[tag]->Draw("histsame");
+
+      for(int ibin=1; ibin<=modelExtended->GetXaxis()->GetNbins(); ibin++)
+	{
+	  Int_t ncounts(0);
+	  if(ibin<=data->numEntries())
+	    {
+	      data->get(ibin-1);
+	      ncounts = data->weight();
+	    }
+	  dataExtended->SetBinContent(ibin+icat*5,ncounts);
+	  dataExtended->SetBinError(ibin+icat*5,sqrt(ncounts));
+	  modelExtended->SetBinContent(ibin+icat*5,preFitModel[tag]->GetBinContent(ibin));
+	  modelExtended->SetBinError(ibin+icat*5,preFitModel[tag]->GetBinError(ibin));
+	  postFitModelExtended->SetBinContent(ibin+icat*5,postInclusiveFitModel[tag]->GetBinContent(ibin));
+	  postFitModelExtended->SetBinError(ibin+icat*5,postInclusiveFitModel[tag]->GetBinError(ibin));
+	}
+
       frame->GetXaxis()->SetNdivisions(maxJets_+1);
       frame->GetXaxis()->SetTitle("b-tag multiplicity");
       frame->GetYaxis()->SetTitle("Events");
@@ -974,6 +1017,31 @@ bool HFCMeasurement::fit(bool debug)
 	  pt->Draw();
 	}
     }
+
+  //extended model canvas
+  TCanvas *extc = new TCanvas("extc","extc",1200,740);
+  extc->cd();
+  {
+    TLegend *leg=new TLegend(0.2,0.7,0.5,0.94);
+    leg->SetBorderSize(0);
+    leg->SetFillStyle(0);
+    leg->SetTextFont(42);
+    modelExtended->Draw("hist");             leg->AddEntry(modelExtended,"Pre-fit model","f");
+    postFitModelExtended->Draw("histsame");  leg->AddEntry(postFitModelExtended,"Post-fit model","f");
+    dataExtended->Draw("e1same");            leg->AddEntry(dataExtended,"data","f");
+    leg->Draw();
+    TPaveText *pt = new TPaveText(0.1,0.96,0.9,1.0,"brNDC");
+    pt->SetBorderSize(0);
+    pt->SetFillColor(0);
+    pt->SetFillStyle(0);
+    if(sampleType_!="data")  pt->AddText("CMS simulation");
+    else                     pt->AddText("CMS preliminary");
+    pt->Draw();
+    extc->Modified();
+    extc->Update();
+  }
+
+  saveGraphicalResult(extc,"DataSlicesExtended");
   saveGraphicalResult(c,"DataSlicesFit");
   saveGraphicalResult(modelc,"DataSlicesModel");
   saveGraphicalResult(pfnc,"ExclusivePostFitNuisances");
@@ -1467,7 +1535,7 @@ HFCMeasurement::FitResult_t HFCMeasurement::plrFit(RooDataSet *data, ModelConfig
 	}
       delete c;
     }
-
+  
   return res;
 }
 
