@@ -2,12 +2,12 @@
     "proc":[
         {
         "tag":"FullSim",
-	"spimpose":true,
         "isdata":false,
-        "color":"1",
-        "lcolor":1,
+        "color":"kGray",
+        "lcolor":1,	
 	"lwidth":2,
-	"fill":0,
+	"fill":1001,
+	"normto":1,
 	"mctruthmode":1,
 	"data":[
        		{
@@ -23,8 +23,9 @@
         "lcolor":2,
 	"lwidth":2,
 	"fill":0,
-	"spimpose":1,
+	"spimpose":true,
 	"mctruthmode":1,
+	"normto":1,
 	"data":[
        		{
  	        "dtag":"MC8TeV_TTJets_FastSim",

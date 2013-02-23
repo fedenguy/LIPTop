@@ -72,7 +72,6 @@ HFCMeasurement::HFCMeasurement(int fitType,TString fitConfig, TString wpConfig, 
 
       RooArgSet constr;
       constr.add( *(ws_->pdf("pdf_st_th")) );
-      constr.add( *(ws_->pdf("pdf_st_exp")) );
       if(ws_->set("constr")!=0) constr.add( *(ws_->set("constr")) );
       ws_->defineSet("constr",constr);
     }
@@ -146,9 +145,12 @@ void HFCMeasurement::parseFitConfig(TString url)
       for(size_t icat=0; icat<dau.size(); icat++)
 	{
 	  JSONWrapper::Object &descript=dau[icat];
-	  string param=jsonF.key[iparam]+"_"+params[iparam].key[icat];
-	  if(params[iparam].key[icat].find("_")==string::npos) sampleCats_.insert(params[iparam].key[icat]);
-
+	  string param=jsonF.key[iparam];
+	  if(params[iparam].key[icat]!="")
+	    {
+	      param+="_"+params[iparam].key[icat];
+	      if(params[iparam].key[icat].find("_")==string::npos) sampleCats_.insert(params[iparam].key[icat]);
+	    }
 	  std::vector<std::string> uncs = descript.key;
 
 	  //for each parameter instantiate a formula, per category of the type: x\prod_i(1+theta_i)
@@ -1647,16 +1649,7 @@ void HFCMeasurement::instantiateSingleTopContribution(RooWorkspace *wspace)
 
   //
   // EXPERIMENTAL CROSS SECTION
-  // parametrized as a gaussian...
-  //
-
-  //JHEP 1212 (2012) 035
+  // JHEP 1212 (2012) 035
   //\sigma(t-ch) = 67.2 +/- 6.1 pb = 67.2 +/- 3.7 (stat.) +/- 3.0 (syst.) +/- 3.5 (theor.) +/- 1.5 (lum.) pb
-  float sigma_st_exp = 67.2;
-  float delta_sigma_st_exp = 6.1;
-  
-  //gaussian(total unc)
-  char pdf_st_exp[1000];
-  sprintf(pdf_st_exp,"Gaussian::pdf_st_exp(st_exp[%f,0,140],%f,%f)",sigma_st_exp,sigma_st_exp,delta_sigma_st_exp);
-  wspace->factory(pdf_st_exp);
+  parseFitConfig("$CMSSW_BASE/src/LIP/Top/bin/HFC/tch_2012_data_cfg.json");
 }
